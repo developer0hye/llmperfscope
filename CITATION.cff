@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "llmperfscope: a whole-lifecycle profiler for LLM inference engines"
+type: software
+authors:
+  - family-names: Kwon
+    given-names: Yonghye
+repository-code: "https://github.com/developer0hye/llmperfscope"
+license: Apache-2.0
+version: 0.1.0
+date-released: "2026-11-01"
+keywords:
+  - llm
+  - profiling
+  - inference
+  - performance
+  - gpu

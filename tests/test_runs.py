@@ -12,7 +12,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmprof import cli, cpuprof, machine, procfs, runner
+from llmperfscope import cli, cpuprof, machine, procfs, runner
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -24,7 +24,7 @@ def run(cmd, gpu=None, **options):
     options.setdefault("baseline_s", 0.3)
     options.setdefault("tail_s", 0.2)
     out = helpers.temp_dir()
-    with mock.patch("llmprof.runner.open_backend", lambda: gpu or helpers.ScriptedGpu()):
+    with mock.patch("llmperfscope.runner.open_backend", lambda: gpu or helpers.ScriptedGpu()):
         return runner.Run(cmd, runner.Options(out=out, **options)).execute()
 
 
@@ -94,11 +94,20 @@ class KnownEngine(unittest.TestCase):
 
     def test_files_are_written(self):
         self.assertIn("diagnosis", self.report)
-        self.assertEqual(self.report["schema"], "llmprof.run/1")
+        self.assertEqual(self.report["schema"], "llmperfscope.run/1")
 
 
 @unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
 class Failures(unittest.TestCase):
+    def test_tracers_refuse_what_they_cannot_reach(self):
+        """They would profile the docker client, and the report would look fine."""
+        for options in ({"nsys": True}, {"cpu_profile": True}):
+            with self.assertRaises(runner.Refused):
+                run(["docker", "run", "--gpus", "all", "some-image"], **options)
+            with self.assertRaises(runner.Refused):
+                with mock.patch("llmperfscope.runner.open_backend", lambda: helpers.ScriptedGpu()):
+                    runner.Run(["/proc/1/exe"], runner.Options(out=helpers.temp_dir(), quiet=True, **options), attach_pid=1).execute()
+
     def test_a_failing_target_is_reported(self):
         report = run(engine("fail"))
         self.assertEqual((report["status"], report["exit_code"]), ("failed", 7))
@@ -167,7 +176,7 @@ class Serving(unittest.TestCase):
                 "--synthetic-words", "16", "--limit", "4", "--max-tokens", "11", "--concurrency", "1,2", *extra,
                 "--", sys.executable, SERVER, str(port), str(ready), str(ttft), str(inter)]
         gpu = helpers.ScriptedGpu(count=1, power_w=100.0, used_mib=1000)
-        with mock.patch("llmprof.runner.open_backend", lambda: gpu), mock.patch("builtins.print"):
+        with mock.patch("llmperfscope.runner.open_backend", lambda: gpu), mock.patch("builtins.print"):
             cli.main(argv)
         with open(os.path.join(out, "run.json")) as f:
             return json.load(f)
@@ -206,7 +215,7 @@ class Serving(unittest.TestCase):
     def test_a_server_that_exits_while_loading_fails_cleanly(self):
         out = helpers.temp_dir()
         argv = ["serve", "--out", out, "--precheck", "skip", "--quiet", "--preset", "vllm", "--url", "http://127.0.0.1:9", "--", sys.executable, ENGINE, "fail"]
-        with mock.patch("llmprof.runner.open_backend", lambda: helpers.ScriptedGpu()), mock.patch("builtins.print"):
+        with mock.patch("llmperfscope.runner.open_backend", lambda: helpers.ScriptedGpu()), mock.patch("builtins.print"):
             code = cli.main(argv)
         self.assertEqual(code, 1)
         with open(os.path.join(out, "run.json")) as f:
@@ -222,7 +231,7 @@ class CpuProfile(unittest.TestCase):
             f.write(textwrap.dedent("""
                 #include <time.h>
                 volatile unsigned long sink;
-                __attribute__((noinline)) void llmprof_test_hot_function(void) {
+                __attribute__((noinline)) void llmperfscope_test_hot_function(void) {
                     struct timespec a, b;
                     clock_gettime(CLOCK_MONOTONIC, &a);
                     do {
@@ -230,7 +239,7 @@ class CpuProfile(unittest.TestCase):
                         clock_gettime(CLOCK_MONOTONIC, &b);
                     } while ((b.tv_sec - a.tv_sec) * 1000000000L + (b.tv_nsec - a.tv_nsec) < 1500000000L);
                 }
-                int main(void) { llmprof_test_hot_function(); return 0; }
+                int main(void) { llmperfscope_test_hot_function(); return 0; }
             """))
         binary = os.path.join(directory, "burn")
         subprocess.run(["cc", "-O1", "-rdynamic", "-o", binary, source], check=True)
@@ -239,7 +248,7 @@ class CpuProfile(unittest.TestCase):
         self.assertTrue(report["perturbed"])
         group = report["cpu_profile"]["groups"]["run"]
         self.assertGreater(group["samples"], 50)
-        self.assertEqual(group["self"][0]["name"], "llmprof_test_hot_function")
+        self.assertEqual(group["self"][0]["name"], "llmperfscope_test_hot_function")
         self.assertGreater(group["self"][0]["share"], 0.8)
 
     def test_parallel_work_is_not_credited_to_the_main_thread(self):
@@ -253,19 +262,19 @@ class CpuProfile(unittest.TestCase):
                 volatile unsigned long sink;
                 /* CPU time of this thread, so the amount of work does not depend on how many cores the machine has. */
                 static double now(void) { struct timespec t; clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
-                __attribute__((noinline)) void llmprof_test_worker_burn(void) {
+                __attribute__((noinline)) void llmperfscope_test_worker_burn(void) {
                     double t0 = now();
                     while (now() - t0 < 1.2) for (int i = 0; i < 20000; i++) sink += i;
                 }
-                __attribute__((noinline)) void llmprof_test_main_burn(void) {
+                __attribute__((noinline)) void llmperfscope_test_main_burn(void) {
                     double t0 = now();
                     while (now() - t0 < 0.6) for (int i = 0; i < 20000; i++) sink += i;
                 }
-                void *worker(void *arg) { (void) arg; llmprof_test_worker_burn(); return 0; }
+                void *worker(void *arg) { (void) arg; llmperfscope_test_worker_burn(); return 0; }
                 int main(void) {
                     pthread_t t[3];
                     for (int i = 0; i < 3; i++) pthread_create(&t[i], 0, worker, 0);
-                    llmprof_test_main_burn();
+                    llmperfscope_test_main_burn();
                     for (int i = 0; i < 3; i++) pthread_join(t[i], 0);
                     return 0;
                 }
@@ -275,11 +284,11 @@ class CpuProfile(unittest.TestCase):
         report = run([binary], cpu_profile=True)
         self.assertEqual(report["status"], "ok")
         rows = {x["name"]: x for x in report["cpu_profile"]["groups"]["run"]["self"]}
-        self.assertEqual(rows["llmprof_test_worker_burn"]["threads"], 3)
-        self.assertEqual(rows["llmprof_test_main_burn"]["threads"], 1)
+        self.assertEqual(rows["llmperfscope_test_worker_burn"]["threads"], 3)
+        self.assertEqual(rows["llmperfscope_test_main_burn"]["threads"], 1)
         # Three threads for twice as long as one: about six times the samples.
-        self.assertGreater(rows["llmprof_test_worker_burn"]["share"], 3 * rows["llmprof_test_main_burn"]["share"])
-        self.assertAlmostEqual(rows["llmprof_test_worker_burn"]["busiest_thread_s"], 1.2, delta=0.4)
+        self.assertGreater(rows["llmperfscope_test_worker_burn"]["share"], 3 * rows["llmperfscope_test_main_burn"]["share"])
+        self.assertAlmostEqual(rows["llmperfscope_test_worker_burn"]["busiest_thread_s"], 1.2, delta=0.4)
 
     def test_stripped_code_gets_no_made_up_name(self):
         table = cpuprof._Symbols("/nonexistent")
@@ -311,11 +320,11 @@ class PageCache(unittest.TestCase):
 @unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
 class Library(unittest.TestCase):
     def test_profile_inside_a_process(self):
-        import llmprof
+        import llmperfscope
         out = helpers.temp_dir()
-        with mock.patch("llmprof.api.open_backend", lambda: helpers.ScriptedGpu(count=1)):
-            with llmprof.Profile(out, label="x", baseline_s=0.2) as profile:
-                with llmprof.phase("load"):
+        with mock.patch("llmperfscope.api.open_backend", lambda: helpers.ScriptedGpu(count=1)):
+            with llmperfscope.Profile(out, label="x", baseline_s=0.2) as profile:
+                with llmperfscope.phase("load"):
                     time.sleep(0.2)
                 profile.mark("decode", tokens=10)
                 time.sleep(0.3)
@@ -326,8 +335,8 @@ class Library(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(out, "run.json")))
 
     def test_token_timer_has_a_streamers_shape(self):
-        import llmprof
-        timer = llmprof.TokenTimer()
+        import llmperfscope
+        timer = llmperfscope.TokenTimer()
         timer.put("prompt")
         for _ in range(4):
             time.sleep(0.01)

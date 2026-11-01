@@ -6,7 +6,7 @@ import sqlite3
 import unittest
 
 import helpers
-from llmprof import adapters, analyze, compare, container, diagnose, driver, machine, markers, nsys, procfs, report, system
+from llmperfscope import adapters, analyze, compare, container, diagnose, driver, machine, markers, nsys, procfs, report, system
 
 BENCH_JSON = """[
   {
@@ -153,7 +153,7 @@ class Containers(unittest.TestCase):
         self.assertEqual(cmd[:5], ["taskset", "-c", "1", "docker", "run"])
         self.assertEqual(cmd[5], "--cidfile")
         self.assertEqual(cmd[-4:], ["--gpus", "all", "img", "--flag"])
-        self.assertIn(f"{os.path.realpath(directory)}:/llmprof-run", cmd)
+        self.assertIn(f"{os.path.realpath(directory)}:/llmperfscope-run", cmd)
 
     def test_identity_names_the_image(self):
         target = container.DockerTarget("docker", helpers.temp_dir())

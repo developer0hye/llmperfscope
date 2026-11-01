@@ -1,0 +1,10 @@
+include CHANGELOG.md CITATION.cff CONTRIBUTING.md LICENSE README.md
+recursive-include src/llmperfscope/native *.c
+recursive-include tests *.py
+recursive-include docs *.md
+include examples/*.py examples/*.json
+global-exclude *.pyc *.so
+prune examples/sample-runs
+prune docs/gallery
+# It checks links into what the two lines above leave out.
+exclude tests/test_docs.py
