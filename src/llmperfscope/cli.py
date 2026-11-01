@@ -59,7 +59,7 @@ def _common(parser):
     parser.add_argument("--cpu-profile", action="store_true", help="sample host CPU stacks, no perf needed (perturbs speed)")
     parser.add_argument("--cpu-hz", type=int, default=200)
     parser.add_argument("--cold-start", action="store_true", help="drop the model from the page cache first, to measure a real disk load")
-    parser.add_argument("--model-file", help="the model's path, when llmprof cannot tell from the command")
+    parser.add_argument("--model-file", help="the model's path, when llmperfscope cannot tell from the command")
 
 
 def _options(args):
@@ -89,7 +89,7 @@ def _options(args):
 def _finish(result, options):
     print(report.render(result))
     page = html.write(options.out)
-    print(f"[llmprof] charts: {page}\n[llmprof] all numbers: {Path(options.out) / 'run.json'}")
+    print(f"[llmperfscope] charts: {page}\n[llmperfscope] all numbers: {Path(options.out) / 'run.json'}")
     return 0 if result["status"] == "ok" else 1
 
 
@@ -103,12 +103,12 @@ def _split_command(argv):
 
 def cmd_run(args, target):
     if not target:
-        raise SystemExit("usage: llmprof run [options] -- command ...")
+        raise SystemExit("usage: llmperfscope run [options] -- command ...")
     options = _options(args)
     try:
         return _finish(runner.Run(target, options).execute(), options)
     except runner.Refused as e:
-        print(f"[llmprof] refused: {e}", file=sys.stderr)
+        print(f"[llmperfscope] refused: {e}", file=sys.stderr)
         return 3
 
 
@@ -207,7 +207,7 @@ def _add_energy_per_token(result):
 
 def cmd_serve(args, target):
     if not target:
-        raise SystemExit("usage: llmprof serve [options] -- server command ...")
+        raise SystemExit("usage: llmperfscope serve [options] -- server command ...")
     options = _options(args)
     options.stop_timeout_s = args.stop_timeout
     preset_name = args.preset or adapters.preset_for(target)
@@ -220,13 +220,13 @@ def cmd_serve(args, target):
             target = target + [extra]
     if preset_name == "ollama" and not args.model:
         raise SystemExit("Ollama starts with no model: name one with --model, for example --model qwen3:0.6b --pull")
-    print(f"[llmprof] server preset {preset_name}, expecting it at {args.url}")
+    print(f"[llmperfscope] server preset {preset_name}, expecting it at {args.url}")
     knows_load_lines = adapters.select(options.adapter, target).name == "llama.cpp:llama-server"
     run = runner.Run(target, options, workload=_serve_workload(args, preset, marks_load=not knows_load_lines))
     try:
         result = run.execute()
     except runner.Refused as e:
-        print(f"[llmprof] refused: {e}", file=sys.stderr)
+        print(f"[llmperfscope] refused: {e}", file=sys.stderr)
         return 3
     _add_energy_per_token(result)
     with open(Path(options.out) / "run.json", "w") as f:
@@ -347,11 +347,11 @@ def cmd_check(_args, _target):
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     argv, target = _split_command(argv)
-    parser = argparse.ArgumentParser(prog="llmprof", description="Whole-lifecycle profiler for LLM inference engines.")
+    parser = argparse.ArgumentParser(prog="llmperfscope", description="Whole-lifecycle profiler for LLM inference engines.")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("run", help="profile any command: llmprof run -- command ...")
+    p = sub.add_parser("run", help="profile any command: llmperfscope run -- command ...")
     _common(p)
     p.set_defaults(func=cmd_run)
 
@@ -391,7 +391,7 @@ def main(argv=None):
     p.add_argument("--b-env", action="append")
     p.add_argument("--order", default="ABBA")
     p.add_argument("--only", help="regex on case labels")
-    p.add_argument("--noise", help="floors from `llmprof noise`")
+    p.add_argument("--noise", help="floors from `llmperfscope noise`")
     p.add_argument("--timeout", type=float, default=1800.0)
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_matrix)

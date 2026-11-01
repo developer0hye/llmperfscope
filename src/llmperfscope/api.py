@@ -1,15 +1,15 @@
-"""Using llmprof from Python, for engines that are libraries (transformers, vLLM's LLM class, ...).
+"""Using llmperfscope from Python, for engines that are libraries (transformers, vLLM's LLM class, ...).
 
 The recommended form keeps the sampler in another process, so it cannot disturb the engine:
 
-    # script.py, started with: llmprof run -- python script.py
-    import llmprof
-    with llmprof.phase("load"):
+    # script.py, started with: llmperfscope run -- python script.py
+    import llmperfscope
+    with llmperfscope.phase("load"):
         model = AutoModelForCausalLM.from_pretrained(...)
-    timer = llmprof.TokenTimer()
-    with llmprof.phase("decode"):
+    timer = llmperfscope.TokenTimer()
+    with llmperfscope.phase("decode"):
         model.generate(**inputs, max_new_tokens=128, streamer=timer)
-    llmprof.mark_tokens(timer)
+    llmperfscope.mark_tokens(timer)
 
 `Profile` does the same from inside one process, without the command line.
 """
@@ -106,7 +106,7 @@ def mark_tokens(timer, group="decode"):
 
 
 class Profile:
-    """Samples from a thread of this process. Fine for finding bottlenecks; for speed numbers prefer `llmprof run`."""
+    """Samples from a thread of this process. Fine for finding bottlenecks; for speed numbers prefer `llmperfscope run`."""
 
     def __init__(self, out, label="", hz=50.0, slow_hz=2.0, baseline_s=0.5):
         self.dir = Path(out)
@@ -163,8 +163,8 @@ class Profile:
             item["start_s"] = round((item.pop("t") - self.t0) / 1e9, 6)
             item["end_s"] = round((item.pop("t_end", t_end) - self.t0) / 1e9, 6)
         self.report = {
-            "schema": "llmprof.run/1",
-            "tool": {"name": "llmprof", "version": __version__},
+            "schema": "llmperfscope.run/1",
+            "tool": {"name": "llmperfscope", "version": __version__},
             "label": self.label,
             "status": "failed" if exc_type else "ok",
             "perturbed": False,

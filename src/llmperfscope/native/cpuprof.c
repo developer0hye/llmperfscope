@@ -6,15 +6,15 @@
 // and "this function runs on one thread" is exactly the kind of thing this tool is used to find out.
 //
 // Each sample: time, thread id and name, interrupted PC, and the stack from the unwinder. Samples go to a preallocated buffer and
-// reach disk at exit, so the run does no file I/O for profiling. llmprof reads the files and symbolizes them.
+// reach disk at exit, so the run does no file I/O for profiling. llmperfscope reads the files and symbolizes them.
 //
 // It interposes pthread_create, to start the timer of each new thread, and nothing else.
 //
 // Environment:
-//   LLMPROF_CPUPROF_OUT  path prefix; files are <prefix>.<pid>.{bin,maps}
-//   LLMPROF_CPUPROF_HZ   samples per CPU second per thread, default 200
+//   LLMPERFSCOPE_CPUPROF_OUT  path prefix; files are <prefix>.<pid>.{bin,maps}
+//   LLMPERFSCOPE_CPUPROF_HZ   samples per CPU second per thread, default 200
 //
-// Build: cc -O2 -shared -fPIC -pthread -o libllmprof_cpu.so cpuprof.c -ldl -lrt
+// Build: cc -O2 -shared -fPIC -pthread -o libllmperfscope_cpu.so cpuprof.c -ldl -lrt
 
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -195,7 +195,7 @@ static void dump(void) {
     snprintf(path, sizeof(path), "%s.%d.bin", g_prefix, (int) g_pid);
     FILE *f = fopen(path, "wb");
     if (f) {
-        uint64_t header[5] = {0x4c4c4d50524f4632ull, (uint64_t) count, (uint64_t) atomic_load(&g_dropped), MAX_FRAMES, (uint64_t) g_hz};
+        uint64_t header[5] = {0x4c5053434f504531ull, (uint64_t) count, (uint64_t) atomic_load(&g_dropped), MAX_FRAMES, (uint64_t) g_hz};
         fwrite(header, sizeof(header), 1, f);
         fwrite(g_samples, sizeof(sample_t), count, f);
         fclose(f);
@@ -232,12 +232,12 @@ static void child_after_fork(void) {
 }
 
 __attribute__((constructor)) static void start(void) {
-    const char *prefix = getenv("LLMPROF_CPUPROF_OUT");
+    const char *prefix = getenv("LLMPERFSCOPE_CPUPROF_OUT");
     if (!prefix || !*prefix || skip_this_process()) {
         return;
     }
     snprintf(g_prefix, sizeof(g_prefix), "%s", prefix);
-    const char *hz = getenv("LLMPROF_CPUPROF_HZ");
+    const char *hz = getenv("LLMPERFSCOPE_CPUPROF_HZ");
     if (hz && atoi(hz) > 0) {
         g_hz = atoi(hz);
     }

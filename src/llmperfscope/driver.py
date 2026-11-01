@@ -313,7 +313,7 @@ class GaugeWatcher(threading.Thread):
     NOT_GAUGES = ("_total", "_sum", "_count", "_bucket", "_created", "_info")
 
     def __init__(self, url, period_s=1.0):
-        super().__init__(daemon=True, name="llmprof-gauges")
+        super().__init__(daemon=True, name="llmperfscope-gauges")
         self.url = url
         self.period_s = period_s
         self.peaks = {}

@@ -1,4 +1,4 @@
-"""llmprof: whole-lifecycle profiler for LLM inference engines."""
+"""llmperfscope: whole-lifecycle profiler for LLM inference engines."""
 
 __version__ = "0.1.0"
 

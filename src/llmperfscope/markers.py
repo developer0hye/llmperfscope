@@ -1,12 +1,12 @@
-"""Phase markers: the only thing an engine has to do to get finer phases than llmprof can see from outside.
+"""Phase markers: the only thing an engine has to do to get finer phases than llmperfscope can see from outside.
 
-`llmprof run` exports LLMPROF_MARKERS=<file>. Any process, in any language, can append one line per event:
+`llmperfscope run` exports LLMPERFSCOPE_MARKERS=<file>. Any process, in any language, can append one line per event:
 
-    echo "load_done" >> "$LLMPROF_MARKERS"                     # time = when llmprof reads it (within 0.2 s)
+    echo "load_done" >> "$LLMPERFSCOPE_MARKERS"                     # time = when llmperfscope reads it (within 0.2 s)
     echo "$(date +%s%N | ...) ..."                             # or give CLOCK_MONOTONIC ns as the first word
     {"t": <CLOCK_MONOTONIC ns>, "phase": "decode", "group": "decode", "tokens": 128, "meta": {...}}   # or JSON
 
-From Python: `llmprof.mark("decode", tokens=128)`. It does nothing when no profiler is running.
+From Python: `llmperfscope.mark("decode", tokens=128)`. It does nothing when no profiler is running.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import json
 import os
 import time
 
-ENV = "LLMPROF_MARKERS"
+ENV = "LLMPERFSCOPE_MARKERS"
 
 _listeners = []  # in-process Profile objects
 

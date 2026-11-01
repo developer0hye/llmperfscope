@@ -19,7 +19,7 @@ from . import nsys as nsys_tool
 from .gpu import open_backend
 from .sampler import Sampler, load_ticks
 
-SCHEMA = "llmprof.run/1"
+SCHEMA = "llmperfscope.run/1"
 DEFAULT_STALL_S = 600.0
 
 
@@ -104,7 +104,7 @@ class Run:
 
     def log(self, text):
         if not self.opts.quiet:
-            print(f"[llmprof] {text}", flush=True)
+            print(f"[llmperfscope] {text}", flush=True)
 
     # Phases ---------------------------------------------------------------------------------------------------------
 
@@ -192,11 +192,11 @@ class Run:
     def request_stop(self, reason):
         self.stop_reason = self.stop_reason or reason
         self.stop_requested_at = time.monotonic()
-        # In this order: the tree signal goes to every child of llmprof, and `docker stop` must not be one of them yet.
+        # In this order: the tree signal goes to every child of llmperfscope, and `docker stop` must not be one of them yet.
         self._signal_tree(getattr(signal, "SIG" + self.opts.stop_signal))
         if self.docker and self.docker_stop_thread is None:
             self.docker_stop_thread = threading.Thread(target=self.docker.stop, args=(self.opts.stop_timeout_s,), daemon=True,
-                                                       name="llmprof-docker-stop")
+                                                       name="llmperfscope-docker-stop")
             self.docker_stop_thread.start()
 
     def _poll_exit(self):
@@ -248,7 +248,7 @@ class Run:
     # Pinning --------------------------------------------------------------------------------------------------------
 
     def _pin_away_from_target(self):
-        """All of llmprof goes to one CPU the target is not allowed on, when there is one."""
+        """All of llmperfscope goes to one CPU the target is not allowed on, when there is one."""
         allowed = None
         for pid in procfs.tree({self.pid}):
             mask = procfs.affinity(pid)
@@ -258,7 +258,7 @@ class Run:
             return None
         free = sorted(os.sched_getaffinity(0) - allowed)
         if not free:
-            self.notes.append("target may use every CPU: llmprof shares CPUs with it")
+            self.notes.append("target may use every CPU: llmperfscope shares CPUs with it")
             return None
         cpu = free[-1]
         for thread in threading.enumerate():
@@ -302,7 +302,7 @@ class Run:
         if self.opts.precheck == "wait":
             # Printed even with --quiet: silence here would look like a hang.
             before = machine.wait_until_quiet(backend, max_wait_s=self.opts.max_wait_s, model=model, ignore=ignore, gpus=gpus,
-                                              log=lambda text: print(f"[llmprof] {text}", flush=True))
+                                              log=lambda text: print(f"[llmperfscope] {text}", flush=True))
         elif self.opts.precheck != "skip":
             before = machine.snapshot(backend, model=model, ignore=ignore, gpus=gpus)
         if before and not before["clean"]:
@@ -364,7 +364,7 @@ class Run:
             self.pid = self.proc.pid
             for name, pipe, path in (("stdout", self.proc.stdout, self.stdout_path),
                                      ("stderr", self.proc.stderr, self.stderr_path)):
-                reader = threading.Thread(target=self._reader, args=(name, pipe, path), daemon=True, name=f"llmprof-{name}")
+                reader = threading.Thread(target=self._reader, args=(name, pipe, path), daemon=True, name=f"llmperfscope-{name}")
                 reader.start()
                 readers.append(reader)
         sampler.set_roots({self.pid})
@@ -388,7 +388,7 @@ class Run:
                         self.emit("teardown")
                         self.request_stop("workload finished")
 
-            self.workload_thread = threading.Thread(target=run_workload, daemon=True, name="llmprof-workload")
+            self.workload_thread = threading.Thread(target=run_workload, daemon=True, name="llmperfscope-workload")
             self.workload_thread.start()
 
         self._watch(sampler, marker_reader, stall_s)
@@ -472,7 +472,7 @@ class Run:
 
         report = {
             "schema": SCHEMA,
-            "tool": {"name": "llmprof", "version": __version__},
+            "tool": {"name": "llmperfscope", "version": __version__},
             "label": self.opts.label,
             "status": self._status(),
             "exit_code": self.returncode,
@@ -501,7 +501,7 @@ class Run:
         }
         report.update(sections)
         report["disks"] = sampler.system.disks
-        # The kernel's totals describe the process llmprof started. For a container that is only the docker client.
+        # The kernel's totals describe the process llmperfscope started. For a container that is only the docker client.
         if self.rusage is not None and not self.docker:
             report.setdefault("memory", {}).setdefault("host", {})["max_rss_kernel_mib"] = round(self.rusage.ru_maxrss / 1024, 1)
             report["cpu"] = {"user_s": round(self.rusage.ru_utime, 3), "sys_s": round(self.rusage.ru_stime, 3),
