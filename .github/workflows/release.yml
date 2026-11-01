@@ -42,6 +42,12 @@ jobs:
           tar tzf dist/*.tar.gz | grep -q "src/llmperfscope/native/cpuprof.c"
           tar tzf dist/*.tar.gz | grep -q "tests/test_runs.py"
           ! tar tzf dist/*.tar.gz | grep -q "sample-runs"
+      - name: The tests in the source archive pass from it alone
+        run: |
+          mkdir "$RUNNER_TEMP/unpacked"
+          tar xzf dist/*.tar.gz -C "$RUNNER_TEMP/unpacked" --strip-components=1
+          cd "$RUNNER_TEMP/unpacked/tests"
+          python -m unittest test_parsers test_html test_samples
       - name: A version tag has to match the package
         if: github.ref_type == 'tag'
         run: test -f "dist/llmperfscope-${GITHUB_REF_NAME#v}-py3-none-any.whl"
