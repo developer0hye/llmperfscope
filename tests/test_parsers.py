@@ -452,6 +452,13 @@ class MemoryFindings(unittest.TestCase):
                "groups": {"decode": {"flows": {"mem_available_min_mib": 10}}}}
         self.assertEqual(self.names(run) & {"process_swapped", "host_ram_nearly_full"}, {"process_swapped", "host_ram_nearly_full"})
 
+    def test_memory_held_after_the_run_means_nothing_when_attached(self):
+        device = {"index": 0, "peak_mib": 2000, "peak_above_baseline_mib": 1500, "baseline_mib": 500, "after_exit_mib": 2000}
+        run = {"memory": {"gpu": {"devices": [device]}}, "groups": {"tail": {"wall_s": 1.0}}}
+        self.assertIn("gpu_memory_after_exit", self.names(run))
+        run["attached"] = True
+        self.assertNotIn("gpu_memory_after_exit", self.names(run))
+
     def test_engine_breakdown(self):
         run = {"memory": {"breakdown_mib": [{"kind": "device", "name": "G", "self": 1000, "compute": 500, "unaccounted": 400}]}}
         self.assertEqual(self.names(run) & {"gpu_memory_unaccounted", "compute_buffers_large"}, {"gpu_memory_unaccounted", "compute_buffers_large"})

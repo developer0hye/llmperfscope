@@ -479,6 +479,7 @@ class Run:
             "stop_reason": self.stop_reason,
             # Numbers from a traced or sampled run are for finding where time goes, never for A/B speed comparisons.
             "perturbed": bool(self.opts.nsys or self.opts.cpu_profile),
+            "attached": bool(self.attach_pid),
             "wall_time_at_t0_ns": self.wall_baseline_ns,
             "command": machine.redact_command(cmd),
             "env": machine.relevant_env({k: env[k] for k in env if k != markers.ENV}),

@@ -277,8 +277,9 @@ def memory_findings(run):
                 f"The server's cache pool reached {fraction * 100:.0f}% ({name}). Requests are probably waiting or being preempted.",
                 metric=name, peak=peak)
 
+    # After attaching, the process is still running when the profile ends, so it still holding its memory says nothing.
     tail_group = groups.get("tail") or {}
-    if tail_group:
+    if tail_group and not run.get("attached"):
         for entry in gpu_devices:
             after = entry.get("after_exit_mib")
             if after is not None and after - entry["baseline_mib"] > 128:
