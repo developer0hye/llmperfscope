@@ -46,6 +46,7 @@ These are real failures that shaped how it works. They show what to watch for in
 - **`setitimer` sampling sends every signal to the main thread when it is running.** That makes a program look single-threaded, so the CPU profiler now uses one CPU-time timer per thread.
 - **The software power cap bit is set far below the limit, even on an idle GPU.** Taking it at face value "found" throttling everywhere and made `--precheck wait` wait forever. It now counts only near the power limit.
 - **Nearest-symbol lookup in a stripped library names the wrong function.** Names are now trusted only inside the symbol's extent.
+- **Two arms per side were not enough for `matrix`.** Arms miss each other by chance 1 time in 3 with 2 per side, and a nightly run flagged losses on models that never run the changed code. The default is now 4 arms per side, a case that looks worse is run again, and anything resting on fewer arms is marked as a hint.
 - **Sampling dropped to 16 Hz with 2 s gaps** in 1-GPU arms of long comparison chains, and this was not reproduced alone. The cause is unknown, possibly NVML blocking on GPUs going idle. Reports note a rate far below the target, and cumulative counters stay right. Gauges in those phases can miss short spikes.
 
 ## Limits to keep in mind

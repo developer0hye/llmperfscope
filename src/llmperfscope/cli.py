@@ -375,7 +375,7 @@ def cmd_matrix(args, _target):
             noise = json.load(f)
     table = compare.run_matrix(compare.load_cases(args.cases), side(args.a), side(args.b), args.out, order=args.order,
                                timeout_s=args.timeout, a_env=_parse_env(args.a_env), b_env=_parse_env(args.b_env), only=args.only,
-                               noise=noise)
+                               noise=noise, recheck=args.recheck)
     print(Path(args.out, "table.md").read_text())
     worse = [c["label"] for c in table["cases"] if c.get("verdict") in ("regression", "tradeoff")]
     if worse:
@@ -469,7 +469,8 @@ def build_parser():
     p.add_argument("--b", required=True, help="NAME=BIN_DIR")
     p.add_argument("--a-env", action="append")
     p.add_argument("--b-env", action="append")
-    p.add_argument("--order", default="ABBA")
+    p.add_argument("--order", default=compare.DEFAULT_ORDER, help="arms per case, A and B in turn. Fewer than 3 per side only gives hints")
+    p.add_argument("--recheck", type=int, default=1, help="when a case looks worse, run this many more rounds of arms before calling it")
     p.add_argument("--only", help="regex on case labels")
     p.add_argument("--noise", help="floors from `llmperfscope noise`")
     p.add_argument("--timeout", type=float, default=1800.0)

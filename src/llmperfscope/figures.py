@@ -1065,9 +1065,11 @@ def make_matrix_figure(path, out_dir, style):
                     continue
                 ratio = value["ratio"]
                 ratios.append(ratio)
-                marker, face, edge = looks.get(value["verdict"], looks["same"])
+                # A difference resting on too few runs is a hint. A paper figure should not call it a result.
+                verdict = "same" if value.get("weak") else value["verdict"]
+                marker, face, edge = looks.get(verdict, looks["same"])
                 ax.scatter([ratio], [i], marker=marker, s=16, facecolor=face, edgecolor=edge, linewidth=0.7, zorder=3)
-                rows.append([case["label"], key, value["a"], value["b"], ratio, value["verdict"]])
+                rows.append([case["label"], key, value["a"], value["b"], ratio, verdict])
             ax.axvline(1.0, color=AXIS, linewidth=0.7, zorder=1)
             ax.set_title(title)
             furthest = max([abs(r - 1.0) for r in ratios] + [0.01])

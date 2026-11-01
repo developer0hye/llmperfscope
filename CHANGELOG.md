@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `matrix` runs 4 arms per side by default, and runs a case that looks worse again (`--recheck`) before calling it. With 2 per side, arms miss each other by chance 1 time in 3.
+- `diff` and `matrix` mark a difference resting on too few runs as a hint, `better?` or `worse?`, and a comparison with only hints as `inconclusive`. Figures do not show hints as results.
+
 ## 0.1.0
 
 First public release.

@@ -4,6 +4,7 @@ import json
 import os
 import sqlite3
 import unittest
+from unittest import mock
 
 import helpers
 from llmperfscope import adapters, analyze, compare, container, diagnose, driver, machine, markers, nsys, procfs, report, system
@@ -244,7 +245,7 @@ class Compare(unittest.TestCase):
     def test_speed_win_with_memory_cost_is_called_a_tradeoff(self):
         a = {"status": "ok", "throughput": {"decode": {"tokens_per_s": 100.0}}, "memory": {"gpu": {"peak_above_baseline_total_mib": 1000}}}
         b = {"status": "ok", "throughput": {"decode": {"tokens_per_s": 120.0}}, "memory": {"gpu": {"peak_above_baseline_total_mib": 2000}}}
-        out = compare.diff([a], [b])
+        out = compare.diff([a, a], [b, b])
         self.assertEqual(out["verdict"], "tradeoff")
         self.assertIn("gpu_peak_mib", out["worse"])
         self.assertIn("decode_tps", out["better"])
@@ -252,7 +253,84 @@ class Compare(unittest.TestCase):
     def test_only_a_cost_is_a_regression(self):
         a = {"status": "ok", "throughput": {"decode": {"tokens_per_s": 100.0}}}
         b = {"status": "ok", "throughput": {"decode": {"tokens_per_s": 80.0}}}
-        self.assertEqual(compare.diff([a], [b])["verdict"], "regression")
+        self.assertEqual(compare.diff([a, a], [b, b])["verdict"], "regression")
+
+    def test_chance_of_arms_separating_with_nothing_changed(self):
+        self.assertEqual(compare.separation_chance(1, 1), 1.0)
+        self.assertAlmostEqual(compare.separation_chance(2, 2), 1 / 3)
+        self.assertAlmostEqual(compare.separation_chance(3, 3), 1 / 10)
+        self.assertAlmostEqual(compare.separation_chance(4, 4), 1 / 35)
+
+    def test_one_run_per_side_proves_nothing(self):
+        a = {"status": "ok", "throughput": {"decode": {"tokens_per_s": 100.0}}}
+        b = {"status": "ok", "throughput": {"decode": {"tokens_per_s": 80.0}}}
+        out = compare.diff([a], [b])
+        self.assertEqual(out["verdict"], "inconclusive")
+        self.assertEqual(out["worse"], [])
+        self.assertEqual(out["maybe_worse"], ["decode_tps"])
+        self.assertIn("worse?", compare.render_diff(out))
+        self.assertIn("every time", compare.render_diff(out))
+
+    def test_two_close_arms_per_side_are_a_hint(self):
+        """Real numbers: a unit flagged 0.990 on a model that never runs its code."""
+        verdict = compare.judge("prefill_tps", [8001.5, 8043.7], [7954.2, 7936.4])
+        self.assertEqual(verdict["verdict"], "worse")
+        self.assertTrue(verdict["weak"])
+
+    def test_four_separated_arms_per_side_are_a_result(self):
+        """Real numbers again: the same size of difference, but arms that stay apart."""
+        verdict = compare.judge("decode_tps", [163.6, 163.5, 163.6, 163.7], [163.3, 162.9, 162.2, 162.9])
+        self.assertEqual(verdict["verdict"], "worse")
+        self.assertFalse(verdict["weak"])
+
+    def test_a_clear_gap_needs_no_more_runs(self):
+        """Prefill +35% with 2 arms per side, and memory that is the same in every arm."""
+        self.assertFalse(compare.judge("prefill_tps", [984.8, 979.3], [1326.8, 1323.6])["weak"])
+        self.assertFalse(compare.judge("gpu_peak_mib", [6220, 6220], [6284, 6284])["weak"])
+
+    def _matrix(self, values, **options):
+        """A matrix over one case, with each arm's decode speed scripted by build and arm count."""
+        arms = []
+
+        class FakeRun:
+            def __init__(self, command, opts):
+                self.bin = command[0]
+                self.opts = opts
+
+            def execute(self):
+                side = "new" if "/new/" in self.bin else "old"
+                speed = values[side][sum(1 for arm in arms if arm == side) % len(values[side])]
+                arms.append(side)
+                return {"status": "ok", "throughput": {"decode": {"tokens_per_s": speed}}}
+
+        out = helpers.temp_dir()
+        cases = [{"label": "case", "binary": "llama-bench", "prefix": [], "args": [], "env": {}, "model": None, "gpus": None}]
+        with mock.patch("llmperfscope.compare.runner.Run", FakeRun):
+            table = compare.run_matrix(cases, ("old", "/old/bin"), ("new", "/new/bin"), out, log=lambda text: None, **options)
+        return table, arms, out
+
+    def test_a_change_that_looks_worse_gets_more_arms(self):
+        table, arms, _ = self._matrix({"old": [101.0, 101.2, 101.1, 101.3, 100.0, 100.2, 100.1, 100.3], "new": [100.0, 100.1, 100.2, 100.3, 101.5, 101.0, 100.9, 101.2]})
+        self.assertEqual(len(arms), 16)
+        self.assertEqual(arms[:8], ["old", "new", "new", "old", "new", "old", "old", "new"])
+        self.assertEqual(arms[8:], ["new", "old", "old", "new", "old", "new", "new", "old"])
+        self.assertEqual(table["cases"][0]["arms"], {"a": 8, "b": 8})
+        self.assertEqual(table["cases"][0]["verdict"], "neutral")
+
+    def test_a_real_regression_survives_the_extra_arms(self):
+        table, arms, out = self._matrix({"old": [100.0, 100.1], "new": [90.0, 90.1]})
+        self.assertEqual(len(arms), 16)
+        self.assertEqual(table["cases"][0]["verdict"], "regression")
+        with open(os.path.join(out, "table.md")) as f:
+            self.assertIn("**0.900** worse", f.read())
+
+    def test_no_extra_arms_when_nothing_looks_worse(self):
+        _, arms, _ = self._matrix({"old": [100.0, 100.1], "new": [110.0, 110.1]})
+        self.assertEqual(len(arms), 8)
+
+    def test_recheck_can_be_turned_off(self):
+        _, arms, _ = self._matrix({"old": [100.0, 100.1], "new": [90.0, 90.1]}, recheck=0)
+        self.assertEqual(len(arms), 8)
 
     def test_noise_from_null_matrix(self):
         path = os.path.join(helpers.temp_dir(), "m.json")

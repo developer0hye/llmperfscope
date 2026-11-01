@@ -104,7 +104,7 @@ Tested end to end with llama.cpp (`llama-bench`, `llama-server`), vLLM 0.32.0 (s
 
 **Where does the GPU's time go?** Add `--nsys` for kernels, collectives, copies and idle gaps per phase and per token, the host's time in CUDA calls, and exact bytes copied. Add `--cpu-profile` for the hot functions of the host threads. It samples from inside the process, so it works where `perf` is not allowed. Both slow the engine down, so those runs are marked and never counted as speed results.
 
-**What did a change cost?** `llmperfscope matrix` runs two builds in alternating order across many cases, in fresh processes, re-checking the machine before each arm. It judges speed, memory, load time and energy together, so a speed win that costs memory shows up as a regression. A difference counts only if the arms do not overlap and it exceeds the noise floor. Measure that floor with the same binary on both sides.
+**What did a change cost?** `llmperfscope matrix` runs two builds in alternating order across many cases, in fresh processes, re-checking the machine before each arm. It judges speed, memory, load time and energy together, so a speed win that costs memory shows up as a regression. A difference counts only if the arms do not overlap and it exceeds the noise floor, and a case that looks worse is run again before anything is called worse. Measure that floor with the same binary on both sides.
 
 ```sh
 llmperfscope matrix --cases cases.json --a old=build-old/bin --b new=build-new/bin --out res

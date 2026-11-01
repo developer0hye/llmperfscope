@@ -3,15 +3,25 @@
 Speed, memory and energy are judged together, so a change cannot look like a win while it costs memory. A difference only
 counts when the arms do not overlap and it is larger than the noise floor, because a single ratio from a few runs is mostly
 noise: the same binary against itself has shown ratios up to 1.006 at 8 GPUs.
+
+Arms that do not overlap are only evidence with enough of them: with 2 per side they miss each other by chance 1 time in 3. A
+difference that rests on so little is reported as a hint, marked `?`, and `matrix` runs more arms before it calls anything worse.
 """
 
 from __future__ import annotations
 
 import json
 import re
+from math import factorial
 from pathlib import Path
 
 from . import runner
+
+DEFAULT_ORDER = "ABBABAAB"
+# Above this chance of the arms separating by luck, a difference is a hint and not a result.
+WEAK_ABOVE = 0.05
+# A difference this many times what each side varies by is real even with few runs, such as memory that is the same in every arm.
+CLEAR_EFFECT = 5.0
 
 # name -> (getter, direction): +1 means bigger is better, -1 smaller is better.
 METRICS = {
@@ -47,8 +57,17 @@ def _get(run, *keys):
     return node
 
 
+def separation_chance(runs_a, runs_b):
+    """How often every run of one side beats every run of the other when nothing changed: 1 run per side always, 2 one time in 3,
+    3 one in 10, 4 one in 35."""
+    if not runs_a or not runs_b:
+        return 1.0
+    return min(1.0, 2.0 * factorial(runs_a) * factorial(runs_b) / factorial(runs_a + runs_b))
+
+
 def judge(metric, a_values, b_values, noise=0.0):
-    """Verdict for B against A: better, worse or same. `noise` is a relative floor measured with a null comparison."""
+    """Verdict for B against A: better, worse or same, with `weak` set when too few runs back it. `noise` is a relative floor measured
+    with a null comparison."""
     a_values = [v for v in a_values if v is not None]
     b_values = [v for v in b_values if v is not None]
     if not a_values or not b_values:
@@ -63,10 +82,14 @@ def judge(metric, a_values, b_values, noise=0.0):
     difference = (b_mean - a_mean) * direction  # positive: B is better
     separated = min(b_values) > max(a_values) or max(b_values) < min(a_values)
     verdict = "same"
+    weak = False
     if abs(difference) > floor and separated:
         verdict = "better" if difference > 0 else "worse"
+        spread = max(max(a_values) - min(a_values), max(b_values) - min(b_values))
+        clear = min(len(a_values), len(b_values)) >= 2 and abs(difference) > CLEAR_EFFECT * spread
+        weak = separation_chance(len(a_values), len(b_values)) > WEAK_ABOVE and not clear
     return {"a": round(a_mean, 4), "b": round(b_mean, 4), "ratio": round(ratio, 4) if ratio is not None else None,
-            "verdict": verdict, "a_runs": a_values, "b_runs": b_values}
+            "verdict": verdict, "weak": weak, "a_runs": a_values, "b_runs": b_values}
 
 
 def diff(runs_a, runs_b, noise=None):
@@ -81,14 +104,34 @@ def diff(runs_a, runs_b, noise=None):
         result = judge(metric, [getter(r) for r in usable_a], [getter(r) for r in usable_b], (noise or {}).get(metric, 0.0))
         if result["verdict"] != "missing":
             out["metrics"][metric] = result
-    worse = [m for m, v in out["metrics"].items() if v["verdict"] == "worse"]
-    better = [m for m, v in out["metrics"].items() if v["verdict"] == "better"]
+    def named(verdict, weak):
+        return [m for m, v in out["metrics"].items() if v["verdict"] == verdict and v["weak"] == weak]
+
+    worse, better = named("worse", False), named("better", False)
     out["worse"], out["better"] = worse, better
+    out["maybe_worse"], out["maybe_better"] = named("worse", True), named("better", True)
     if worse and better:
         out["verdict"] = "tradeoff"
+    elif worse or better:
+        out["verdict"] = "regression" if worse else "improvement"
     else:
-        out["verdict"] = "regression" if worse else "improvement" if better else "neutral"
+        out["verdict"] = "inconclusive" if out["maybe_worse"] or out["maybe_better"] else "neutral"
     return out
+
+
+def _mark(value):
+    """How a metric's verdict reads in a table. `?` means too few runs to tell."""
+    mark = {"better": "better", "worse": "worse", "same": ""}[value["verdict"]]
+    if value.get("weak"):
+        return f"{mark}?"
+    return f"**{mark}**" if value["verdict"] == "worse" else mark
+
+
+def _weak_note(runs_per_side):
+    chance = separation_chance(runs_per_side, runs_per_side)
+    odds = "every time" if chance >= 1.0 else f"1 time in {round(1 / chance)}"
+    return (f"`?`: too few runs to tell. With {runs_per_side} per side, arms miss each other by chance {odds} when nothing changed. "
+            "Run more, or use `llmperfscope matrix`.")
 
 
 def load_run(path):
@@ -102,9 +145,11 @@ def load_run(path):
 def render_diff(result, a_label="A", b_label="B"):
     lines = [f"| metric | {a_label} | {b_label} | ratio | |", "|---|---:|---:|---:|---|"]
     for metric, v in result["metrics"].items():
-        mark = {"better": "better", "worse": "**worse**", "same": ""}[v["verdict"]]
-        lines.append(f"| {metric} | {v['a']:,} | {v['b']:,} | {v['ratio']} | {mark} |")
+        lines.append(f"| {metric} | {v['a']:,} | {v['b']:,} | {v['ratio']} | {_mark(v)} |")
     lines.append(f"\nVerdict: **{result['verdict']}**")
+    if result["maybe_worse"] or result["maybe_better"]:
+        weak = next(v for v in result["metrics"].values() if v.get("weak"))
+        lines.append(_weak_note(min(len(weak["a_runs"]), len(weak["b_runs"]))))
     if result["dropped_runs"]:
         lines.append(f"{result['dropped_runs']} failed or traced runs were left out.")
     if result.get("dirty_runs"):
@@ -142,12 +187,14 @@ def _tag(label):
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", label)
 
 
-def run_matrix(cases, a, b, out_dir, order="ABBA", timeout_s=1800.0, a_env=None, b_env=None, only=None, noise=None, log=print,
-               precheck="wait"):
-    """a and b are (name, bin_dir). Fresh process per arm, alternating order, machine re-checked before every arm."""
+def run_matrix(cases, a, b, out_dir, order=DEFAULT_ORDER, timeout_s=1800.0, a_env=None, b_env=None, only=None, noise=None, log=print,
+               precheck="wait", recheck=1):
+    """a and b are (name, bin_dir). Fresh process per arm, alternating order, machine re-checked before every arm. A case that looks worse
+    gets the same number of arms again, in mirrored order, up to `recheck` times: among many cases and metrics some will look worse by
+    chance, and calling a change a regression should take more than that."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    table = {"a": a[0], "b": b[0], "order": order, "cases": []}
+    table = {"a": a[0], "b": b[0], "order": order, "recheck": recheck, "cases": []}
     for case in cases:
         if only and not re.search(only, case["label"]):
             continue
@@ -156,25 +203,42 @@ def run_matrix(cases, a, b, out_dir, order="ABBA", timeout_s=1800.0, a_env=None,
             table["cases"].append({"label": case["label"], "skipped": "model missing"})
             continue
         runs = {"A": [], "B": []}
-        for i, side in enumerate(order):
-            name, bin_dir = a if side == "A" else b
-            env = dict(case["env"])
-            env.update((a_env if side == "A" else b_env) or {})
-            if case["gpus"] is not None:
-                env["CUDA_VISIBLE_DEVICES"] = case["gpus"]
-            options = runner.Options(out=str(out_dir / _tag(case["label"]) / f"{i}_{side}_{name}"), label=f"{case['label']} [{name}]",
-                                     env=env, timeout_s=timeout_s, quiet=True, precheck=precheck)
-            log(f"{case['label']}: arm {i + 1}/{len(order)} ({name})")
-            try:
-                report = runner.Run(_command(case, bin_dir), options).execute()
-            except runner.Refused as e:
-                log(f"  refused: {e}")
-                continue
-            if report["status"] != "ok":
-                log(f"  arm ended with status {report['status']}")
-            runs[side].append(report)
-        result = diff(runs["A"], runs["B"], (noise or {}).get(case["label"]))
+        arms_done = 0
+
+        def run_arms(sequence):
+            nonlocal arms_done
+            for side in sequence:
+                name, bin_dir = a if side == "A" else b
+                env = dict(case["env"])
+                env.update((a_env if side == "A" else b_env) or {})
+                if case["gpus"] is not None:
+                    env["CUDA_VISIBLE_DEVICES"] = case["gpus"]
+                options = runner.Options(out=str(out_dir / _tag(case["label"]) / f"{arms_done}_{side}_{name}"), label=f"{case['label']} [{name}]",
+                                         env=env, timeout_s=timeout_s, quiet=True, precheck=precheck)
+                arms_done += 1
+                log(f"{case['label']}: arm {arms_done} ({name})")
+                try:
+                    report = runner.Run(_command(case, bin_dir), options).execute()
+                except runner.Refused as e:
+                    log(f"  refused: {e}")
+                    continue
+                if report["status"] != "ok":
+                    log(f"  arm ended with status {report['status']}")
+                runs[side].append(report)
+
+        floors = (noise or {}).get(case["label"])
+        run_arms(order)
+        result = diff(runs["A"], runs["B"], floors)
+        mirrored = order.translate(str.maketrans("AB", "BA"))
+        for _ in range(recheck):
+            suspects = result["worse"] + result["maybe_worse"]
+            if not suspects:
+                break
+            log(f"  looks worse in {', '.join(suspects)}: {len(order)} more arms before calling it")
+            run_arms(mirrored)
+            result = diff(runs["A"], runs["B"], floors)
         result["label"] = case["label"]
+        result["arms"] = {"a": len(runs["A"]), "b": len(runs["B"])}
         table["cases"].append(result)
         with open(out_dir / "matrix.json", "w") as f:
             json.dump(table, f, indent=1)
@@ -200,15 +264,22 @@ def write_table(table, path):
                 cells.append("-")
                 continue
             cell = f"{value['ratio']:.3f}" if value["ratio"] is not None else "-"
-            if value["verdict"] == "worse":
+            mark = _mark(value)
+            if value["verdict"] == "worse" and not value.get("weak"):
                 cell = f"**{cell}** worse"
-            elif value["verdict"] == "better":
-                cell = f"{cell} better"
+            elif mark:
+                cell = f"{cell} {mark}"
             cells.append(cell)
         extra = f" ({case['dropped_runs']} arms failed)" if case["dropped_runs"] else ""
         if case.get("worse"):
             extra += ": costs " + ", ".join(case["worse"])
+        arms = case.get("arms")
+        if arms and arms["a"] != len(table.get("order", "")) / 2:
+            extra += f" ({arms['a']} + {arms['b']} arms)"
         lines.append(f"| {case['label']} | " + " | ".join(cells) + f" | {case['verdict']}{extra} |")
+    weak = [v for case in table["cases"] for v in case.get("metrics", {}).values() if v.get("weak")]
+    if weak:
+        lines += ["", _weak_note(min(min(len(v["a_runs"]), len(v["b_runs"])) for v in weak))]
     with open(path, "w") as f:
         f.write("\n".join(lines) + "\n")
 
