@@ -431,8 +431,9 @@ class Run:
 
         after = machine.snapshot(backend, cpu_seconds=0, ignore=ignore) if self.opts.precheck != "skip" else None
         devices = backend.devices
+        driver_version = backend.driver_version()
         backend.close()
-        return self._finish(cmd, env, identity, before, after, devices, sampler, t_end, spare_cpu)
+        return self._finish(cmd, env, identity, before, after, devices, sampler, t_end, spare_cpu, driver_version)
 
     # Report ---------------------------------------------------------------------------------------------------------
 
@@ -445,7 +446,7 @@ class Run:
             return "ok"
         return "ok" if self.returncode == 0 else "failed"
 
-    def _finish(self, cmd, env, identity, before, after, devices, sampler, t_end, spare_cpu):
+    def _finish(self, cmd, env, identity, before, after, devices, sampler, t_end, spare_cpu, driver_version):
         ticks = load_ticks(self.dir / "samples.jsonl.gz")
         with self.lock:
             phases = sorted(self.phases, key=lambda p: p["t"])
@@ -481,6 +482,8 @@ class Run:
             "perturbed": bool(self.opts.nsys or self.opts.cpu_profile),
             "attached": bool(self.attach_pid),
             "wall_time_at_t0_ns": self.wall_baseline_ns,
+            "t0_monotonic_ns": self.t_baseline,
+            "gpu_driver": driver_version,
             "command": machine.redact_command(cmd),
             "env": machine.relevant_env({k: env[k] for k in env if k != markers.ENV}),
             "adapter": self.adapter.name,

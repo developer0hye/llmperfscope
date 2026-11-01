@@ -61,6 +61,9 @@ class GpuBackend:
     def pcie_kbps(self, index, direction):
         return None
 
+    def driver_version(self):
+        return None
+
     def close(self):
         pass
 
@@ -144,6 +147,12 @@ class NvmlBackend(GpuBackend):
             dev["nvlink"] = ok
         self._samples = (_Sample * 512)()
         self._util_seen = [0 for _ in self.handles]
+
+    def driver_version(self):
+        text = C.create_string_buffer(96)
+        if self.lib.nvmlSystemGetDriverVersion(text, 96) == 0:
+            return text.value.decode()
+        return None
 
     def _describe(self, index, handle):
         name = C.create_string_buffer(96)

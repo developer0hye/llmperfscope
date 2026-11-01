@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, adapters, capabilities, compare, driver, html, nsys, report, runner
+from . import __version__, adapters, capabilities, compare, driver, figures, html, nsys, report, runner, share
 
 
 def _default_out(label):
@@ -164,11 +164,17 @@ def _serve_workload(args, preset, marks_load):
             watcher.start()
         throughput = {}
         with open(run.dir / "requests.jsonl", "w") as log:
+            current = {}
+
             def record(item):
-                log.write(json.dumps({k: v for k, v in item.items() if k != "itl_s"}) + "\n")
+                row = {k: v for k, v in item.items() if k not in ("t_send", "t_done")}
+                row["level"] = current.get("concurrency")
+                row["itl_s"] = [round(gap, 6) for gap in item.get("itl_s", [])]
+                log.write(json.dumps(row) + "\n")
 
             for concurrency in [int(x) for x in str(args.concurrency).split(",")]:
                 name = f"serve_c{concurrency}"
+                current["concurrency"] = concurrency
                 run.emit(name, group="serve", concurrency=concurrency)
                 results, wall = driver.run_load(client, rows, concurrency=concurrency, repeat=args.repeat, seed=args.seed,
                                                 emit_each=record, level=f"c{concurrency}", unique=not args.reuse_prompts)
@@ -298,6 +304,53 @@ def cmd_html(args, _target):
     return 0
 
 
+def _figure_style(args):
+    return figures.Style(width=figures.parse_width(args.width), height=args.height or 0.0, formats=tuple(args.format.split(",")), dpi=args.dpi,
+                         font={"sans": "sans-serif", "serif": "serif"}.get(args.font, args.font), font_size=args.font_size, print_safe=args.print_safe,
+                         title=args.title or "", letters=args.letters)
+
+
+def cmd_figure(args, _target):
+    style = _figure_style(args)
+    if args.matrix:
+        written, skipped = figures.make_matrix_figure(args.matrix, args.out or str(Path(args.matrix).parent / "figures"), style)
+    elif args.compare:
+        specs = []
+        for item in args.compare:
+            label, sep, path = item.partition("=")
+            if not sep:
+                raise SystemExit(f"--compare needs LABEL=RUN_DIR, got {item!r}")
+            specs.append((label, path))
+        kinds = figures.COMPARE_KINDS if args.kind == "all" else tuple(args.kind.split(","))
+        unknown = set(kinds) - set(figures.COMPARE_KINDS)
+        if unknown:
+            raise SystemExit(f"unknown --kind {sorted(unknown)}; with --compare choose from {list(figures.COMPARE_KINDS)}")
+        written, skipped = figures.make_compare_figures(specs, args.out or "figures-compare", style, kinds)
+    else:
+        if not args.run:
+            raise SystemExit("usage: llmperfscope figure RUN_DIR, or --compare LABEL=RUN_DIR ..., or --matrix matrix.json")
+        kinds = figures.RUN_KINDS if args.kind == "all" else tuple(args.kind.split(","))
+        unknown = set(kinds) - set(figures.RUN_KINDS)
+        if unknown:
+            raise SystemExit(f"unknown --kind {sorted(unknown)}; choose from {list(figures.RUN_KINDS)}")
+        panels = tuple(args.panels.split(",")) if args.panels else figures.DEFAULT_PANELS
+        unknown = set(panels) - set(figures.ALL_PANELS)
+        if unknown:
+            raise SystemExit(f"unknown --panels {sorted(unknown)}; choose from {list(figures.ALL_PANELS)}")
+        xlim = tuple(float(x) for x in args.xlim.split(",")) if args.xlim else None
+        written, skipped = figures.make_run_figures(args.run, args.out or str(Path(args.run) / "figures"), style, kinds, panels, args.per_gpu, xlim)
+    for path in written:
+        print(path)
+    if skipped:
+        print(f"[llmperfscope] nothing to draw for: {', '.join(skipped)} (gpu-time needs a run with --nsys, hotspots --cpu-profile, serving `llmperfscope serve`)", file=sys.stderr)
+    return 0
+
+
+def cmd_anonymize(args, _target):
+    print(share.anonymize(args.run, args.out))
+    return 0
+
+
 def cmd_diff(args, _target):
     runs_a = [compare.load_run(p) for p in args.a]
     runs_b = [compare.load_run(p) for p in args.b]
@@ -344,9 +397,7 @@ def cmd_check(_args, _target):
     return 0
 
 
-def main(argv=None):
-    argv = list(sys.argv[1:] if argv is None else argv)
-    argv, target = _split_command(argv)
+def build_parser():
     parser = argparse.ArgumentParser(prog="llmperfscope", description="Whole-lifecycle profiler for LLM inference engines.")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -375,6 +426,31 @@ def main(argv=None):
     p = sub.add_parser("html", help="write the charts of a run to report.html")
     p.add_argument("run")
     p.set_defaults(func=cmd_html)
+
+    p = sub.add_parser("figure", help="figures for papers: vector PDF and SVG, high-resolution PNG, the data as CSV, suggested captions")
+    p.add_argument("run", nargs="?", help="run directory")
+    p.add_argument("--compare", nargs="+", metavar="LABEL=RUN_DIR", help="compare runs against each other")
+    p.add_argument("--matrix", help="a matrix.json from `llmperfscope matrix`")
+    p.add_argument("--kind", default="all", help=f"comma-separated. For a run: {', '.join(figures.RUN_KINDS)}. With --compare: {', '.join(figures.COMPARE_KINDS)}")
+    p.add_argument("--out", help="output directory (default: <run>/figures)")
+    p.add_argument("--format", default="pdf,png,svg", help="comma-separated formats")
+    p.add_argument("--width", default="double", help="single (3.5 in), double (7.16 in), or inches")
+    p.add_argument("--height", type=float, help="inches (default: fits the content)")
+    p.add_argument("--dpi", type=int, default=300, help="for PNG")
+    p.add_argument("--font", default="sans", help="sans, serif, or a font name")
+    p.add_argument("--font-size", type=float, default=7.5, help="points")
+    p.add_argument("--print-safe", action="store_true", help="add line styles, for grayscale print")
+    p.add_argument("--letters", action="store_true", help="label panels (a), (b), ...")
+    p.add_argument("--title", help="figure title (default: none, papers use the caption)")
+    p.add_argument("--panels", help=f"lifecycle panels, comma-separated: {', '.join(figures.ALL_PANELS)}")
+    p.add_argument("--per-gpu", action="store_true", help="one line per GPU in lifecycle panels")
+    p.add_argument("--xlim", help="lifecycle time range in seconds: START,END")
+    p.set_defaults(func=cmd_figure)
+
+    p = sub.add_parser("anonymize", help="a copy of a run without host and user names, paths, serial numbers or prompts, to share or publish")
+    p.add_argument("run")
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_anonymize)
 
     p = sub.add_parser("diff", help="compare finished runs")
     p.add_argument("--a", nargs="+", required=True)
@@ -408,8 +484,13 @@ def main(argv=None):
 
     p = sub.add_parser("check", help="what can be measured on this machine")
     p.set_defaults(func=cmd_check)
+    return parser
 
-    args = parser.parse_args(argv)
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    argv, target = _split_command(argv)
+    args = build_parser().parse_args(argv)
     return args.func(args, target)
 
 
