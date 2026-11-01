@@ -16,7 +16,7 @@ NEW_TOKENS = 128
 
 with llmprof.phase("load"):
     tokenizer = AutoTokenizer.from_pretrained(MODEL)
-    model = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=torch.bfloat16, device_map="auto")
+    model = AutoModelForCausalLM.from_pretrained(MODEL, dtype=torch.bfloat16, device_map="auto")
 
 inputs = tokenizer("The history of measurement is", return_tensors="pt").to(model.device)
 with llmprof.phase("warmup"):
