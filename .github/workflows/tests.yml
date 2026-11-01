@@ -15,12 +15,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.9", "3.12", "3.13"]
+        # The oldest Python with the oldest matplotlib the package claims to work with, and current versions of both.
+        include:
+          - python: "3.9"
+            matplotlib: "3.7.5"
+          - python: "3.12"
+            matplotlib: "3.11.2"
+          - python: "3.13"
+            matplotlib: "3.11.2"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python }}
-      - name: Tests need no GPU; real processes with known behaviour stand in for an engine
+      - name: Tests need no GPU; real processes with known behaviour stand in for an engine. Nothing but Python is installed yet, as for a user.
         working-directory: tests
-        run: python -m unittest test_parsers test_html test_runs
+        run: python -m unittest test_parsers test_html test_runs test_docs test_samples
+      - name: Install matplotlib
+        run: python -m pip install "matplotlib==${{ matrix.matplotlib }}"
+      - name: Figures
+        working-directory: tests
+        run: python -m unittest test_figures test_samples
+
+  figures-on-macos:
+    # Measuring needs Linux, but reading runs and drawing figures is meant to work anywhere.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install matplotlib
+        run: python -m pip install "matplotlib==3.11.2"
+      - name: Sample runs and docs
+        working-directory: tests
+        run: python -m unittest test_samples test_docs
