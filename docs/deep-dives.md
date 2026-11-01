@@ -40,6 +40,8 @@ Samples the stacks of the host threads from inside the process, so it works wher
 
 Each thread has its own CPU-time timer. That matters: the classic `setitimer` signal goes to the main thread whenever it is running, which makes every multi-threaded program look single-threaded.
 
+A signal only arrives when a system call returns, so time inside one long call would show as a single sample. The kernel reports how many timer periods it merged, and each sample counts for all of them, so a `munmap` of 12 s shows as 12 s. The report checks the profile against the CPU time measured from outside, and says so if it accounts for under 90% of it.
+
 Per phase, the report has the functions with the most self time, the threads that ran them, and the share of the phase each one can account for at most. That last number is the most a speed-up of that function could win back. `--cpu-hz` sets the rate, 200 by default. Draw it with `llmperfscope figure RUN --kind hotspots`.
 
 Function names come from the binary's symbols through `nm`. A stripped library shows as `library!?`, and a name is only trusted inside its symbol's extent, because the nearest symbol in a stripped library is usually wrong. Figures name such libraries for what they are, for example `GPU driver`.

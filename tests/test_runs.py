@@ -290,6 +290,44 @@ class CpuProfile(unittest.TestCase):
         self.assertGreater(rows["llmperfscope_test_worker_burn"]["share"], 3 * rows["llmperfscope_test_main_burn"]["share"])
         self.assertAlmostEqual(rows["llmperfscope_test_worker_burn"]["busiest_thread_s"], 1.2, delta=0.4)
 
+    def test_a_long_system_call_counts_for_all_of_its_time(self):
+        """A signal only arrives when the call returns. Real case: one munmap of 12 s showed as 8 samples, 0.06% of the load."""
+        directory = helpers.temp_dir()
+        source = os.path.join(directory, "kernel.c")
+        with open(source, "w") as f:
+            f.write(textwrap.dedent("""
+                #define _GNU_SOURCE
+                #include <sys/mman.h>
+                int main(void) {
+                    size_t size = (size_t) 1 << 31;
+                    /* One call each, in the kernel from start to end: filling in the pages cannot be interrupted by a signal. */
+                    for (int i = 0; i < 4; i++) {
+                        void *p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+                        if (p == MAP_FAILED) return 1;
+                        madvise(p, size, MADV_NOHUGEPAGE);
+                        munmap(p, size);
+                    }
+                    return 0;
+                }
+            """))
+        binary = os.path.join(directory, "kernel")
+        subprocess.run(["cc", "-O1", "-o", binary, source], check=True)
+        report = run([binary], cpu_profile=True, cpu_hz=1000)
+        self.assertEqual(report["status"], "ok")
+        group = report["cpu_profile"]["groups"]["run"]
+        self.assertGreater(group["samples"], 10 * group["raw_samples"], "samples should stand for the periods merged during each call")
+        calls = sum(x["share"] for x in group["self"] if "mmap" in x["name"] or "madvise" in x["name"])
+        self.assertGreater(calls, 0.7)
+        self.assertGreater(report["consistency"]["cpu_profile_coverage"], 0.8)
+
+    def test_coverage_compares_the_profile_with_what_was_measured(self):
+        profile = {"groups": {"load": {"cpu_s": 67.5}, "decode": {"cpu_s": 1.0}, "startup": {"cpu_s": 0.1}}}
+        groups = {"load": {"host": {"user_s": 45.0, "sys_s": 35.0}}, "decode": {"host": {"user_s": 1.0, "sys_s": 0.0}}, "startup": {"host": {"user_s": 0.1, "sys_s": 0.0}}}
+        self.assertEqual(cpuprof.coverage(profile, groups), round(68.6 / 81.1, 3))
+        self.assertEqual(profile["groups"]["load"]["coverage"], round(67.5 / 80.0, 3))
+        self.assertNotIn("coverage", profile["groups"]["startup"])
+        self.assertIsNone(cpuprof.coverage({"groups": {"run": {"cpu_s": 0.1}}}, {"run": {"host": {"user_s": 0.1, "sys_s": 0.0}}}))
+
     def test_stripped_code_gets_no_made_up_name(self):
         table = cpuprof._Symbols("/nonexistent")
         table.starts, table.ends, table.names = [100], [110], ["real"]

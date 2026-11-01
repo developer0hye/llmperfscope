@@ -5,8 +5,13 @@
 // the main thread whenever that thread is running, so work done in parallel would look like work done by the main thread alone,
 // and "this function runs on one thread" is exactly the kind of thing this tool is used to find out.
 //
-// Each sample: time, thread id and name, interrupted PC, and the stack from the unwinder. Samples go to a preallocated buffer and
-// reach disk at exit, so the run does no file I/O for profiling. llmperfscope reads the files and symbolizes them.
+// A signal only arrives when a system call returns. While a thread sits in one long call the timer keeps expiring and the kernel
+// merges the expirations into one signal, with their number in si_overrun. The sample records that number, so it counts for the
+// whole time: without it, a munmap of 12 s looks like one sample.
+//
+// Each sample: time, thread id and name, how many periods it stands for, interrupted PC, and the stack from the unwinder. Samples go
+// to a preallocated buffer and reach disk at exit, so the run does no file I/O for profiling. llmperfscope reads the files and
+// symbolizes them.
 //
 // It interposes pthread_create, to start the timer of each new thread, and nothing else.
 //
@@ -43,6 +48,8 @@ typedef struct {
     uint64_t t_ns;
     uint32_t tid;
     uint32_t depth;
+    uint32_t weight;
+    uint32_t reserved;
     char comm[16];
     uint64_t frames[MAX_FRAMES];
 } sample_t;
@@ -62,7 +69,6 @@ static __thread int t_has_timer;
 
 static void on_sigprof(int signum, siginfo_t *info, void *context) {
     (void) signum;
-    (void) info;
     if (!atomic_load_explicit(&g_armed, memory_order_relaxed)) {
         return;
     }
@@ -78,6 +84,7 @@ static void on_sigprof(int signum, siginfo_t *info, void *context) {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     s->t_ns = (uint64_t) ts.tv_sec * 1000000000ull + (uint64_t) ts.tv_nsec;
     s->tid = (uint32_t) syscall(SYS_gettid);
+    s->weight = 1 + (info->si_code == SI_TIMER && info->si_overrun > 0 ? (uint32_t) info->si_overrun : 0);
     prctl(PR_GET_NAME, s->comm, 0, 0, 0);
     void *stack[MAX_FRAMES + 2];
     int n = backtrace(stack, MAX_FRAMES + 2);
@@ -195,7 +202,7 @@ static void dump(void) {
     snprintf(path, sizeof(path), "%s.%d.bin", g_prefix, (int) g_pid);
     FILE *f = fopen(path, "wb");
     if (f) {
-        uint64_t header[5] = {0x4c5053434f504531ull, (uint64_t) count, (uint64_t) atomic_load(&g_dropped), MAX_FRAMES, (uint64_t) g_hz};
+        uint64_t header[5] = {0x4c5053434f504532ull, (uint64_t) count, (uint64_t) atomic_load(&g_dropped), MAX_FRAMES, (uint64_t) g_hz};
         fwrite(header, sizeof(header), 1, f);
         fwrite(g_samples, sizeof(sample_t), count, f);
         fclose(f);

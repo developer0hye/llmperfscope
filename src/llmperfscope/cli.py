@@ -363,6 +363,11 @@ def cmd_diff(args, _target):
 
 
 def cmd_matrix(args, _target):
+    refusal = runner.platform_refusal()
+    if refusal:
+        print(f"[llmperfscope] refused: {refusal}", file=sys.stderr)
+        return 3
+
     def side(value):
         name, sep, path = value.partition("=")
         if not sep:

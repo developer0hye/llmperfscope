@@ -13,7 +13,10 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 NATIVE = Path(__file__).parent / "native"
-MAGIC = 0x4c5053434f504531
+MAGIC_NO_WEIGHT = 0x4c5053434f504531
+MAGIC = 0x4c5053434f504532
+# Below this share of the measured CPU time, the profile is missing something worth saying.
+GOOD_COVERAGE = 0.9
 
 
 def library_path():
@@ -129,20 +132,23 @@ def _load_maps(path):
 
 
 def _read_samples(path):
-    """[(time ns, tid, thread name, frames)], dropped count, samples per CPU second."""
+    """[(time ns, tid, thread name, periods it stands for, frames)], dropped count, samples per CPU second."""
     with open(path, "rb") as f:
         magic, count, dropped, max_frames, hz = struct.unpack("<5Q", f.read(40))
-        if magic != MAGIC:
+        if magic not in (MAGIC, MAGIC_NO_WEIGHT):
             raise ValueError("not a llmperfscope CPU profile")
-        size = 32 + 8 * max_frames
-        layout = f"<QII16s{max_frames}Q"
+        weighted = magic == MAGIC
+        layout = f"<QIIII16s{max_frames}Q" if weighted else f"<QII16s{max_frames}Q"
+        size = struct.calcsize(layout)
+        first_frame = 6 if weighted else 4
         samples = []
         for _ in range(count):
             raw = f.read(size)
             if len(raw) < size:
                 break
             values = struct.unpack(layout, raw)
-            samples.append((values[0], values[1], values[3].split(b"\0", 1)[0].decode("utf-8", "replace"), values[4:4 + values[2]]))
+            comm = values[first_frame - 1].split(b"\0", 1)[0].decode("utf-8", "replace")
+            samples.append((values[0], values[1], comm, values[3] if weighted else 1, values[first_frame:first_frame + values[2]]))
     return samples, dropped, hz
 
 
@@ -158,7 +164,7 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
     for phase in phases:
         wall_by_group[phase["group"]] += phase["end_s"] - phase["start_s"]
     symbols = {}
-    per_group = defaultdict(lambda: {"n": 0, "modules": Counter(), "self": Counter(), "inclusive": Counter(), "threads": Counter(),
+    per_group = defaultdict(lambda: {"n": 0, "raw": 0, "modules": Counter(), "self": Counter(), "inclusive": Counter(), "threads": Counter(),
                                      "per_tid": Counter(), "self_tids": defaultdict(Counter), "tid_names": {}})
     total = dropped_total = 0
     period_s = 0.005
@@ -184,15 +190,18 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
             return module, name if name else f"{module}!?"
 
         cache = {}
-        for t, tid, comm, frames in samples:
+        for t, tid, comm, weight, frames in samples:
             if not frames:
                 continue
-            total += 1
+            total += weight
+            # The sample arrives when a long system call returns, so it belongs to the phase where the call began. The difference only
+            # matters for a call that crosses a phase boundary.
             i = bisect.bisect_right(starts, t) - 1
             bucket = per_group[groups[i] if i >= 0 else "before"]
-            bucket["n"] += 1
-            bucket["threads"][_thread_label(comm)] += 1
-            bucket["per_tid"][tid] += 1
+            bucket["n"] += weight
+            bucket["raw"] += 1
+            bucket["threads"][_thread_label(comm)] += weight
+            bucket["per_tid"][tid] += weight
             bucket["tid_names"][tid] = comm
             seen = set()
             for depth, address in enumerate(frames):
@@ -201,12 +210,12 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
                     resolved = cache[address] = resolve(address)
                 module, name = resolved
                 if depth == 0:
-                    bucket["self"][name] += 1
-                    bucket["modules"][module] += 1
-                    bucket["self_tids"][name][tid] += 1
+                    bucket["self"][name] += weight
+                    bucket["modules"][module] += weight
+                    bucket["self_tids"][name][tid] += weight
                 if name not in seen:
                     seen.add(name)
-                    bucket["inclusive"][name] += 1
+                    bucket["inclusive"][name] += weight
     out = {"samples": total, "dropped": dropped_total, "period_s": period_s, "groups": {}}
     for group, bucket in per_group.items():
         n = bucket["n"] or 1
@@ -223,6 +232,7 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
             self_rows.append(row)
         out["groups"][group] = {
             "samples": bucket["n"],
+            "raw_samples": bucket["raw"],
             "cpu_s": round(bucket["n"] * period_s, 3),
             "modules": [{"name": k, "share": round(v / n, 4)} for k, v in bucket["modules"].most_common(8)],
             "self": self_rows,
@@ -232,6 +242,20 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
                                 for tid, count in bucket["per_tid"].most_common(8)],
         }
     return out
+
+
+def coverage(profile, groups):
+    """How much of the CPU time measured from outside the profile accounts for: the check that it is not missing something. Sets it per
+    group and returns the whole-run figure, or None with too little CPU time to judge."""
+    profiled = measured = 0.0
+    for name, entry in (profile.get("groups") or {}).items():
+        host = (groups.get(name) or {}).get("host") or {}
+        cpu = (host.get("user_s") or 0.0) + (host.get("sys_s") or 0.0)
+        if cpu >= 0.5:
+            entry["coverage"] = round(entry["cpu_s"] / cpu, 3)
+        profiled += entry["cpu_s"]
+        measured += cpu
+    return round(profiled / measured, 3) if measured >= 0.5 else None
 
 
 def _thread_label(name):

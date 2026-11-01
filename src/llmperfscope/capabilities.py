@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import shutil
 import subprocess
+import sys
 
 from . import cpuprof, machine, nsys
 from .gpu import open_backend
@@ -31,6 +33,12 @@ def collect():
 
     def add(what, status, detail=""):
         items.append({"what": what, "status": status, "detail": detail})
+
+    if not sys.platform.startswith("linux"):
+        add("measuring: run, serve, attach, matrix", "no", f"needs Linux for now, this is {sys.platform}")
+        add("reading runs: show, html, anonymize, diff", "yes")
+        add("figures", "yes" if importlib.util.find_spec("matplotlib") else "no", "" if importlib.util.find_spec("matplotlib") else 'pip install "llmperfscope[figures]"')
+        return {"host": machine.host_info(), "items": items}
 
     add("process memory, CPU, disk reads (/proc)", "yes" if os.path.exists("/proc/self/status") else "no",
         "" if os.path.exists("/proc/self/status") else "needs Linux")

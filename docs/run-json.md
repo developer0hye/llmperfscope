@@ -44,7 +44,7 @@ The format is identified by `schema`, currently `llmperfscope.run/1`. New keys c
 | `disks` | model and kind per disk: `nvme`, `ssd`, `hdd` |
 | `machine_before`, `machine_after` | foreign load, available RAM, page cache, how much of the model was cached, where it is stored, `clean` and the `reasons` if not |
 | `sampler` | achieved rate, largest gap, its own CPU time and pinned CPU |
-| `consistency` | self-checks, such as `energy_over_power_gauge`, and engine timers against phase times |
+| `consistency` | self-checks: `energy_over_power_gauge`, `cpu_profile_coverage`, and engine timers against phase times |
 | `notes` | anything else a reader should know |
 
 ### Time

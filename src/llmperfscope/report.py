@@ -247,6 +247,8 @@ def render(run):
         out.append(f"\nSelf-check: phase time / engine's own timer = {consistency['phase_wall_over_engine_time']:.4f} (should be near 1).")
     if consistency.get("energy_over_power_gauge"):
         out.append(f"\nSelf-check: power from the energy counter / power gauge = {consistency['energy_over_power_gauge']:.3f} (should be near 1).")
+    if consistency.get("cpu_profile_coverage"):
+        out.append(f"\nSelf-check: the CPU profile accounts for {consistency['cpu_profile_coverage'] * 100:.0f}% of the CPU time measured from outside (should be near 100%).")
     sampler = run.get("sampler") or {}
     if sampler.get("hz_achieved"):
         pinned = f", on CPU {sampler['pinned_cpu']}" if sampler.get("pinned_cpu") is not None else ""
