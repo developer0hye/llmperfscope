@@ -1,18 +1,49 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmperfscope"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Whole-lifecycle profiler for LLM inference engines: load, warmup, prefill, decode, serving and teardown; speed, memory and energy. Works with any engine, needs no code changes."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = []
+authors = [{ name = "Yonghye Kwon" }]
+keywords = ["llm", "profiler", "inference", "performance", "gpu", "llama.cpp", "vllm", "sglang", "benchmark", "bottleneck"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Benchmark",
+]
+
+[project.optional-dependencies]
+figures = ["matplotlib>=3.7"]
+
+[project.urls]
+Homepage = "https://github.com/developer0hye/llmperfscope"
+Documentation = "https://github.com/developer0hye/llmperfscope/tree/main/docs"
+Issues = "https://github.com/developer0hye/llmperfscope/issues"
+Changelog = "https://github.com/developer0hye/llmperfscope/blob/main/CHANGELOG.md"
 
 [project.scripts]
 llmperfscope = "llmperfscope.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "llmperfscope.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
