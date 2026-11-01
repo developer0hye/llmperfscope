@@ -273,6 +273,10 @@ class Run:
     # Main -----------------------------------------------------------------------------------------------------------
 
     def execute(self):
+        if (self.opts.nsys or self.opts.cpu_profile) and (self.attach_pid or adapters.docker_index(self.cmd) is not None):
+            # They would profile the docker client, or nothing, and the report would look fine.
+            raise Refused("--nsys and --cpu-profile have to start the engine themselves, so they cannot reach a container or a running process. "
+                          "Run the engine directly, or run llmperfscope inside the container.")
         self.dir.mkdir(parents=True, exist_ok=True)
         env = dict(os.environ)
         env.update(self.opts.env)
