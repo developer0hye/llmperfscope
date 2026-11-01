@@ -507,7 +507,16 @@ def throughput_from_phases(groups):
     return out
 
 
-def summarize(ticks, phases, t_end):
+def _attached_baseline(series, t_attached):
+    """A process that was already running holds its memory before the first sample, so the GPU's memory then is not an idle level. The
+    idle level is what remains after taking away what the process itself holds, at the first reading that knows about it."""
+    for tick in series.slow:
+        if tick["t"] >= t_attached and any(tick["s"].get("self_mib", [])):
+            return [max(0, (tick["g"][dev][G_MEM] or 0) - tick["s"]["self_mib"][dev]) for dev in range(series.n_gpus)]
+    return None
+
+
+def summarize(ticks, phases, t_end, attached=False):
     """phases: [{"name", "group", "t", ...}] sorted by t. Adds t_end and metrics in place, returns the report sections."""
     series = Series(ticks)
     for i, phase in enumerate(phases):
@@ -520,6 +529,8 @@ def summarize(ticks, phases, t_end):
         for dev in range(series.n_gpus):
             values = [tick["g"][dev][G_MEM] or 0 for tick in ticks[i:j]]
             baseline_mem[dev] = round(sum(values) / len(values)) if values else 0
+        if attached:
+            baseline_mem = _attached_baseline(series, baseline[0]["t_end"]) or baseline_mem
     devices = used_devices(series, baseline_mem)
 
     groups = {}

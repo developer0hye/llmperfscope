@@ -463,7 +463,7 @@ class Run:
                 extras = self.adapter.finalize(phases, self.stdout_path, self.stderr_path) or {}
             except Exception as e:  # noqa: BLE001 - keep the rest of the report
                 self.notes.append(f"adapter finalize failed: {e!r}")
-        sections = analyze.summarize(ticks, phases, t_end) if ticks else {"groups": {}, "memory": {}, "energy": {}}
+        sections = analyze.summarize(ticks, phases, t_end, attached=bool(self.attach_pid)) if ticks else {"groups": {}, "memory": {}, "energy": {}}
 
         t0 = phases[0]["t"]
         for phase in phases:

@@ -314,6 +314,18 @@ class Analyze(unittest.TestCase):
         self.assertEqual(self.out["memory"]["gpu"]["peak_above_baseline_total_mib"], 1000)
         self.assertEqual(self.out["groups"]["decode"]["gpu"]["mem_peak_mib"], 1000)
 
+    def test_a_process_already_running_keeps_its_memory(self):
+        # Attached: the GPU holds 1100 MiB from the first sample on, of which the process's own is 1000.
+        ticks = _ticks()
+        for tick in ticks:
+            tick["g"][0][0] = 1100
+            if "s" in tick:
+                tick["s"]["self_mib"] = [1000 if tick["t"] >= int(1e9) else 0]
+        phases = [{"name": "baseline", "group": "baseline", "t": 0}, {"name": "observe", "group": "observe", "t": int(1e9)}]
+        out = analyze.summarize(ticks, phases, int(10e9), attached=True)
+        self.assertEqual(out["memory"]["gpu"]["devices"][0]["baseline_mib"], 100)
+        self.assertEqual(out["memory"]["gpu"]["peak_above_baseline_total_mib"], 1000)
+
     def test_cpu_and_threads(self):
         decode = self.out["groups"]["decode"]["host"]
         self.assertAlmostEqual(decode["user_s"], 5.0, delta=0.05)
