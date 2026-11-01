@@ -76,8 +76,8 @@ GPU figures cover the GPUs in `devices_used`, and memory is above the idle basel
 
 | Key | Content |
 |---|---|
-| `throughput.prefill`, `.decode` | `tokens_per_s`, `stddev`, `samples`, `tokens_per_run` |
-| `throughput.serve_c4` (one per level) | `concurrency`, `requests`, `failed`, `output_tokens_per_s`, `ttft_ms` and `itl_ms` with `mean`, `p50`, `p90`, `p99`, `max`, and `j_per_output_token` |
+| `throughput.prefill`, `.decode` | `tokens_per_s`, `stddev`, `samples`, `tokens_per_run`. With `serve`, from the server's own timers at the lowest concurrency, with `real_prompts` set |
+| `throughput.serve_c4` (one per level) | `concurrency`, `requests`, `failed`, `output_tokens_per_s`, `server_prefill_tokens_per_s`, `server_decode_tokens_per_s`, `ttft_ms` and `itl_ms` with `mean`, `p50`, `p90`, `p99`, `max`, and `j_per_output_token` |
 | `memory.gpu` | `devices` with baseline, peak, process peak and what stays after exit, and `peak_above_baseline_total_mib` |
 | `memory.host` | anonymous, file-backed, shared, pinned and swap peaks, kernel max RSS |
 | `memory.breakdown_mib` | the engine's own table, where it has one |

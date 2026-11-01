@@ -58,7 +58,7 @@ llmperfscope serve --model qwen2.5:0.5b --pull -- ollama serve
 llmperfscope serve -- docker run --gpus all -p 8000:8000 vllm/vllm-openai --model Qwen/Qwen3-0.6B
 ```
 
-Choose the load with `--prompts file.jsonl`, `--concurrency 1,4,8` and `--max-tokens 64`. Any other OpenAI-compatible server works with `--preset openai --url http://host:port`, and something already running with `llmperfscope attach`.
+Choose the load with `--prompts mix` (public real prompts in several languages and lengths) or `--prompts file.jsonl`, `--concurrency 1,4,8` and `--max-tokens 64`. Any other OpenAI-compatible server works with `--preset openai --url http://host:port`, and something already running with `llmperfscope attach`.
 
 An engine used as a library takes a wrapper and, optionally, a few markers. They do nothing when no profiler is running:
 
@@ -102,7 +102,7 @@ Tested end to end with llama.cpp (`llama-bench`, `llama-server`), vLLM 0.32.0 (s
 
 **Where does data travel?** Per phase: bytes read and written per disk, with NVMe, SSD and HDD told apart; swap in and out; page cache changes and refaults; major page faults; RAM to GPU and back over PCIe; GPU to GPU over NVLink. Reads from disk during inference are flagged, because they mean the weights are not staying in RAM. `--cold-start` drops the model from the page cache first, without root, so a load can be measured as a user's first run would see it.
 
-**Where does the GPU's time go?** Add `--nsys` for kernels, collectives, copies and idle gaps per phase and per token, the host's time in CUDA calls, and exact bytes copied. Add `--cpu-profile` for the hot functions of the host threads. It samples from inside the process, so it works where `perf` is not allowed. Both slow the engine down, so those runs are marked and never counted as speed results.
+**Where does the GPU's time go, and which kernel is worth speeding up?** Add `--nsys` for kernels, collectives, copies and idle gaps per phase and per token, the host's time in CUDA calls, and exact bytes copied. `llmperfscope kernels` then lists each kernel's share of a token and the most it could win. Add `--cpu-profile` for the hot functions of the host threads. It samples from inside the process, so it works where `perf` is not allowed. Both slow the engine down, so those runs are marked and never counted as speed results.
 
 **What did a change cost?** `llmperfscope matrix` runs two builds in alternating order across many cases, in fresh processes, re-checking the machine before each arm. It judges speed, memory, load time and energy together, so a speed win that costs memory shows up as a regression. A difference counts only if the arms do not overlap and it exceeds the noise floor, and a case that looks worse is run again before anything is called worse. Measure that floor with the same binary on both sides.
 

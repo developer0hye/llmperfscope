@@ -48,6 +48,7 @@ These are real failures that shaped how it works. They show what to watch for in
 - **A signal-based profiler barely sees a long system call.** A `munmap` of 12 s showed as 8 samples, 0.06% of the load. Samples now count for the timer periods the kernel merged, and each profile is checked against the CPU time measured from outside.
 - **Nearest-symbol lookup in a stripped library names the wrong function.** Names are now trusted only inside the symbol's extent.
 - **Two arms per side were not enough for `matrix`.** Arms miss each other by chance 1 time in 3 with 2 per side, and a nightly run flagged losses on models that never run the changed code. The default is now 4 arms per side, a case that looks worse is run again, and anything resting on fewer arms is marked as a hint.
+- **A benchmark's input can decide its result.** A change sped up prefill by 33% with `llama-bench`'s random tokens and by 2% to 11% on real prompts. Random tokens read a table all over, and real text does not. Reports from `llama-bench` now say so, `--prompts mix` makes real prompts one option away, and `matrix` can compare with them.
 - **Sampling dropped to 16 Hz with 2 s gaps** in 1-GPU arms of long comparison chains, and this was not reproduced alone. The cause is unknown, possibly NVML blocking on GPUs going idle. Reports note a rate far below the target, and cumulative counters stay right. Gauges in those phases can miss short spikes.
 
 ## Limits to keep in mind

@@ -17,6 +17,14 @@ from collections import Counter, defaultdict
 DEFAULT_COMM_REGEX = r"nccl|allreduce|all_reduce|ggml_cuda_ar_|ar_add_kernel|ucx|ompi"
 
 
+_COMM = re.compile(DEFAULT_COMM_REGEX, re.I)
+
+
+def is_collective(name):
+    """Speeding up a collective is a communication problem, not kernel tuning, so reports keep the two apart."""
+    return bool(_COMM.search(name))
+
+
 def find_nsys():
     found = shutil.which("nsys")
     if found:
@@ -218,7 +226,7 @@ def analyze(sqlite_path, phases=None, wall_t0_ns=None, comm_regex=DEFAULT_COMM_R
         entry["top_kernels"] = [
             {"name": name, "ms": round(ns / 1e6, 3), "share": round(ns / total, 4), "n": kernel_count[group][name],
              "avg_us": round(ns / 1e3 / max(kernel_count[group][name], 1), 2)}
-            for name, ns in kernel_time[group].most_common(16)
+            for name, ns in kernel_time[group].most_common(32)
         ]
         if group in copies:
             entry["copies"] = {kind: {"mib": round(v[0] / (1 << 20), 2), "ms": round(v[1] / 1e6, 3), "n": v[2],

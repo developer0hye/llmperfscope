@@ -15,7 +15,7 @@ import re
 from math import factorial
 from pathlib import Path
 
-from . import runner
+from . import runner, serving
 
 DEFAULT_ORDER = "ABBABAAB"
 # Above this chance of the arms separating by luck, a difference is a hint and not a result.
@@ -33,6 +33,11 @@ METRICS = {
     "load_s": (lambda r: _get(r, "groups", "load", "wall_s"), -1),
     "prefill_j_per_token": (lambda r: _get(r, "energy", "prefill_j_per_token"), -1),
     "decode_j_per_token": (lambda r: _get(r, "energy", "decode_j_per_token"), -1),
+    # Serving, as a streaming client saw it. Throughput is at the highest level of concurrency, latency at the lowest, where nothing queues.
+    "output_tps": (lambda r: _level(r, -1, "output_tokens_per_s"), +1),
+    "ttft_ms": (lambda r: _level(r, 0, "ttft_ms", "p50"), -1),
+    "itl_ms": (lambda r: _level(r, 0, "itl_ms", "p50"), -1),
+    "serve_j_per_token": (lambda r: _get(r, "energy", "serve_j_per_token"), -1),
 }
 # Smallest difference that can mean anything, per metric: relative, then absolute. Memory rounds to whole MiB and allocators
 # differ by a little from run to run; load time depends on the page cache; energy has its own counter resolution.
@@ -45,6 +50,10 @@ FLOORS = {
     "load_s": (0.05, 0.5),
     "prefill_j_per_token": (0.05, 0.0),
     "decode_j_per_token": (0.03, 0.0),
+    "output_tps": (0.003, 0.0),
+    "ttft_ms": (0.01, 1.0),
+    "itl_ms": (0.005, 0.01),
+    "serve_j_per_token": (0.03, 0.0),
 }
 
 
@@ -55,6 +64,11 @@ def _get(run, *keys):
             return None
         node = node[key]
     return node
+
+
+def _level(run, which, *keys):
+    levels = sorted((t for t in (run.get("throughput") or {}).values() if isinstance(t, dict) and "concurrency" in t), key=lambda t: t["concurrency"])
+    return _get(levels[which], *keys) if levels else None
 
 
 def separation_chance(runs_a, runs_b):
@@ -171,6 +185,7 @@ def load_cases(path):
             "env": {**defaults.get("env", {}), **case.get("env", {})},
             "model": case.get("model"),
             "gpus": case.get("gpus"),
+            "serve": case.get("serve", defaults.get("serve")),
         }
         cases.append(merged)
     return cases
@@ -218,7 +233,10 @@ def run_matrix(cases, a, b, out_dir, order=DEFAULT_ORDER, timeout_s=1800.0, a_en
                 arms_done += 1
                 log(f"{case['label']}: arm {arms_done} ({name})")
                 try:
-                    report = runner.Run(_command(case, bin_dir), options).execute()
+                    if case.get("serve") is not None:
+                        report = serving.serve(_command(case, bin_dir), options, serving.defaults(**case["serve"]))
+                    else:
+                        report = runner.Run(_command(case, bin_dir), options).execute()
                 except runner.Refused as e:
                     log(f"  refused: {e}")
                     continue
@@ -251,6 +269,8 @@ def run_matrix(cases, a, b, out_dir, order=DEFAULT_ORDER, timeout_s=1800.0, a_en
 def write_table(table, path):
     columns = [("prefill_tps", "pp"), ("decode_tps", "tg"), ("gpu_peak_mib", "GPU mem"), ("host_anon_peak_mib", "host anon"),
                ("load_s", "load"), ("decode_j_per_token", "tg J/tok")]
+    if any("output_tps" in case.get("metrics", {}) for case in table["cases"]):
+        columns += [("output_tps", "output"), ("ttft_ms", "first token"), ("itl_ms", "between tokens"), ("serve_j_per_token", "serve J/tok")]
     header = "| case | " + " | ".join(f"{title} {table['b']}/{table['a']}" for _, title in columns) + " | verdict |"
     lines = [header, "|---|" + "---:|" * len(columns) + "---|"]
     for case in table["cases"]:

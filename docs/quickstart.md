@@ -48,17 +48,14 @@ Runs go to `runs/<label>-<time>` unless you pass `--out`.
 llmperfscope serve --concurrency 1,4,8 --max-tokens 64 -- vllm serve Qwen/Qwen3-0.6B
 ```
 
-Without `--prompts` it sends 8 generated prompts of about 512 words. For real prompts pass a JSONL file with a `prompt` or `messages` column per row. [llm-speed-prompt-mix](https://huggingface.co/datasets/developer0hye/llm-speed-prompt-mix) is one such set, with several languages, domains and lengths:
-
-```python
-from datasets import load_dataset
-
-load_dataset("developer0hye/llm-speed-prompt-mix", "all", split="test").to_json("prompts.jsonl")
-```
+Without `--prompts` it sends 8 generated prompts of about 512 words. For real prompts use `--prompts mix`, which downloads [llm-speed-prompt-mix](https://huggingface.co/datasets/developer0hye/llm-speed-prompt-mix) once: 89 prompts in several languages, domains and lengths, or the other 371 with `--filter tier=extended`. Your own JSONL file with a `prompt` or `messages` column per row works too:
 
 ```sh
-llmperfscope serve --prompts prompts.jsonl --filter tier=standard --concurrency 1,4 -- llama-server -m model.gguf -ngl 99 -np 4
+llmperfscope serve --prompts mix --max-prompt-chars 20000 --concurrency 1,4 -- llama-server -m model.gguf -ngl 99 -np 4
+llmperfscope serve --prompts mine.jsonl --filter language=ko -- llama-server -m model.gguf -ngl 99
 ```
+
+Use real prompts for any speed you will quote. `llama-bench` feeds random tokens, and a gain there can be much smaller with real text.
 
 Every engine has its own notes in [engines.md](engines.md).
 

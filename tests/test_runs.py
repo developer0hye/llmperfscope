@@ -12,7 +12,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import cli, cpuprof, machine, procfs, runner
+from llmperfscope import cli, compare, cpuprof, machine, procfs, runner
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -223,6 +223,25 @@ class Serving(unittest.TestCase):
 
 
 @unittest.skipUnless(os.path.exists("/proc/self/status") and shutil.which("cc"), "needs Linux and a C compiler")
+class MatrixWithServer(unittest.TestCase):
+    def test_a_server_case_is_judged_on_what_a_client_saw(self):
+        port = free_port()
+        case = {"label": "server", "binary": os.path.basename(sys.executable), "prefix": [], "args": [SERVER, str(port), "0.1", "0.02", "0.002"], "env": {}, "model": None, "gpus": None,
+                "serve": {"preset": "vllm", "url": f"http://127.0.0.1:{port}", "synthetic_words": 16, "limit": 2, "max_tokens": 8, "stop_timeout": 10.0}}
+        out = helpers.temp_dir()
+        directory = os.path.dirname(sys.executable)
+        with mock.patch("llmperfscope.runner.open_backend", lambda: helpers.ScriptedGpu()):
+            table = compare.run_matrix([case], ("a", directory), ("b", directory), out, order="ABBA", precheck="skip", log=lambda text: None, recheck=0, timeout_s=60.0)
+        result = table["cases"][0]
+        self.assertEqual(result["dropped_runs"], 0)
+        self.assertIn("output_tps", result["metrics"])
+        self.assertIn("ttft_ms", result["metrics"])
+        self.assertAlmostEqual(result["metrics"]["ttft_ms"]["a"], 20.0, delta=15.0)
+        with open(os.path.join(out, "table.md")) as f:
+            self.assertIn("first token", f.read())
+
+
+@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
 class CpuProfile(unittest.TestCase):
     def test_samples_name_the_function_that_burns_the_cpu(self):
         directory = helpers.temp_dir()

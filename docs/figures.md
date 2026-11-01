@@ -141,6 +141,7 @@ Series colors follow one fixed order, checked for color vision deficiency agains
 
 - [ ] Speed numbers come from runs without `--nsys` or `--cpu-profile`. Those runs are marked `perturbed`, and the captions of traced figures warn about it.
 - [ ] The report said the machine was clean, or you can explain what else was running.
+- [ ] Speed from `llama-bench` is labeled as random tokens, or confirmed with real prompts (`llmperfscope serve --prompts mix`). The "how it was measured" paragraph says which.
 - [ ] A load time says whether it was warm or cold (`--cold-start`). The report states how much of the model was in the page cache.
 - [ ] A comparison runs on the same hardware, with its noise floor stated. See [comparing.md](comparing.md).
 - [ ] The methods section has the engine commit, driver and hardware. `captions.md` has them in its "how it was measured" paragraph.

@@ -7,7 +7,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import adapters, analyze, compare, container, diagnose, driver, machine, markers, nsys, procfs, report, system
+from llmperfscope import adapters, analyze, compare, container, diagnose, driver, kernels, machine, markers, nsys, procfs, report, serving, system
 
 BENCH_JSON = """[
   {
@@ -337,6 +337,122 @@ class Compare(unittest.TestCase):
         with open(path, "w") as f:
             json.dump({"cases": [{"label": "c", "metrics": {"decode_tps": {"a_runs": [100, 101], "b_runs": [102, 100]}}}]}, f)
         self.assertAlmostEqual(compare.noise_from_null(path)["c"]["decode_tps"], 2 / 100.75, places=4)
+
+
+class Kernels(unittest.TestCase):
+    """Two GPUs, 10 tokens, known times. GPU 0 reaches each collective first and waits; GPU 1 shows what the collectives really cost."""
+
+    def _run(self, mul_mat_ms=120.0):
+        return {"nsys": {"groups": {"decode": {
+            "tokens": 10,
+            "devices": [{"device": 0, "kernel_ms": 100.0, "comm_ms": 30.0, "copy_ms": 2.0, "span_ms": 300.0},
+                        {"device": 1, "kernel_ms": 100.0, "comm_ms": 10.0, "copy_ms": 2.0, "span_ms": 300.0}],
+            "top_kernels": [{"name": "mul_mat", "ms": mul_mat_ms, "share": 0.5, "n": 40, "avg_us": 3000.0},
+                            {"name": "rms_norm", "ms": 80.0, "share": 0.3, "n": 20, "avg_us": 4000.0},
+                            {"name": "ncclDevKernel_AllReduce_f32_RING", "ms": 40.0, "share": 0.2, "n": 20, "avg_us": 2000.0}]}}}}
+
+    def test_time_per_token_per_gpu(self):
+        data = kernels.per_token(self._run()["nsys"]["groups"]["decode"])
+        self.assertAlmostEqual(data["kernel_ms"], 10.0)
+        self.assertAlmostEqual(data["collective_ms"], 1.0)
+        self.assertAlmostEqual(data["waiting_ms"], 1.0)
+        rows = {row["name"]: row for row in data["kernels"]}
+        self.assertAlmostEqual(rows["mul_mat"]["ms_per_token"], 6.0)
+        self.assertAlmostEqual(rows["mul_mat"]["calls_per_token"], 2.0)
+
+    def test_a_collective_counts_without_its_waiting(self):
+        rows = {row["name"]: row for row in kernels.per_token(self._run()["nsys"]["groups"]["decode"])["kernels"]}
+        collective = rows["ncclDevKernel_AllReduce_f32_RING"]
+        self.assertTrue(collective["collective"])
+        self.assertFalse(rows["mul_mat"]["collective"])
+        self.assertAlmostEqual(collective["ms_per_token"], 2.0)
+        self.assertAlmostEqual(collective["cost_ms_per_token"], 1.0)
+
+    def test_what_a_kernel_could_win(self):
+        self.assertAlmostEqual(kernels.gain_if_free(20.0, 5.0), 1 / 3)
+        self.assertIsNone(kernels.gain_if_free(20.0, 25.0))
+
+    def test_shares_need_a_run_without_tracing(self):
+        speed = {"throughput": {"decode": {"tokens_per_s": 50.0}}}
+        text = kernels.render(self._run(), speed)
+        self.assertIn("20.00 ms per token without tracing", text)
+        self.assertIn("| gaps, host work and waiting between kernels | 8.80 | 44% |", text)
+        self.assertIn("| mul_mat | 6.000 | 2.0 | 3000.0 | 30.0% | +42.9% |", text)
+        self.assertIn("ncclDevKernel_AllReduce_f32_RING (collective)", text)
+        without = kernels.render(self._run())
+        self.assertIn("Add --speed", without)
+        self.assertNotIn("speed-up if free", without)
+
+    def test_a_run_without_a_trace_says_so(self):
+        self.assertIn("--nsys", kernels.render({"throughput": {}}))
+
+    def test_diff_shows_which_kernel_changed(self):
+        text = kernels.render_diff(self._run(), self._run(mul_mat_ms=100.0), "old", "new")
+        self.assertIn("| old ms/token | new ms/token |", text)
+        self.assertIn("| mul_mat | 6.000 | 5.000 | -1.000 |", text)
+        self.assertIn("| rms_norm | 4.000 | 4.000 | +0.000 |", text)
+
+
+class RealPrompts(unittest.TestCase):
+    def _opener(self, urls):
+        import contextlib
+        import io
+
+        def opener(url, timeout=None):
+            urls.append(url)
+            row = {"messages": [{"role": "user", "content": "x" * (10 if "long" not in url else 5000)}], "tier": "standard" if "mbpp" in url or "long_code" in url else "extended", "language": "en"}
+            return contextlib.closing(io.BytesIO(json.dumps(row).encode()))
+        return opener
+
+    def test_downloads_once_from_a_pinned_revision(self):
+        directory = helpers.temp_dir()
+        urls = []
+        with mock.patch("builtins.print"):
+            path = driver.prompt_mix_path(directory, self._opener(urls))
+            self.assertEqual(driver.prompt_mix_path(directory, self._opener(urls)), path)
+        self.assertEqual(len(urls), len(driver.MIX_FILES))
+        self.assertTrue(all(driver.MIX_REVISION in url for url in urls))
+        self.assertEqual(len(driver.load_prompts(path)), len(driver.MIX_FILES))
+
+    def test_the_standard_tier_is_the_default_and_filters_still_work(self):
+        directory = helpers.temp_dir()
+        with mock.patch("builtins.print"):
+            path = driver.prompt_mix_path(directory, self._opener([]))
+        with mock.patch("llmperfscope.driver.prompt_mix_path", lambda: path):
+            self.assertEqual(len(serving.rows_from(serving.defaults(prompts="mix"))), 2)
+            self.assertEqual(len(serving.rows_from(serving.defaults(prompts="mix", filter=["tier=extended"]))), len(driver.MIX_FILES) - 2)
+            self.assertEqual(len(serving.rows_from(serving.defaults(prompts="mix", max_prompt_chars=100))), 1)
+
+    def test_a_failed_download_says_what_to_do(self):
+        def refuse(url, timeout=None):
+            raise OSError("no network")
+        with mock.patch("builtins.print"), self.assertRaises(SystemExit) as caught:
+            driver.prompt_mix_path(helpers.temp_dir(), refuse)
+        self.assertIn("--prompts", str(caught.exception))
+
+    def test_unknown_server_settings_are_refused(self):
+        with self.assertRaises(ValueError):
+            serving.defaults(concurency="1")
+
+    def test_prefill_and_decode_as_the_server_timed_them(self):
+        results = [{"ok": True, "chunks": 4, "ttft_s": 0.1, "itl_s": [0.01] * 3, "usage": {"completion_tokens": 4, "prompt_tokens": 100},
+                    "server_timings": {"prompt_n": 100, "prompt_ms": 50.0, "predicted_n": 4, "predicted_ms": 40.0}},
+                   {"ok": True, "chunks": 4, "ttft_s": 0.1, "itl_s": [0.01] * 3, "usage": {"completion_tokens": 4, "prompt_tokens": 300},
+                    "server_timings": {"prompt_n": 300, "prompt_ms": 150.0, "predicted_n": 4, "predicted_ms": 40.0}}]
+        summary = driver.summarize_load(results, 1.0)
+        self.assertEqual(summary["server_prefill_tokens_per_s"], 2000.0)
+        self.assertEqual(summary["server_decode_tokens_per_s"], 100.0)
+        speed = serving._overall_speed({"serve_c4": {**summary, "concurrency": 4, "server_prefill_tokens_per_s": 500.0}, "serve_c1": {**summary, "concurrency": 1}})
+        self.assertEqual(speed["prefill"]["tokens_per_s"], 2000.0)
+        self.assertTrue(speed["prefill"]["real_prompts"])
+
+    def test_serving_metrics_read_the_right_level(self):
+        run = {"status": "ok", "throughput": {"serve_c4": {"concurrency": 4, "output_tokens_per_s": 90.0, "ttft_ms": {"p50": 900.0}, "itl_ms": {"p50": 30.0}},
+                                              "serve_c1": {"concurrency": 1, "output_tokens_per_s": 40.0, "ttft_ms": {"p50": 100.0}, "itl_ms": {"p50": 20.0}}}}
+        self.assertEqual(compare.METRICS["output_tps"][0](run), 90.0)
+        self.assertEqual(compare.METRICS["ttft_ms"][0](run), 100.0)
+        self.assertEqual(compare.METRICS["itl_ms"][0](run), 20.0)
+        self.assertIsNone(compare.METRICS["output_tps"][0]({"throughput": {"decode": {"tokens_per_s": 1.0}}}))
 
 
 def _ticks(duration_s=10, hz=10, watts=100.0):

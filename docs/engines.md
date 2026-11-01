@@ -158,9 +158,11 @@ With `--url` it drives requests like `serve`. Without it, it watches for `--dura
 
 | Option | What it does |
 |---|---|
+| `--prompts mix` | the public [llm-speed-prompt-mix](https://huggingface.co/datasets/developer0hye/llm-speed-prompt-mix) set, downloaded once and pinned: real prompts in several languages, domains and lengths. Each row states its own license |
 | `--prompts FILE` | JSONL with `prompt` or `messages` per row |
 | `--filter column=value` | keep matching rows, repeatable |
 | `--limit N` | at most N prompts |
+| `--max-prompt-chars N` | leave out longer prompts, for a server with a small context. The prompt set goes up to 64K tokens |
 | `--synthetic-words N` | length of generated prompts when there is no file |
 | `--concurrency 1,4,8` | levels, each runs the whole list |
 | `--repeat N` | run the list N times per level |

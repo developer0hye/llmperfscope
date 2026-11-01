@@ -109,6 +109,10 @@ One row per phase group, showing wall time, tokens, memory at the end and at the
 
 Phases: `startup` is from process start to the first sign of loading, and `load`, `setup`, `warmup`, `prefill`, `decode`, `serve` and `teardown` are what they say. A run may also have `download`, `run` (no finer phases known) or `observe` (attached, watching). The report leaves out `baseline`, sampled before the process starts, and `tail`, sampled after it ends. These two provide the idle level and show what stays behind.
 
+## Notes about the input
+
+A report from `llama-bench` notes that it feeds random tokens. Caches, expert routing and table lookups behave differently with real text, so treat its speeds as a first look and confirm a gain with `--prompts mix`.
+
 ## The last lines
 
 ```

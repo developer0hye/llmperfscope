@@ -10,7 +10,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import capabilities, cli, compare, figures, report
+from llmperfscope import capabilities, cli, compare, figures, kernels, report
 
 SAMPLES = os.path.join(os.path.dirname(helpers.HERE), "examples", "sample-runs")
 PRIVATE = re.compile(r"/home/|/Users/|/tmp/|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-|GPU-[0-9a-f]{6}", re.I)
@@ -90,6 +90,18 @@ class SampleRuns(unittest.TestCase):
                     for line in f:
                         row = json.loads(line)
                         self.assertFalse({"prompt", "messages", "id", "text"} & set(row), requests)
+
+    def test_kernel_table_from_a_real_trace(self):
+        traced = compare.load_run(os.path.join(SAMPLES, "deepseek-v4.1-flash-8gpu-nsys"))
+        untraced = compare.load_run(os.path.join(SAMPLES, "deepseek-v4.1-flash-8gpu-cpu-profile"))
+        text = kernels.render(traced, untraced)
+        self.assertIn("ms per token without tracing", text)
+        self.assertIn("mul_mat_vec_q", text)
+        self.assertIn("(collective)", text)
+        data = kernels.per_token(traced["nsys"]["groups"]["decode"])
+        token_ms = 1000.0 / untraced["throughput"]["decode"]["tokens_per_s"]
+        # What the trace says kernels and collectives cost has to fit inside a token measured without it.
+        self.assertLess(data["kernel_ms"] + data["collective_ms"], token_ms)
 
     def test_ram_limited_run_says_ram(self):
         data = compare.load_run(os.path.join(SAMPLES, "cpu-ram-limited"))

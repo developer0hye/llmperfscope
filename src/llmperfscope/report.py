@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .nsys import is_collective
+
 
 def _num(value, digits=1):
     if value is None:
@@ -224,7 +226,8 @@ def render(run):
         for name in ("decode", "prefill"):
             top = (nsys["groups"].get(name) or {}).get("top_kernels")
             if top:
-                out.append(f"\nTop kernels, {name}: " + ", ".join(f"{k['name']} {k['share'] * 100:.0f}%" for k in top[:6]))
+                out.append(f"\nTop kernels, {name}: " + ", ".join(f"{k['name']}{' (collective)' if is_collective(k['name']) else ''} {k['share'] * 100:.0f}%" for k in top[:6]))
+        out.append("\n`llmperfscope kernels RUN --speed OTHER_RUN` says how much of a token each one is, with OTHER_RUN the same command without --nsys.")
     if nsys.get("error"):
         out.append(f"\nnsys: {nsys['error']}")
 

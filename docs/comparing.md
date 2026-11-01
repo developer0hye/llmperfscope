@@ -30,6 +30,27 @@ For each case, it runs both builds in the order set by `--order` (`ABBABAAB` by 
 
 Useful options: `--only 'regex'` runs some cases, `--a-env KEY=VALUE` and `--b-env KEY=VALUE` run the same binary with different settings, `--timeout` limits each arm, and `--order` sets the arms.
 
+### With real prompts
+
+`llama-bench` feeds random tokens. Caches, expert routing and table lookups behave differently with real text, so a gain can be much smaller there. One real change sped up prefill by 33% with `llama-bench` and by 2% to 11% with real prompts, depending on their length. Before you trust a gain, add a server case. It takes a `serve` block with the settings of `llmperfscope serve`:
+
+```json
+{
+  "cases": [
+    {
+      "label": "real prompts, 2 GPUs",
+      "binary": "llama-server",
+      "model": "/models/large.gguf",
+      "gpus": "0,1",
+      "args": ["-ngl", "99", "-sm", "tensor", "-c", "131072", "--port", "8123"],
+      "serve": {"prompts": "mix", "max_tokens": 16}
+    }
+  ]
+}
+```
+
+These cases are judged on what a streaming client saw, as well as on memory and energy. llama-server's own timers also give prefill and decode speed.
+
 ### What it judges
 
 | Metric | Better is | Floor |
@@ -40,6 +61,9 @@ Useful options: `--only 'regex'` runs some cases, `--a-env KEY=VALUE` and `--b-e
 | `load_s` | lower | 5%, at least 0.5 s |
 | `prefill_j_per_token` | lower | 5% |
 | `decode_j_per_token` | lower | 3% |
+| `output_tps`, at the highest concurrency | higher | 0.3% |
+| `ttft_ms`, `itl_ms`, median at the lowest concurrency | lower | 1% with at least 1 ms, 0.5% |
+| `serve_j_per_token` | lower | 3% |
 
 A result counts as `better` or `worse` only if **both** of these hold: the arms do not overlap, meaning every run of one side beats every run of the other, and the difference of the means exceeds the floor. Otherwise it is `same`.
 
@@ -107,6 +131,7 @@ See [figures.md](figures.md).
 - Check for other work first. `--precheck wait` waits until two samples in a row are clean: no build running, no other process above 10% of a core (or 1% of all CPUs on a large machine), other processes together under double that, the GPUs in use idle, and at least 20% of memory available. `matrix` does this before every arm.
 - Use fresh processes. A long-lived process carries caches and allocator state from one arm to the next.
 - Alternate the order. A slow drift, such as heat or background work, then cannot pass for a speed-up.
+- Use real prompts for anything you will quote. See [With real prompts](#with-real-prompts).
 - Use the same page cache state. Run a warm-up arm, or `--cold-start` on both sides.
 - Run enough arms for them to separate. With the default order and `-r 3`, each side has 4 processes of 3 repetitions.
 - Keep the run directories. A number without its machine state cannot be trusted later, and `run.json` has that state.
