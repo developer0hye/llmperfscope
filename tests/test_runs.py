@@ -99,6 +99,15 @@ class KnownEngine(unittest.TestCase):
 
 @unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
 class Failures(unittest.TestCase):
+    def test_tracers_refuse_what_they_cannot_reach(self):
+        """They would profile the docker client, and the report would look fine."""
+        for options in ({"nsys": True}, {"cpu_profile": True}):
+            with self.assertRaises(runner.Refused):
+                run(["docker", "run", "--gpus", "all", "some-image"], **options)
+            with self.assertRaises(runner.Refused):
+                with mock.patch("llmperfscope.runner.open_backend", lambda: helpers.ScriptedGpu()):
+                    runner.Run(["/proc/1/exe"], runner.Options(out=helpers.temp_dir(), quiet=True, **options), attach_pid=1).execute()
+
     def test_a_failing_target_is_reported(self):
         report = run(engine("fail"))
         self.assertEqual((report["status"], report["exit_code"]), ("failed", 7))

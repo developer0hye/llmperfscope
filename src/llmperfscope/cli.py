@@ -263,7 +263,11 @@ def cmd_attach(args, _target):
             time.sleep(args.duration)
             return {}
     run = runner.Run([f"/proc/{pid}/exe"], options, workload=workload, attach_pid=pid)
-    result = run.execute()
+    try:
+        result = run.execute()
+    except runner.Refused as e:
+        print(f"[llmperfscope] refused: {e}", file=sys.stderr)
+        return 3
     _add_energy_per_token(result)
     with open(Path(options.out) / "run.json", "w") as f:
         json.dump(result, f, indent=1)
