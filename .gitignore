@@ -5,3 +5,5 @@ build/
 dist/
 runs/
 *.so
+figures-try/
+figures-compare/

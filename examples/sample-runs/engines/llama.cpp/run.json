@@ -1,0 +1,1773 @@
+{
+ "schema": "llmperfscope.run/1",
+ "tool": {
+  "name": "llmperfscope",
+  "version": "0.1.0"
+ },
+ "label": "llama-server",
+ "status": "ok",
+ "exit_code": 0,
+ "stop_reason": "workload finished",
+ "perturbed": false,
+ "attached": false,
+ "wall_time_at_t0_ns": 1793531500197723675,
+ "t0_monotonic_ns": 429046243453268,
+ "gpu_driver": "580.178.04",
+ "command": [
+  "<path>/llama-server",
+  "-m",
+  "<path>/Qwen3-0.6B-Q8_0.gguf",
+  "-ngl",
+  "99",
+  "-c",
+  "8192",
+  "-np",
+  "4",
+  "--port",
+  "8100",
+  "--metrics"
+ ],
+ "env": {
+  "CUDA_HOME": "<path>/cuda-13.0",
+  "LLAMA_ARG_LOG_JSONL": "1"
+ },
+ "adapter": "llama.cpp:llama-server",
+ "identity": {
+  "sha256": "7de50a98afa0426d470d2c22f190ec43d9d4a20a05adf2b7246a112d7507b1fb",
+  "git_commit": "0ec4027a2a0183de87c007069adddc06e665f7de",
+  "git_dirty_files": 0
+ },
+ "host": {
+  "hostname": "host",
+  "kernel": "7.0.0-38-generic",
+  "cpus": 12,
+  "user": "user",
+  "cpu": "Intel(R) Core(TM) i5-10400 CPU @ 2.90GHz",
+  "numa_nodes": 1,
+  "governor": "powersave",
+  "thp": "always [madvise] never"
+ },
+ "devices": [
+  {
+   "index": 0,
+   "name": "NVIDIA GeForce RTX 3070",
+   "memory_total_mib": 8192,
+   "power_limit_w": 240.0,
+   "nvlink": false
+  }
+ ],
+ "machine_before": {
+  "t_wall": 1793531499.9536128,
+  "foreign_cpu_cores": 0,
+  "mem_available_mib": 29966,
+  "mem_total_mib": 31993,
+  "page_cache_mib": 22401,
+  "swap_used_mib": 230,
+  "loadavg": [
+   4.93115234375,
+   5.1083984375,
+   2.25390625
+  ],
+  "gpus": [
+   {
+    "index": 0,
+    "mem_used_mib": 562,
+    "util": 0,
+    "temp_c": 41,
+    "throttle": []
+   }
+  ],
+  "model_page_cache_fraction": 1.0,
+  "model_storage": {
+   "path": "<path>/Qwen3-0.6B-Q8_0.gguf",
+   "size_gib": 0.749,
+   "fstype": "ext4",
+   "mount": "/",
+   "disks": [
+    {
+     "name": "nvme0n1",
+     "kind": "nvme",
+     "model": "WDC WDS100T2B0C-00PXH0",
+     "size_gib": 931.5
+    }
+   ]
+  },
+  "clean": true,
+  "reasons": []
+ },
+ "machine_after": {
+  "t_wall": 1793531509.0081139,
+  "foreign_cpu_cores": 0,
+  "mem_available_mib": 29844,
+  "mem_total_mib": 31993,
+  "page_cache_mib": 22404,
+  "swap_used_mib": 230,
+  "loadavg": [
+   4.6962890625,
+   5.056640625,
+   2.25244140625
+  ],
+  "gpus": [
+   {
+    "index": 0,
+    "mem_used_mib": 562,
+    "util": 0,
+    "temp_c": 45,
+    "throttle": []
+   }
+  ],
+  "clean": true,
+  "reasons": []
+ },
+ "sampler": {
+  "hz_target": 50.0,
+  "hz_achieved": 50.0,
+  "max_gap_ms": 38.0,
+  "cpu_seconds": 0.133,
+  "pinned_cpu": null,
+  "error": null
+ },
+ "groups": {
+  "baseline": {
+   "phases": 1,
+   "wall_s": 1.000353,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 20.345,
+    "power_avg_w": 20.34,
+    "power_gauge_w": 20.9,
+    "sm_mhz_avg": 210.0,
+    "sm_mhz_min": 210,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 41,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 0.0,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 0.0,
+    "file_start_mib": 0.0,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 0.0,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 0,
+    "user_s": 0.0,
+    "sys_s": 0.0,
+    "busy_cores": 0.0,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 0.5,
+    "pcie_from_gpu_mib_est": 7.3,
+    "mem_available_min_mib": 29971,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.1,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.6,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "startup": {
+   "phases": 1,
+   "wall_s": 0.155985,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 5.833,
+    "power_avg_w": 37.39,
+    "power_gauge_w": 20.9,
+    "sm_mhz_avg": 210.0,
+    "sm_mhz_min": 210,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 41,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 0.0,
+    "anon_end_mib": 98.6,
+    "anon_peak_mib": 98.6,
+    "file_start_mib": 0.0,
+    "file_end_mib": 73.8,
+    "file_peak_mib": 73.8,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 4,
+    "user_s": 0.02,
+    "sys_s": 0.128,
+    "busy_cores": 0.95,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.0,
+      "busy_pct": 0.0
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 0.1,
+    "pcie_from_gpu_mib_est": 1.1,
+    "mem_available_min_mib": 29982,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.0,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 9.0,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "load": {
+   "phases": 1,
+   "wall_s": 0.672169,
+   "gpu": {
+    "mem_start_mib": 2,
+    "mem_end_mib": 1721,
+    "mem_peak_mib": 1721,
+    "mem_peak_max_device_mib": 1721,
+    "energy_j": 41.804,
+    "power_avg_w": 62.19,
+    "power_gauge_w": 22.3,
+    "sm_mhz_avg": 496.0,
+    "sm_mhz_min": 210,
+    "util_avg": 17.7,
+    "util_min_device": 17.7,
+    "util_max_device": 17.7,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 42,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 105.7,
+    "anon_end_mib": 214.0,
+    "anon_peak_mib": 214.0,
+    "file_start_mib": 75.9,
+    "file_end_mib": 309.7,
+    "file_peak_mib": 912.6,
+    "shmem_peak_mib": 22.3,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 19,
+    "user_s": 0.425,
+    "sys_s": 0.152,
+    "busy_cores": 0.86,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 0.5
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 0.5,
+     "busy": 0.744
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.0,
+      "busy_pct": 0.0
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 0.4,
+    "pcie_from_gpu_mib_est": 5.0,
+    "mem_available_min_mib": 29728,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.1,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 8.2,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "warmup": {
+   "phases": 1,
+   "wall_s": 0.102902,
+   "gpu": {
+    "mem_start_mib": 1721,
+    "mem_end_mib": 1721,
+    "mem_peak_mib": 1721,
+    "mem_peak_max_device_mib": 1721,
+    "energy_j": 9.071,
+    "power_avg_w": 88.15,
+    "power_gauge_w": 28.7,
+    "sm_mhz_avg": 1830.0,
+    "sm_mhz_min": 1830,
+    "util_avg": 32.0,
+    "util_min_device": 32.0,
+    "util_max_device": 32.0,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 42,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 215.9,
+    "anon_end_mib": 215.9,
+    "anon_peak_mib": 215.9,
+    "file_start_mib": 309.8,
+    "file_end_mib": 309.8,
+    "file_peak_mib": 309.8,
+    "shmem_peak_mib": 22.3,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 19,
+    "user_s": 0.091,
+    "sys_s": 0.0,
+    "busy_cores": 0.88,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.0,
+      "busy_pct": 0.0
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "mem_available_min_mib": 29658,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.1,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 7.3,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "serve": {
+   "phases": 2,
+   "wall_s": 5.670344,
+   "tokens": 2048,
+   "gpu": {
+    "mem_start_mib": 1721,
+    "mem_end_mib": 1733,
+    "mem_peak_mib": 1733,
+    "mem_peak_max_device_mib": 1733,
+    "energy_j": 857.013,
+    "power_avg_w": 151.14,
+    "power_gauge_w": 143.5,
+    "sm_mhz_avg": 1986.9,
+    "sm_mhz_min": 1830,
+    "util_avg": 75.9,
+    "util_min_device": 75.9,
+    "util_max_device": 75.9,
+    "util_mem_avg": 46.5,
+    "temp_c_max": 50,
+    "throttled": false,
+    "throttle": [],
+    "j_per_token": 0.4185
+   },
+   "host": {
+    "anon_start_mib": 220.8,
+    "anon_end_mib": 1369.6,
+    "anon_peak_mib": 1369.6,
+    "file_start_mib": 310.8,
+    "file_end_mib": 312.5,
+    "file_peak_mib": 312.5,
+    "shmem_peak_mib": 22.3,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 19,
+    "user_s": 5.427,
+    "sys_s": 0.402,
+    "busy_cores": 1.03,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 5.55
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 5.45,
+     "busy": 0.961
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 1.9,
+      "busy_pct": 0.1
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 129.8,
+    "pcie_from_gpu_mib_est": 1763.2,
+    "mem_available_min_mib": 28695,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.0,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 9.23,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "teardown": {
+   "phases": 2,
+   "wall_s": 0.204938,
+   "gpu": {
+    "mem_start_mib": 195,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 195,
+    "mem_peak_max_device_mib": 195,
+    "energy_j": 16.695,
+    "power_avg_w": 81.46,
+    "power_gauge_w": 140.8,
+    "sm_mhz_avg": 1995.0,
+    "sm_mhz_min": 1995,
+    "util_avg": 56.0,
+    "util_min_device": 56.0,
+    "util_max_device": 56.0,
+    "util_mem_avg": 15.0,
+    "temp_c_max": 46,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 1367.9,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 1367.9,
+    "file_start_mib": 154.8,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 218.7,
+    "shmem_peak_mib": 10.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 5,
+    "user_s": 0.027,
+    "sys_s": 0.148,
+    "busy_cores": 0.85,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 0.5
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 0.5,
+     "busy": 1.0
+    }
+   },
+   "flows": {
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 6.1,
+    "pcie_from_gpu_mib_est": 106.1,
+    "mem_available_min_mib": 28578,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.3,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 3.6,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "tail": {
+   "phases": 1,
+   "wall_s": 1.003571,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 63.4,
+    "power_avg_w": 63.17,
+    "power_gauge_w": 112.5,
+    "sm_mhz_avg": 1995.0,
+    "sm_mhz_min": 1995,
+    "util_avg": 0.4,
+    "util_min_device": 0.4,
+    "util_max_device": 0.4,
+    "util_mem_avg": 5.9,
+    "temp_c_max": 46,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 0.0,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 0.0,
+    "file_start_mib": 0.0,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 0.0,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 0,
+    "user_s": 0.0,
+    "sys_s": 0.0,
+    "busy_cores": 0.0,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.4,
+      "busy_pct": 0.0
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 0.4,
+    "pcie_from_gpu_mib_est": 0.6,
+    "mem_available_min_mib": 29828,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.2,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.9,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  }
+ },
+ "memory": {
+  "gpu": {
+   "devices": [
+    {
+     "index": 0,
+     "baseline_mib": 562,
+     "peak_mib": 2295,
+     "peak_above_baseline_mib": 1733,
+     "process_peak_mib": 1726,
+     "after_exit_mib": 562
+    }
+   ],
+   "peak_above_baseline_total_mib": 1733,
+   "peak_above_baseline_max_device_mib": 1733
+  },
+  "host": {
+   "anon_peak_mib": 1369.6,
+   "file_peak_mib": 912.6,
+   "shmem_peak_mib": 22.3,
+   "pinned_peak_mib": 0.0,
+   "swap_peak_mib": 0.0,
+   "vm_hwm_sum_mib": 1704.4,
+   "max_rss_kernel_mib": 1703.8
+  },
+  "breakdown_mib": [
+   {
+    "kind": "device",
+    "name": "CUDA0",
+    "total": 7817,
+    "free": 5896,
+    "self": 1528,
+    "model": 604,
+    "context": 896,
+    "compute": 28,
+    "unaccounted": 393
+   },
+   {
+    "kind": "host",
+    "name": "Host",
+    "self": 167,
+    "model": 157,
+    "context": 0,
+    "compute": 10
+   }
+  ]
+ },
+ "energy": {
+  "total_j": 930.416,
+  "serve_j_per_token": 0.4185
+ },
+ "devices_used": [
+  0
+ ],
+ "disks": {
+  "nvme0n1": {
+   "kind": "nvme",
+   "model": "WDC WDS100T2B0C-00PXH0",
+   "size_gib": 931.5
+  },
+  "nvme1n1": {
+   "kind": "nvme",
+   "model": "WDC WDS100T2B0C-00PXH0",
+   "size_gib": 931.5
+  }
+ },
+ "cpu": {
+  "user_s": 5.997,
+  "sys_s": 0.831,
+  "major_faults": 0,
+  "voluntary_switches": 10865,
+  "involuntary_switches": 45
+ },
+ "consistency": {
+  "energy_over_power_gauge": 1.053
+ },
+ "throughput": {
+  "serve_c1": {
+   "requests": 16,
+   "failed": 0,
+   "wall_s": 3.812,
+   "completion_tokens": 1024,
+   "prompt_tokens": 4860,
+   "prompt_tokens_cached": 0,
+   "tokens_exact": true,
+   "output_tokens_per_s": 268.631,
+   "ttft_ms": {
+    "n": 16,
+    "mean": 40.87,
+    "p50": 41.38,
+    "p90": 42.47,
+    "p99": 42.47,
+    "max": 42.47
+   },
+   "itl_ms": {
+    "n": 1008,
+    "mean": 3.13,
+    "p50": 3.1,
+    "p90": 3.15,
+    "p99": 4.14,
+    "max": 4.36
+   },
+   "decode_tokens_per_s_mean": 319.556,
+   "prefill_tokens_per_s_mean": 7488.206,
+   "concurrency": 1,
+   "j_per_output_token": 0.5818
+  },
+  "serve_c4": {
+   "requests": 16,
+   "failed": 0,
+   "wall_s": 1.857,
+   "completion_tokens": 1024,
+   "prompt_tokens": 4860,
+   "prompt_tokens_cached": 0,
+   "tokens_exact": true,
+   "output_tokens_per_s": 551.393,
+   "ttft_ms": {
+    "n": 16,
+    "mean": 139.51,
+    "p50": 154.24,
+    "p90": 156.93,
+    "p99": 157.06,
+    "max": 157.06
+   },
+   "itl_ms": {
+    "n": 1008,
+    "mean": 5.15,
+    "p50": 5.09,
+    "p90": 5.28,
+    "p99": 6.82,
+    "max": 8.26
+   },
+   "decode_tokens_per_s_mean": 194.321,
+   "prefill_tokens_per_s_mean": 2289.859,
+   "concurrency": 4,
+   "j_per_output_token": 0.2552
+  }
+ },
+ "workload": {
+  "ready_s": 0.626,
+  "model": "<path>/Qwen3-0.6B-Q8_0.gguf",
+  "prompts": 16,
+  "warmup_ttft_ms": 5.98,
+  "server_gauges_peak": {
+   "llamacpp:requests_processing": 4.0,
+   "llamacpp:requests_deferred": 0.0
+  },
+  "server_metrics_delta": {
+   "llamacpp:prompt_tokens_total": 9720.0,
+   "llamacpp:prompt_seconds_total": 0.54249,
+   "llamacpp:tokens_predicted_total": 2048.0,
+   "llamacpp:tokens_predicted_seconds_total": 8.34013,
+   "llamacpp:n_decode_total": 1280.0,
+   "llamacpp:n_tokens_max": 334.0,
+   "llamacpp:prompt_tokens_seconds": 18633.739,
+   "llamacpp:predicted_tokens_seconds": -127.624,
+   "llamacpp:n_busy_slots_per_decode": 0.58537
+  }
+ },
+ "notes": [
+  "target may use every CPU: llmperfscope shares CPUs with it"
+ ],
+ "phases": [
+  {
+   "name": "baseline",
+   "group": "baseline",
+   "metrics": {
+    "wall_s": 1.000353,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 20.345,
+     "power_avg_w": 20.34,
+     "power_gauge_w": 20.88,
+     "sm_mhz_avg": 210.0,
+     "sm_mhz_min": 210,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 41,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 562,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 562,
+       "energy_j": 20.345,
+       "power_avg_w": 20.34,
+       "power_gauge_w": 20.88,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 41,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 0.0,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 0.0,
+     "file_start_mib": 0.0,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 0.0,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 0,
+     "user_s": 0.0,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": 0.0,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29971,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 0.5,
+     "pcie_from_gpu_mib_est": 7.3
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.6,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 0.0,
+   "end_s": 1.000353
+  },
+  {
+   "name": "startup",
+   "group": "startup",
+   "metrics": {
+    "wall_s": 0.155985,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 5.833,
+     "power_avg_w": 37.4,
+     "power_gauge_w": 20.89,
+     "sm_mhz_avg": 210.0,
+     "sm_mhz_min": 210,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 41,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 562,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 562,
+       "energy_j": 5.833,
+       "power_avg_w": 37.4,
+       "power_gauge_w": 20.89,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 41,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 0.0,
+     "anon_end_mib": 98.6,
+     "anon_peak_mib": 98.6,
+     "file_start_mib": 0.0,
+     "file_end_mib": 73.8,
+     "file_peak_mib": 73.8,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 4,
+     "user_s": 0.02,
+     "sys_s": 0.128,
+     "major_faults": 0,
+     "busy_cores": 0.95,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.0,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29982,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 0.1,
+     "pcie_from_gpu_mib_est": 1.1
+    },
+    "pressure": {
+     "cpu_some_pct": 0.0,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 9.0,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 1.000353,
+   "end_s": 1.156337
+  },
+  {
+   "name": "load",
+   "group": "load",
+   "metrics": {
+    "wall_s": 0.672169,
+    "gpu": {
+     "mem_start_mib": 2,
+     "mem_end_mib": 1721,
+     "mem_peak_mib": 1721,
+     "mem_peak_max_device_mib": 1721,
+     "energy_j": 41.804,
+     "power_avg_w": 62.19,
+     "power_gauge_w": 22.28,
+     "sm_mhz_avg": 496.0,
+     "sm_mhz_min": 210,
+     "util_avg": 17.7,
+     "util_min_device": 17.7,
+     "util_max_device": 17.7,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 42,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 564,
+       "mem_end_mib": 2283,
+       "mem_peak_mib": 2283,
+       "energy_j": 41.804,
+       "power_avg_w": 62.19,
+       "power_gauge_w": 22.28,
+       "sm_mhz_avg": 496,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 1534,
+       "util_avg": 17.7,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 42,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 105.7,
+     "anon_end_mib": 214.0,
+     "anon_peak_mib": 214.0,
+     "file_start_mib": 75.9,
+     "file_end_mib": 309.7,
+     "file_peak_mib": 912.6,
+     "shmem_peak_mib": 22.3,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 19,
+     "user_s": 0.425,
+     "sys_s": 0.152,
+     "major_faults": 0,
+     "busy_cores": 0.86,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.0,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29728,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 0.4,
+     "pcie_from_gpu_mib_est": 5.0
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 8.2,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 1.156337,
+   "end_s": 1.828507
+  },
+  {
+   "name": "warmup",
+   "group": "warmup",
+   "metrics": {
+    "wall_s": 0.102902,
+    "gpu": {
+     "mem_start_mib": 1721,
+     "mem_end_mib": 1721,
+     "mem_peak_mib": 1721,
+     "mem_peak_max_device_mib": 1721,
+     "energy_j": 9.071,
+     "power_avg_w": 88.15,
+     "power_gauge_w": 28.71,
+     "sm_mhz_avg": 1830.0,
+     "sm_mhz_min": 1830,
+     "util_avg": 32.0,
+     "util_min_device": 32.0,
+     "util_max_device": 32.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 42,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 2283,
+       "mem_end_mib": 2283,
+       "mem_peak_mib": 2283,
+       "energy_j": 9.071,
+       "power_avg_w": 88.15,
+       "power_gauge_w": 28.71,
+       "sm_mhz_avg": 1830,
+       "sm_mhz_min": 1830,
+       "mem_mhz_avg": 6801,
+       "util_avg": 32.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 42,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 215.9,
+     "anon_end_mib": 215.9,
+     "anon_peak_mib": 215.9,
+     "file_start_mib": 309.8,
+     "file_end_mib": 309.8,
+     "file_peak_mib": 309.8,
+     "shmem_peak_mib": 22.3,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 19,
+     "user_s": 0.091,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": 0.88,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.0,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29658,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 7.3,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 1.828507,
+   "end_s": 1.931409
+  },
+  {
+   "name": "serve_c1",
+   "group": "serve",
+   "meta": {
+    "concurrency": 1
+   },
+   "tokens": 1024,
+   "metrics": {
+    "wall_s": 3.812297,
+    "gpu": {
+     "mem_start_mib": 1721,
+     "mem_end_mib": 1723,
+     "mem_peak_mib": 1723,
+     "mem_peak_max_device_mib": 1723,
+     "energy_j": 595.724,
+     "power_avg_w": 156.26,
+     "power_gauge_w": 138.55,
+     "sm_mhz_avg": 1983.0,
+     "sm_mhz_min": 1830,
+     "util_avg": 80.2,
+     "util_min_device": 80.2,
+     "util_max_device": 80.2,
+     "util_mem_avg": 50.4,
+     "temp_c_max": 50,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 2283,
+       "mem_end_mib": 2285,
+       "mem_peak_mib": 2285,
+       "energy_j": 595.724,
+       "power_avg_w": 156.26,
+       "power_gauge_w": 138.55,
+       "sm_mhz_avg": 1983,
+       "sm_mhz_min": 1830,
+       "mem_mhz_avg": 6801,
+       "util_avg": 80.2,
+       "util_mem_avg": 50.4,
+       "temp_c_max": 50,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 220.8,
+     "anon_end_mib": 839.1,
+     "anon_peak_mib": 839.1,
+     "file_start_mib": 310.8,
+     "file_end_mib": 312.3,
+     "file_peak_mib": 312.3,
+     "shmem_peak_mib": 22.3,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 19,
+     "user_s": 3.646,
+     "sys_s": 0.213,
+     "major_faults": 0,
+     "busy_cores": 1.01,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 1.9,
+       "busy_pct": 0.1
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29083,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 71.8,
+     "pcie_from_gpu_mib_est": 697.3
+    },
+    "pressure": {
+     "cpu_some_pct": 0.0,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 9.0,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    },
+    "tokens": 1024
+   },
+   "start_s": 1.931409,
+   "end_s": 5.743705
+  },
+  {
+   "name": "serve_c4",
+   "group": "serve",
+   "meta": {
+    "concurrency": 4
+   },
+   "tokens": 1024,
+   "metrics": {
+    "wall_s": 1.858047,
+    "gpu": {
+     "mem_start_mib": 1723,
+     "mem_end_mib": 1733,
+     "mem_peak_mib": 1733,
+     "mem_peak_max_device_mib": 1733,
+     "energy_j": 261.289,
+     "power_avg_w": 140.63,
+     "power_gauge_w": 153.61,
+     "sm_mhz_avg": 1995.0,
+     "sm_mhz_min": 1995,
+     "util_avg": 67.0,
+     "util_min_device": 67.0,
+     "util_max_device": 67.0,
+     "util_mem_avg": 38.4,
+     "temp_c_max": 50,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 2285,
+       "mem_end_mib": 2295,
+       "mem_peak_mib": 2295,
+       "energy_j": 261.289,
+       "power_avg_w": 140.63,
+       "power_gauge_w": 153.61,
+       "sm_mhz_avg": 1995,
+       "sm_mhz_min": 1995,
+       "mem_mhz_avg": 6801,
+       "util_avg": 67.0,
+       "util_mem_avg": 38.4,
+       "temp_c_max": 50,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 879.5,
+     "anon_end_mib": 1369.6,
+     "anon_peak_mib": 1369.6,
+     "file_start_mib": 312.3,
+     "file_end_mib": 312.5,
+     "file_peak_mib": 312.5,
+     "shmem_peak_mib": 22.3,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 19,
+     "user_s": 1.781,
+     "sys_s": 0.189,
+     "major_faults": 0,
+     "busy_cores": 1.06,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 28695,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 58.0,
+     "pcie_from_gpu_mib_est": 1065.9
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 9.7,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    },
+    "tokens": 1024
+   },
+   "start_s": 5.743705,
+   "end_s": 7.601753
+  },
+  {
+   "name": "teardown",
+   "group": "teardown",
+   "metrics": {
+    "wall_s": 7.2e-05,
+    "gpu": {
+     "mem_start_mib": 195,
+     "mem_end_mib": 195,
+     "mem_peak_mib": 195,
+     "mem_peak_max_device_mib": 195,
+     "energy_j": 0.006,
+     "power_avg_w": 81.46,
+     "power_gauge_w": 141.27,
+     "sm_mhz_avg": 1995.0,
+     "sm_mhz_min": 1995,
+     "util_avg": 41.0,
+     "util_min_device": 41.0,
+     "util_max_device": 41.0,
+     "util_mem_avg": 15.0,
+     "temp_c_max": 46,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 757,
+       "mem_end_mib": 757,
+       "mem_peak_mib": 757,
+       "energy_j": 0.006,
+       "power_avg_w": 81.46,
+       "power_gauge_w": 141.27,
+       "sm_mhz_avg": 1995,
+       "sm_mhz_min": 1995,
+       "mem_mhz_avg": 6801,
+       "util_avg": 41.0,
+       "util_mem_avg": 15.0,
+       "temp_c_max": 46,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 1367.9,
+     "anon_end_mib": 1367.9,
+     "anon_peak_mib": 1367.9,
+     "file_start_mib": 154.8,
+     "file_end_mib": 154.8,
+     "file_peak_mib": 154.8,
+     "shmem_peak_mib": 10.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 5,
+     "user_s": 0.0,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": 0.0,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 28578,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0
+    },
+    "pressure": {
+     "cpu_some_pct": 0.0,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 9.3,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 7.601753,
+   "end_s": 7.601824
+  },
+  {
+   "name": "teardown",
+   "group": "teardown",
+   "metrics": {
+    "wall_s": 0.204866,
+    "gpu": {
+     "mem_start_mib": 195,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 195,
+     "mem_peak_max_device_mib": 195,
+     "energy_j": 16.689,
+     "power_avg_w": 81.46,
+     "power_gauge_w": 140.79,
+     "sm_mhz_avg": 1995.0,
+     "sm_mhz_min": 1995,
+     "util_avg": 56.0,
+     "util_min_device": 56.0,
+     "util_max_device": 56.0,
+     "util_mem_avg": 15.0,
+     "temp_c_max": 46,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 757,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 757,
+       "energy_j": 16.689,
+       "power_avg_w": 81.46,
+       "power_gauge_w": 140.79,
+       "sm_mhz_avg": 1995,
+       "sm_mhz_min": 1995,
+       "mem_mhz_avg": 6801,
+       "util_avg": 56.0,
+       "util_mem_avg": 15.0,
+       "temp_c_max": 46,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 1367.9,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 1367.9,
+     "file_start_mib": 154.8,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 218.7,
+     "shmem_peak_mib": 10.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 5,
+     "user_s": 0.027,
+     "sys_s": 0.148,
+     "major_faults": 0,
+     "busy_cores": 0.85,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 28578,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 6.1,
+     "pcie_from_gpu_mib_est": 106.1
+    },
+    "pressure": {
+     "cpu_some_pct": 0.3,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 3.6,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 7.601824,
+   "end_s": 7.80669
+  },
+  {
+   "name": "tail",
+   "group": "tail",
+   "metrics": {
+    "wall_s": 1.003571,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 63.4,
+     "power_avg_w": 63.17,
+     "power_gauge_w": 112.46,
+     "sm_mhz_avg": 1995.0,
+     "sm_mhz_min": 1995,
+     "util_avg": 0.4,
+     "util_min_device": 0.4,
+     "util_max_device": 0.4,
+     "util_mem_avg": 5.9,
+     "temp_c_max": 46,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 562,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 562,
+       "energy_j": 63.4,
+       "power_avg_w": 63.17,
+       "power_gauge_w": 112.46,
+       "sm_mhz_avg": 1995,
+       "sm_mhz_min": 1995,
+       "mem_mhz_avg": 6923,
+       "util_avg": 0.4,
+       "util_mem_avg": 5.9,
+       "temp_c_max": 46,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 0.0,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 0.0,
+     "file_start_mib": 0.0,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 0.0,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 0,
+     "user_s": 0.0,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": 0.0,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.4,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29828,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 0.4,
+     "pcie_from_gpu_mib_est": 0.6
+    },
+    "pressure": {
+     "cpu_some_pct": 0.2,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.9,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 7.80669,
+   "end_s": 8.810261
+  }
+ ],
+ "platform": {
+  "python": "3.12.3"
+ },
+ "diagnosis": {
+  "bottlenecks": {
+   "load": {
+    "limit": "too short to judge",
+    "confidence": "none",
+    "evidence": {
+     "gpu_util_pct": 17.7,
+     "cpu_cores": 0.86,
+     "busiest_thread": "llama-server 74%",
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.1,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "0.67 s is too short for the GPU's utilization counter. Use a longer run."
+   },
+   "warmup": {
+    "limit": "too short to judge",
+    "confidence": "none",
+    "evidence": {
+     "gpu_util_pct": 32.0,
+     "cpu_cores": 0.88,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.1,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "0.10 s is too short for the GPU's utilization counter. Use a longer run."
+   },
+   "serve_c1": {
+    "limit": "gpu + host wait",
+    "confidence": "medium",
+    "evidence": {
+     "gpu_util_pct": 80.2,
+     "cpu_cores": 1.01,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.0,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "GPU 80% busy with nothing else saturated, so the rest of the time is host work or synchronization. --nsys shows the gaps, --cpu-profile what the host does."
+   },
+   "serve_c4": {
+    "limit": "gpu + host wait",
+    "confidence": "medium",
+    "evidence": {
+     "gpu_util_pct": 67.0,
+     "cpu_cores": 1.06,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.1
+    },
+    "why": "GPU 67% busy with nothing else saturated, so the rest of the time is host work or synchronization. --nsys shows the gaps, --cpu-profile what the host does."
+   }
+  },
+  "memory": [
+   {
+    "severity": "warning",
+    "what": "host_memory_growing",
+    "text": "Host memory grew 1,149 MiB during serve, from 0.22 GiB to 1.34 GiB. If it keeps growing with more requests it is a leak or an unbounded cache; if it levels off, a cache filling up.",
+    "evidence": {
+     "start_mib": 220.8,
+     "end_mib": 1369.6,
+     "phase": "serve"
+    }
+   },
+   {
+    "severity": "info",
+    "what": "gpu_memory_unaccounted",
+    "text": "CUDA0: 393 MiB in use that the engine cannot account for, against 1,528 MiB it can. Other processes or driver overhead hold it.",
+    "evidence": {
+     "unaccounted_mib": 393,
+     "self_mib": 1528
+    }
+   }
+  ],
+  "movement": [
+   {
+    "severity": "info",
+    "what": "load_from_page_cache",
+    "text": "The model was 100% in the page cache, so this load time is a warm one. A cold start reads it from disk and takes longer.",
+    "evidence": {
+     "cached_fraction": 1.0
+    }
+   }
+  ],
+  "serving": [
+   {
+    "severity": "info",
+    "what": "parallel_scaling",
+    "text": "Going from 1 to 4 concurrent requests raised throughput 2.05 times, and the median first token moved from 41 to 154 ms.",
+    "evidence": {
+     "from": 1,
+     "to": 4,
+     "throughput_gain": 2.05,
+     "ttft_from_ms": 41.38,
+     "ttft_to_ms": 154.24
+    }
+   }
+  ],
+  "timeline": [],
+  "next_steps": [
+   "--nsys: which kernels take the GPU's time, and what it waits on in the gaps",
+   "--cpu-profile: which functions the host threads spend their time in"
+  ]
+ }
+}

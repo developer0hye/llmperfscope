@@ -68,7 +68,7 @@ def _chart(title, unit, series, phases, t_max, floor=None):
         color = GROUP_COLORS.get(phase["group"])
         if color and phase["group"] not in ("baseline", "tail"):
             x0, x1 = x(phase["start_s"]), x(phase["end_s"])
-            parts.append(f'<rect x="{x0:.1f}" y="10" width="{max(x1 - x0, 0.5):.1f}" height="{ROW_HEIGHT - 28}" fill="{color}" opacity="0.28"/>')
+            parts.append(f'<rect x="{x0:.1f}" y="10" width="{max(x1 - x0, 0.5):.1f}" height="{ROW_HEIGHT - 28}" fill="{color}" opacity="0.14"/>')
     for fraction in (0, 0.5, 1):
         level = y(y_max * fraction)
         parts.append(f'<line x1="{PLOT_LEFT}" x2="{WIDTH - PLOT_RIGHT}" y1="{level:.1f}" y2="{level:.1f}" stroke="var(--grid)" stroke-width="1"/>')

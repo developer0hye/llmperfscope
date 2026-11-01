@@ -1,0 +1,385 @@
+{
+ "a": "upstream",
+ "b": "patched",
+ "order": "ABBA",
+ "cases": [
+  {
+   "metrics": {
+    "prefill_tps": {
+     "a": 4881.7818,
+     "b": 4883.7676,
+     "ratio": 1.0004,
+     "verdict": "same",
+     "a_runs": [
+      4890.716776,
+      4872.846805
+     ],
+     "b_runs": [
+      4883.666135,
+      4883.869084
+     ]
+    },
+    "decode_tps": {
+     "a": 109.5933,
+     "b": 109.7528,
+     "ratio": 1.0015,
+     "verdict": "same",
+     "a_runs": [
+      109.592905,
+      109.593604
+     ],
+     "b_runs": [
+      109.736706,
+      109.76889
+     ]
+    },
+    "gpu_peak_mib": {
+     "a": 5180.0,
+     "b": 5180.0,
+     "ratio": 1.0,
+     "verdict": "same",
+     "a_runs": [
+      5180,
+      5180
+     ],
+     "b_runs": [
+      5180,
+      5180
+     ]
+    },
+    "gpu_peak_max_device_mib": {
+     "a": 5180.0,
+     "b": 5180.0,
+     "ratio": 1.0,
+     "verdict": "same",
+     "a_runs": [
+      5180,
+      5180
+     ],
+     "b_runs": [
+      5180,
+      5180
+     ]
+    },
+    "host_anon_peak_mib": {
+     "a": 225.55,
+     "b": 230.4,
+     "ratio": 1.0215,
+     "verdict": "same",
+     "a_runs": [
+      225.6,
+      225.5
+     ],
+     "b_runs": [
+      230.4,
+      230.4
+     ]
+    },
+    "load_s": {
+     "a": 2.344,
+     "b": 2.1723,
+     "ratio": 0.9267,
+     "verdict": "same",
+     "a_runs": [
+      2.347144,
+      2.340868
+     ],
+     "b_runs": [
+      2.281026,
+      2.063483
+     ]
+    },
+    "prefill_j_per_token": {
+     "a": 0.0527,
+     "b": 0.0494,
+     "ratio": 0.9383,
+     "verdict": "better",
+     "a_runs": [
+      0.0521,
+      0.0532
+     ],
+     "b_runs": [
+      0.051,
+      0.0478
+     ]
+    },
+    "decode_j_per_token": {
+     "a": 2.658,
+     "b": 2.6812,
+     "ratio": 1.0087,
+     "verdict": "same",
+     "a_runs": [
+      2.698,
+      2.6179
+     ],
+     "b_runs": [
+      2.6749,
+      2.6875
+     ]
+    }
+   },
+   "dropped_runs": 0,
+   "worse": [],
+   "better": [
+    "prefill_j_per_token"
+   ],
+   "verdict": "improvement",
+   "label": "qwen3-8b q4_k_m 1 GPU"
+  },
+  {
+   "metrics": {
+    "prefill_tps": {
+     "a": 6965.9457,
+     "b": 7131.0688,
+     "ratio": 1.0237,
+     "verdict": "better",
+     "a_runs": [
+      6962.9857,
+      6968.905649
+     ],
+     "b_runs": [
+      7133.746992,
+      7128.390657
+     ]
+    },
+    "decode_tps": {
+     "a": 155.5533,
+     "b": 169.574,
+     "ratio": 1.0901,
+     "verdict": "better",
+     "a_runs": [
+      155.601463,
+      155.505183
+     ],
+     "b_runs": [
+      169.881741,
+      169.266279
+     ]
+    },
+    "gpu_peak_mib": {
+     "a": 6220.0,
+     "b": 6284.0,
+     "ratio": 1.0103,
+     "verdict": "worse",
+     "a_runs": [
+      6220,
+      6220
+     ],
+     "b_runs": [
+      6284,
+      6284
+     ]
+    },
+    "gpu_peak_max_device_mib": {
+     "a": 3110.0,
+     "b": 3142.0,
+     "ratio": 1.0103,
+     "verdict": "worse",
+     "a_runs": [
+      3110,
+      3110
+     ],
+     "b_runs": [
+      3142,
+      3142
+     ]
+    },
+    "host_anon_peak_mib": {
+     "a": 542.2,
+     "b": 549.5,
+     "ratio": 1.0135,
+     "verdict": "same",
+     "a_runs": [
+      542.2,
+      542.2
+     ],
+     "b_runs": [
+      549.5,
+      549.5
+     ]
+    },
+    "load_s": {
+     "a": 2.6098,
+     "b": 2.705,
+     "ratio": 1.0365,
+     "verdict": "same",
+     "a_runs": [
+      2.588522,
+      2.631146
+     ],
+     "b_runs": [
+      2.743611,
+      2.666382
+     ]
+    },
+    "prefill_j_per_token": {
+     "a": 0.065,
+     "b": 0.0559,
+     "ratio": 0.86,
+     "verdict": "better",
+     "a_runs": [
+      0.0728,
+      0.0572
+     ],
+     "b_runs": [
+      0.0556,
+      0.0562
+     ]
+    },
+    "decode_j_per_token": {
+     "a": 3.375,
+     "b": 3.1367,
+     "ratio": 0.9294,
+     "verdict": "better",
+     "a_runs": [
+      3.348,
+      3.402
+     ],
+     "b_runs": [
+      3.1331,
+      3.1403
+     ]
+    }
+   },
+   "dropped_runs": 0,
+   "worse": [
+    "gpu_peak_mib",
+    "gpu_peak_max_device_mib"
+   ],
+   "better": [
+    "prefill_tps",
+    "decode_tps",
+    "prefill_j_per_token",
+    "decode_j_per_token"
+   ],
+   "verdict": "regression",
+   "label": "qwen3-8b q4_k_m tensor 2"
+  },
+  {
+   "metrics": {
+    "prefill_tps": {
+     "a": 7746.6013,
+     "b": 9759.6792,
+     "ratio": 1.2599,
+     "verdict": "better",
+     "a_runs": [
+      7758.093797,
+      7735.108755
+     ],
+     "b_runs": [
+      9724.209874,
+      9795.148596
+     ]
+    },
+    "decode_tps": {
+     "a": 199.039,
+     "b": 314.8939,
+     "ratio": 1.5821,
+     "verdict": "better",
+     "a_runs": [
+      199.210367,
+      198.867607
+     ],
+     "b_runs": [
+      315.67116,
+      314.116582
+     ]
+    },
+    "gpu_peak_mib": {
+     "a": 19000.0,
+     "b": 18968.0,
+     "ratio": 0.9983,
+     "verdict": "same",
+     "a_runs": [
+      19000,
+      19000
+     ],
+     "b_runs": [
+      18968,
+      18968
+     ]
+    },
+    "gpu_peak_max_device_mib": {
+     "a": 2400.0,
+     "b": 2396.0,
+     "ratio": 0.9983,
+     "verdict": "same",
+     "a_runs": [
+      2400,
+      2400
+     ],
+     "b_runs": [
+      2396,
+      2396
+     ]
+    },
+    "host_anon_peak_mib": {
+     "a": 1516.65,
+     "b": 1531.7,
+     "ratio": 1.0099,
+     "verdict": "same",
+     "a_runs": [
+      1517.9,
+      1515.4
+     ],
+     "b_runs": [
+      1533.1,
+      1530.3
+     ]
+    },
+    "load_s": {
+     "a": 7.1768,
+     "b": 7.277,
+     "ratio": 1.014,
+     "verdict": "same",
+     "a_runs": [
+      7.262579,
+      7.091089
+     ],
+     "b_runs": [
+      7.218846,
+      7.335069
+     ]
+    },
+    "prefill_j_per_token": {
+     "a": 0.1294,
+     "b": 0.0968,
+     "ratio": 0.7485,
+     "verdict": "better",
+     "a_runs": [
+      0.1283,
+      0.1305
+     ],
+     "b_runs": [
+      0.0957,
+      0.098
+     ]
+    },
+    "decode_j_per_token": {
+     "a": 5.269,
+     "b": 3.4754,
+     "ratio": 0.6596,
+     "verdict": "better",
+     "a_runs": [
+      5.2559,
+      5.282
+     ],
+     "b_runs": [
+      3.4728,
+      3.478
+     ]
+    }
+   },
+   "dropped_runs": 0,
+   "worse": [],
+   "better": [
+    "prefill_tps",
+    "decode_tps",
+    "prefill_j_per_token",
+    "decode_j_per_token"
+   ],
+   "verdict": "improvement",
+   "label": "gpt-oss-20b tensor 8"
+  }
+ ]
+}
