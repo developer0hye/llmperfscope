@@ -142,7 +142,7 @@ def render(run, ticks):
     t_max = (ticks[-1]["t"] - t0) / 1e9 if ticks else 1.0
     devices = run.get("devices_used") or []
     out = []
-    title = run.get("label") or run.get("adapter") or "llmprof run"
+    title = run.get("label") or run.get("adapter") or "llmperfscope run"
     out.append(f"<h1>{_escape(title)}</h1>")
     facts = [f"status: {run.get('status')}", f"adapter: {run.get('adapter')}"]
     host = (run.get("host") or {}).get("hostname")

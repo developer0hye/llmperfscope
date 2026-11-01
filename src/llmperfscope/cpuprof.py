@@ -13,15 +13,15 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 NATIVE = Path(__file__).parent / "native"
-MAGIC = 0x4c4c4d50524f4632
+MAGIC = 0x4c5053434f504531
 
 
 def library_path():
     """Builds the shim next to the package, or in the user's cache when the package directory is read-only."""
     source = NATIVE / "cpuprof.c"
     compiler = None
-    for directory in (NATIVE, Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "llmprof"):
-        target = directory / "libllmprof_cpu.so"
+    for directory in (NATIVE, Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "llmperfscope"):
+        target = directory / "libllmperfscope_cpu.so"
         if target.exists() and target.stat().st_mtime >= source.stat().st_mtime:
             return target
         compiler = compiler or shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
@@ -44,8 +44,8 @@ def prepare_env(env, run_dir, hz):
     library = str(library_path())
     existing = env.get("LD_PRELOAD")
     env["LD_PRELOAD"] = f"{library}:{existing}" if existing else library
-    env["LLMPROF_CPUPROF_OUT"] = str(Path(run_dir).resolve() / "cpuprof")
-    env["LLMPROF_CPUPROF_HZ"] = str(hz)
+    env["LLMPERFSCOPE_CPUPROF_OUT"] = str(Path(run_dir).resolve() / "cpuprof")
+    env["LLMPERFSCOPE_CPUPROF_HZ"] = str(hz)
     return env
 
 
@@ -133,7 +133,7 @@ def _read_samples(path):
     with open(path, "rb") as f:
         magic, count, dropped, max_frames, hz = struct.unpack("<5Q", f.read(40))
         if magic != MAGIC:
-            raise ValueError("not a llmprof CPU profile")
+            raise ValueError("not a llmperfscope CPU profile")
         size = 32 + 8 * max_frames
         layout = f"<QII16s{max_frames}Q"
         samples = []

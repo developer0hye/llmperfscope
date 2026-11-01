@@ -6,7 +6,7 @@ import unittest
 import xml.dom.minidom
 
 import helpers
-from llmprof import analyze, diagnose, html
+from llmperfscope import analyze, diagnose, html
 from test_parsers import _ticks
 
 

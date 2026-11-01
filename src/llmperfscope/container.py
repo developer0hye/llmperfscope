@@ -1,5 +1,5 @@
 """`docker run ...` as a target. The docker client is only a remote control: the engine is a child of the daemon, so the client's
-process tree holds nothing worth measuring. llmprof asks docker for the container's first process and follows that instead.
+process tree holds nothing worth measuring. llmperfscope asks docker for the container's first process and follows that instead.
 Memory, CPU and per-process GPU memory all stay visible from the host, because a container's processes are host processes."""
 
 from __future__ import annotations
@@ -22,10 +22,10 @@ class DockerTarget:
         self._done = threading.Event()
 
     def prepare(self, cmd, index, marker_file):
-        """Adds what llmprof needs right after `docker run`: the id file, and the marker file for scripts inside the container."""
+        """Adds what llmperfscope needs right after `docker run`: the id file, and the marker file for scripts inside the container."""
         if self.cidfile.exists():
             self.cidfile.unlink()
-        extra = ["--cidfile", str(self.cidfile), "-e", "LLMPROF_MARKERS=/llmprof-run/markers.log", "-v", f"{self.run_dir}:/llmprof-run"]
+        extra = ["--cidfile", str(self.cidfile), "-e", "LLMPERFSCOPE_MARKERS=/llmperfscope-run/markers.log", "-v", f"{self.run_dir}:/llmperfscope-run"]
         return cmd[:index + 2] + extra + cmd[index + 2:]
 
     def follow(self, on_pid, timeout_s=300.0):
@@ -49,7 +49,7 @@ class DockerTarget:
                         return
                 time.sleep(0.2)
 
-        threading.Thread(target=wait, daemon=True, name="llmprof-container").start()
+        threading.Thread(target=wait, daemon=True, name="llmperfscope-container").start()
 
     def identity(self):
         """Which image ran, as the report's record of which code this was."""

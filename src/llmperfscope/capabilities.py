@@ -1,4 +1,4 @@
-"""`llmprof check`: what can be measured on this machine, what cannot, and what it would take."""
+"""`llmperfscope check`: what can be measured on this machine, what cannot, and what it would take."""
 
 from __future__ import annotations
 

@@ -24,7 +24,7 @@ class BlockingQueries(threading.Thread):
     get a thread of their own so the fast samples keep their rate, and once the target's GPUs are known only those are read."""
 
     def __init__(self, backend, period_s=0.5, pcie=True):
-        super().__init__(name="llmprof-driver-queries", daemon=True)
+        super().__init__(name="llmperfscope-driver-queries", daemon=True)
         self.backend = backend
         self.period_s = period_s
         self.want_pcie = pcie
@@ -67,7 +67,7 @@ class BlockingQueries(threading.Thread):
 
 class Sampler(threading.Thread):
     def __init__(self, path, backend, hz=50.0, slow_hz=2.0, pcie=True):
-        super().__init__(name="llmprof-sampler", daemon=True)
+        super().__init__(name="llmperfscope-sampler", daemon=True)
         self.path = path
         self.backend = backend
         self.period_ns = int(1e9 / hz)

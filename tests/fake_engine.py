@@ -8,7 +8,7 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-import llmprof  # noqa: E402
+import llmperfscope  # noqa: E402
 
 MIB = 1 << 20
 
@@ -41,13 +41,13 @@ def spin(seconds):
 
 def phases():
     """Known durations and allocations, announced with markers."""
-    llmprof.mark("load")
+    llmperfscope.mark("load")
     block = touch_anon(200)
     f, mapping = touch_file(sys.argv[2], 64)
     time.sleep(0.4)
-    llmprof.mark("decode", tokens=100)
+    llmperfscope.mark("decode", tokens=100)
     spin(0.6)
-    llmprof.mark("post", group="teardown")
+    llmperfscope.mark("post", group="teardown")
     del block
     mapping.close()
     f.close()
@@ -90,10 +90,10 @@ def main():
         time.sleep(0.2)
     elif scenario == "plain_marker":
         # No library, as a shell script or another language would do it.
-        with open(os.environ["LLMPROF_MARKERS"], "a") as f:
+        with open(os.environ["LLMPERFSCOPE_MARKERS"], "a") as f:
             f.write("first_phase\n")
         time.sleep(0.5)
-        with open(os.environ["LLMPROF_MARKERS"], "a") as f:
+        with open(os.environ["LLMPERFSCOPE_MARKERS"], "a") as f:
             f.write(f"{time.monotonic_ns()} second_phase\n")
         time.sleep(0.5)
     else:

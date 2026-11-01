@@ -260,8 +260,8 @@ class NvmlBackend(GpuBackend):
 
 def open_backend():
     """The best backend on this machine. Never raises: no GPU still gives a host-only profile."""
-    if os.environ.get("LLMPROF_NO_GPU"):
-        return GpuBackend(reason="LLMPROF_NO_GPU is set")
+    if os.environ.get("LLMPERFSCOPE_NO_GPU"):
+        return GpuBackend(reason="LLMPERFSCOPE_NO_GPU is set")
     try:
         return NvmlBackend()
     except (OSError, AttributeError) as e:

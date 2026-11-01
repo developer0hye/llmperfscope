@@ -1,4 +1,4 @@
-"""What llmprof knows about specific engines. The core works without any of this; an adapter only adds finer phases,
+"""What llmperfscope knows about specific engines. The core works without any of this; an adapter only adds finer phases,
 exact throughput and server defaults. A new engine needs one small class here, or just `--mark 'regex=phase'`.
 
 Canonical phase groups, so reports line up across engines:
@@ -17,7 +17,7 @@ WRAPPERS = {"env", "taskset", "numactl", "timeout", "nice", "ionice", "chrt", "f
 
 class Adapter:
     name = "generic"
-    # Defaults for `llmprof serve`: paths on the server, signal to stop it, extra request fields.
+    # Defaults for `llmperfscope serve`: paths on the server, signal to stop it, extra request fields.
     server = None
 
     def __init__(self, cmd, marks=()):
@@ -201,7 +201,7 @@ def _merge_tests(tests):
 
 
 def _phase_vs_samples(phases, tests):
-    """Self-check: the time llmprof saw for each run against what the engine timed itself. Far from 1 means the phase
+    """Self-check: the time llmperfscope saw for each run against what the engine timed itself. Far from 1 means the phase
     boundaries cannot be trusted."""
     wall = sampled = 0.0
     for test in tests:

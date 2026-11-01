@@ -7,8 +7,8 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from llmprof import procfs  # noqa: E402
-from llmprof.gpu import GpuBackend  # noqa: E402
+from llmperfscope import procfs  # noqa: E402
+from llmperfscope.gpu import GpuBackend  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -31,7 +31,7 @@ class ScriptedGpu(GpuBackend):
         self.children = False
 
     def _running(self):
-        # The target is a child of the test process, as it would be of the llmprof command.
+        # The target is a child of the test process, as it would be of the llmperfscope command.
         for pid in procfs.children_of(os.getpid()):
             st = procfs.stat(pid)
             if st and st["state"] != "Z":
@@ -52,7 +52,7 @@ class ScriptedGpu(GpuBackend):
 
 
 def temp_dir():
-    return tempfile.mkdtemp(prefix="llmprof-test-", dir=os.environ.get("LLMPROF_TEST_DIR"))
+    return tempfile.mkdtemp(prefix="llmperfscope-test-", dir=os.environ.get("LLMPERFSCOPE_TEST_DIR"))
 
 
 def group(**kwargs):
