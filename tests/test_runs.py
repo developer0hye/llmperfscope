@@ -251,7 +251,8 @@ class CpuProfile(unittest.TestCase):
                 #include <pthread.h>
                 #include <time.h>
                 volatile unsigned long sink;
-                static double now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
+                /* CPU time of this thread, so the amount of work does not depend on how many cores the machine has. */
+                static double now(void) { struct timespec t; clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t); return t.tv_sec + t.tv_nsec * 1e-9; }
                 __attribute__((noinline)) void llmprof_test_worker_burn(void) {
                     double t0 = now();
                     while (now() - t0 < 1.2) for (int i = 0; i < 20000; i++) sink += i;
