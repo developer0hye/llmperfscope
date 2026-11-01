@@ -1,0 +1,3371 @@
+{
+ "schema": "llmperfscope.run/1",
+ "tool": {
+  "name": "llmperfscope",
+  "version": "0.1.0"
+ },
+ "label": "DeepSeek-V4.1-Flash, 8 GPUs",
+ "status": "ok",
+ "exit_code": 0,
+ "stop_reason": "workload finished",
+ "perturbed": false,
+ "attached": false,
+ "wall_time_at_t0_ns": 1793534879144407294,
+ "t0_monotonic_ns": 1166794516090164,
+ "gpu_driver": "580.159.03",
+ "command": [
+  "taskset",
+  "-c",
+  "16-23,80-87",
+  "numactl",
+  "--interleave=all",
+  "<path>/llama-server",
+  "-m",
+  "<path>/DeepSeek-V4.1-Flash-1017-Q8_0-upstream.gguf",
+  "-ngl",
+  "99",
+  "-sm",
+  "tensor",
+  "-fa",
+  "1",
+  "-t",
+  "8",
+  "-b",
+  "2048",
+  "-ub",
+  "512",
+  "-c",
+  "32768",
+  "-np",
+  "4",
+  "--port",
+  "8123",
+  "--metrics"
+ ],
+ "env": {
+  "CUDA_VISIBLE_DEVICES": "0,1,2,3,4,5,6,7",
+  "GGML_CUDA_ALLREDUCE": "nccl",
+  "LLAMA_ARG_LOG_JSONL": "1",
+  "NCCL_P2P_DISABLE": "0",
+  "NCCL_P2P_LEVEL": "NVL"
+ },
+ "adapter": "llama.cpp:llama-server",
+ "identity": {
+  "sha256": "9e9cb75e42b5cfd2a3727703b810b6d8338d7ed55e3ebedcb7fa34216a48201f",
+  "git_commit": "0ec4027a2a0183de87c007069adddc06e665f7de",
+  "git_dirty_files": 2
+ },
+ "host": {
+  "hostname": "host",
+  "kernel": "6.8.0-117-generic",
+  "cpus": 256,
+  "user": "user",
+  "cpu": "AMD EPYC 9554 64-Core Processor",
+  "numa_nodes": 2,
+  "governor": "schedutil",
+  "thp": "always [madvise] never"
+ },
+ "devices": [
+  {
+   "index": 0,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  },
+  {
+   "index": 1,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  },
+  {
+   "index": 2,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  },
+  {
+   "index": 3,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  },
+  {
+   "index": 4,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  },
+  {
+   "index": 5,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  },
+  {
+   "index": 6,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  },
+  {
+   "index": 7,
+   "name": "NVIDIA RTX A6000",
+   "memory_total_mib": 46068,
+   "power_limit_w": 300.0,
+   "nvlink": true
+  }
+ ],
+ "machine_before": {
+  "t_wall": 1793534878.9165928,
+  "foreign_cpu_cores": 0.02,
+  "mem_available_mib": 998189,
+  "mem_total_mib": 1031695,
+  "page_cache_mib": 828153,
+  "swap_used_mib": 91,
+  "loadavg": [
+   0.2275390625,
+   0.35595703125,
+   0.20263671875
+  ],
+  "gpus": [
+   {
+    "index": 0,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 28,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   {
+    "index": 1,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 26,
+    "throttle": []
+   },
+   {
+    "index": 2,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 28,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   {
+    "index": 3,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 26,
+    "throttle": []
+   },
+   {
+    "index": 4,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 26,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   {
+    "index": 5,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 26,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   {
+    "index": 6,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 27,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   {
+    "index": 7,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 26,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   }
+  ],
+  "model_page_cache_fraction": 1.0,
+  "model_storage": {
+   "path": "<path>/DeepSeek-V4.1-Flash-1017-Q8_0-upstream.gguf",
+   "size_gib": 473.069,
+   "fstype": "ext4",
+   "mount": "<path>/data",
+   "disks": [
+    {
+     "name": "sda",
+     "kind": "hdd",
+     "model": "AsustekPIKE3108",
+     "size_gib": 50074.1
+    }
+   ]
+  },
+  "clean": true,
+  "reasons": []
+ },
+ "machine_after": {
+  "t_wall": 1793534989.8152008,
+  "foreign_cpu_cores": 0,
+  "mem_available_mib": 998214,
+  "mem_total_mib": 1031695,
+  "page_cache_mib": 828154,
+  "swap_used_mib": 91,
+  "loadavg": [
+   1.0634765625,
+   0.64111328125,
+   0.326171875
+  ],
+  "gpus": [
+   {
+    "index": 0,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 45,
+    "throttle": []
+   },
+   {
+    "index": 1,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 41,
+    "throttle": []
+   },
+   {
+    "index": 2,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 45,
+    "throttle": []
+   },
+   {
+    "index": 3,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 42,
+    "throttle": []
+   },
+   {
+    "index": 4,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 42,
+    "throttle": []
+   },
+   {
+    "index": 5,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 42,
+    "throttle": []
+   },
+   {
+    "index": 6,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 43,
+    "throttle": []
+   },
+   {
+    "index": 7,
+    "mem_used_mib": 583,
+    "util": 0,
+    "temp_c": 42,
+    "throttle": []
+   }
+  ],
+  "clean": true,
+  "reasons": []
+ },
+ "sampler": {
+  "hz_target": 50.0,
+  "hz_achieved": 46.7,
+  "max_gap_ms": 440.8,
+  "cpu_seconds": 13.76,
+  "pinned_cpu": 255,
+  "error": null
+ },
+ "groups": {
+  "baseline": {
+   "phases": 1,
+   "wall_s": 1.000679,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 184.858,
+    "power_avg_w": 184.73,
+    "power_gauge_w": 200.0,
+    "sm_mhz_avg": 210.0,
+    "sm_mhz_min": 210,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 28,
+    "throttled": true,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   "host": {
+    "anon_start_mib": 0.0,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 0.0,
+    "file_start_mib": 0.0,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 0.0,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 0,
+    "user_s": 0.0,
+    "sys_s": 0.008,
+    "busy_cores": 0.01,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.1,
+      "busy_pct": 2.3
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 3.3,
+    "pcie_from_gpu_mib_est": 9.9,
+    "nvlink_mib": 0.0,
+    "mem_available_min_mib": 998190,
+    "swap_used_max_mib": 91
+   },
+   "pressure": {
+    "cpu_some_pct": 0.1,
+    "io_full_pct": 0.1,
+    "io_some_pct": 0.1,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.2,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "startup": {
+   "phases": 1,
+   "wall_s": 1.996268,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 24,
+    "mem_peak_mib": 24,
+    "mem_peak_max_device_mib": 3,
+    "energy_j": 411.76,
+    "power_avg_w": 206.26,
+    "power_gauge_w": 207.3,
+    "sm_mhz_avg": 210.0,
+    "sm_mhz_min": 210,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 28,
+    "throttled": true,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   "host": {
+    "anon_start_mib": 16.7,
+    "anon_end_mib": 122.3,
+    "anon_peak_mib": 122.3,
+    "file_start_mib": 22.1,
+    "file_end_mib": 78.3,
+    "file_peak_mib": 78.3,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 150,
+    "user_s": 0.037,
+    "sys_s": 1.739,
+    "busy_cores": 0.89,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 1.51
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 1.51,
+     "busy": 0.756
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 1.4,
+      "busy_pct": 0.5
+     },
+     "sda": {
+      "read_mib": 0.0,
+      "write_mib": 0.1,
+      "busy_pct": 0.1
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 40.6,
+    "pcie_from_gpu_mib_est": 92.5,
+    "nvlink_mib": 0.0,
+    "mem_available_min_mib": 997924,
+    "swap_used_max_mib": 91
+   },
+   "pressure": {
+    "cpu_some_pct": 1.1,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.5,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "load": {
+   "phases": 1,
+   "wall_s": 79.667621,
+   "gpu": {
+    "mem_start_mib": 24,
+    "mem_end_mib": 308752,
+    "mem_peak_mib": 308752,
+    "mem_peak_max_device_mib": 38610,
+    "energy_j": 45865.639,
+    "power_avg_w": 575.71,
+    "power_gauge_w": 592.5,
+    "sm_mhz_avg": 1785.1,
+    "sm_mhz_min": 210,
+    "util_avg": 2.0,
+    "util_min_device": 1.9,
+    "util_max_device": 2.0,
+    "util_mem_avg": 0.1,
+    "temp_c_max": 36,
+    "throttled": false,
+    "throttle": [
+     "sw_power_cap"
+    ]
+   },
+   "host": {
+    "anon_start_mib": 143.2,
+    "anon_end_mib": 1379.6,
+    "anon_peak_mib": 1379.6,
+    "file_start_mib": 79.3,
+    "file_end_mib": 9235.6,
+    "file_peak_mib": 284549.0,
+    "shmem_peak_mib": 482.9,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 301,
+    "user_s": 46.76,
+    "sys_s": 36.823,
+    "busy_cores": 1.05,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 81.89,
+     "cuda-EvtHandlr": 0.17
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 77.81,
+     "busy": 0.977
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 9.0,
+      "busy_pct": 0.5
+     },
+     "sda": {
+      "read_mib": 0.0,
+      "write_mib": 1.6,
+      "busy_pct": 0.0
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 336,
+    "network_rx_mib": 0.9,
+    "network_tx_mib": 0.9,
+    "pcie_to_gpu_mib_est": 312233.2,
+    "pcie_from_gpu_mib_est": 36763.0,
+    "nvlink_mib": 112.7,
+    "mem_available_min_mib": 995636,
+    "swap_used_max_mib": 91
+   },
+   "pressure": {
+    "cpu_some_pct": 0.3,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.5,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "warmup": {
+   "phases": 1,
+   "wall_s": 1.191223,
+   "gpu": {
+    "mem_start_mib": 308752,
+    "mem_end_mib": 309056,
+    "mem_peak_mib": 309056,
+    "mem_peak_max_device_mib": 38648,
+    "energy_j": 1088.931,
+    "power_avg_w": 914.13,
+    "power_gauge_w": 693.2,
+    "sm_mhz_avg": 1815.2,
+    "sm_mhz_min": 1800,
+    "util_avg": 38.8,
+    "util_min_device": 33.5,
+    "util_max_device": 42.7,
+    "util_mem_avg": 3.0,
+    "temp_c_max": 39,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 1379.7,
+    "anon_end_mib": 1738.2,
+    "anon_peak_mib": 1738.2,
+    "file_start_mib": 9235.8,
+    "file_end_mib": 9331.1,
+    "file_peak_mib": 9331.1,
+    "shmem_peak_mib": 482.9,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 294,
+    "user_s": 0.972,
+    "sys_s": 0.21,
+    "busy_cores": 0.99,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 0.91
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 0.91,
+     "busy": 0.764
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.8,
+      "busy_pct": 0.8
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 1858.5,
+    "pcie_from_gpu_mib_est": 832.0,
+    "nvlink_mib": 655.0,
+    "mem_available_min_mib": 995195,
+    "swap_used_max_mib": 91
+   },
+   "pressure": {
+    "cpu_some_pct": 0.4,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.4,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "serve": {
+   "phases": 2,
+   "wall_s": 23.105111,
+   "tokens": 1024,
+   "gpu": {
+    "mem_start_mib": 309056,
+    "mem_end_mib": 311248,
+    "mem_peak_mib": 311248,
+    "mem_peak_max_device_mib": 38922,
+    "energy_j": 35889.098,
+    "power_avg_w": 1553.3,
+    "power_gauge_w": 1571.2,
+    "sm_mhz_avg": 1912.3,
+    "sm_mhz_min": 1875,
+    "util_avg": 72.2,
+    "util_min_device": 71.1,
+    "util_max_device": 72.6,
+    "util_mem_avg": 34.3,
+    "temp_c_max": 51,
+    "throttled": true,
+    "throttle": [
+     "sw_power_cap"
+    ],
+    "j_per_token": 35.0479
+   },
+   "host": {
+    "anon_start_mib": 1738.3,
+    "anon_end_mib": 2650.2,
+    "anon_peak_mib": 2650.2,
+    "file_start_mib": 9331.1,
+    "file_end_mib": 10276.8,
+    "file_peak_mib": 10276.8,
+    "shmem_peak_mib": 482.9,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 294,
+    "user_s": 21.928,
+    "sys_s": 1.385,
+    "busy_cores": 1.01,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 23.07,
+     "cuda-EvtHandlr": 0.06
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 23.04,
+     "busy": 0.997
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.3,
+      "busy_pct": 0.3
+     },
+     "sda": {
+      "read_mib": 0.0,
+      "write_mib": 0.4,
+      "busy_pct": 0.0
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.3,
+    "network_tx_mib": 0.3,
+    "pcie_to_gpu_mib_est": 177358.5,
+    "pcie_from_gpu_mib_est": 122199.5,
+    "nvlink_mib": 77548.6,
+    "mem_available_min_mib": 994212,
+    "swap_used_max_mib": 91
+   },
+   "pressure": {
+    "cpu_some_pct": 0.4,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.5,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "teardown": {
+   "phases": 2,
+   "wall_s": 2.648598,
+   "gpu": {
+    "mem_start_mib": 311248,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 311248,
+    "mem_peak_max_device_mib": 38922,
+    "energy_j": 2084.331,
+    "power_avg_w": 786.96,
+    "power_gauge_w": 1131.2,
+    "sm_mhz_avg": 1905.0,
+    "sm_mhz_min": 1890,
+    "util_avg": 37.1,
+    "util_min_device": 35.1,
+    "util_max_device": 38.7,
+    "util_mem_avg": 8.6,
+    "temp_c_max": 50,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 2637.0,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 2637.0,
+    "file_start_mib": 10276.8,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 10276.8,
+    "shmem_peak_mib": 482.9,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 36,
+    "user_s": 0.282,
+    "sys_s": 1.275,
+    "busy_cores": 0.59,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "llama-server": 1.3,
+     "cuda-EvtHandlr": 0.01
+    },
+    "busiest_thread": {
+     "name": "llama-server",
+     "cpu_s": 1.3,
+     "busy": 0.491
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.0,
+      "busy_pct": 0.5
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": -333,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 3566.2,
+    "pcie_from_gpu_mib_est": 2552.7,
+    "nvlink_mib": 314.8,
+    "mem_available_min_mib": 994301,
+    "swap_used_max_mib": 91
+   },
+   "pressure": {
+    "cpu_some_pct": 0.7,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.4,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "tail": {
+   "phases": 1,
+   "wall_s": 1.061017,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 651.482,
+    "power_avg_w": 614.02,
+    "power_gauge_w": 717.1,
+    "sm_mhz_avg": 1905.0,
+    "sm_mhz_min": 1890,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 0.1,
+    "temp_c_max": 45,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 0.0,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 0.0,
+    "file_start_mib": 0.0,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 0.0,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 0,
+    "user_s": 0.0,
+    "sys_s": 0.0,
+    "busy_cores": 0.0,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 0.6,
+      "busy_pct": 0.8
+     },
+     "sda": {
+      "read_mib": 0.0,
+      "write_mib": 0.1,
+      "busy_pct": 0.0
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 4.0,
+    "pcie_from_gpu_mib_est": 8.0,
+    "nvlink_mib": 0.0,
+    "mem_available_min_mib": 998214,
+    "swap_used_max_mib": 91
+   },
+   "pressure": {
+    "cpu_some_pct": 1.2,
+    "io_full_pct": 0.2,
+    "io_some_pct": 0.2,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.1,
+    "iowait_pct": 0.01,
+    "steal_pct": 0.0
+   }
+  }
+ },
+ "memory": {
+  "gpu": {
+   "devices": [
+    {
+     "index": 0,
+     "baseline_mib": 583,
+     "peak_mib": 39473,
+     "peak_above_baseline_mib": 38890,
+     "process_peak_mib": 38882,
+     "after_exit_mib": 583
+    },
+    {
+     "index": 1,
+     "baseline_mib": 583,
+     "peak_mib": 39505,
+     "peak_above_baseline_mib": 38922,
+     "process_peak_mib": 38914,
+     "after_exit_mib": 583
+    },
+    {
+     "index": 2,
+     "baseline_mib": 583,
+     "peak_mib": 39473,
+     "peak_above_baseline_mib": 38890,
+     "process_peak_mib": 38882,
+     "after_exit_mib": 583
+    },
+    {
+     "index": 3,
+     "baseline_mib": 583,
+     "peak_mib": 39505,
+     "peak_above_baseline_mib": 38922,
+     "process_peak_mib": 38914,
+     "after_exit_mib": 583
+    },
+    {
+     "index": 4,
+     "baseline_mib": 583,
+     "peak_mib": 39473,
+     "peak_above_baseline_mib": 38890,
+     "process_peak_mib": 38882,
+     "after_exit_mib": 583
+    },
+    {
+     "index": 5,
+     "baseline_mib": 583,
+     "peak_mib": 39505,
+     "peak_above_baseline_mib": 38922,
+     "process_peak_mib": 38914,
+     "after_exit_mib": 583
+    },
+    {
+     "index": 6,
+     "baseline_mib": 583,
+     "peak_mib": 39473,
+     "peak_above_baseline_mib": 38890,
+     "process_peak_mib": 38882,
+     "after_exit_mib": 583
+    },
+    {
+     "index": 7,
+     "baseline_mib": 583,
+     "peak_mib": 39505,
+     "peak_above_baseline_mib": 38922,
+     "process_peak_mib": 38914,
+     "after_exit_mib": 583
+    }
+   ],
+   "peak_above_baseline_total_mib": 311248,
+   "peak_above_baseline_max_device_mib": 38922
+  },
+  "host": {
+   "anon_peak_mib": 2650.2,
+   "file_peak_mib": 284549.0,
+   "shmem_peak_mib": 482.9,
+   "pinned_peak_mib": 0.0,
+   "swap_peak_mib": 0.0,
+   "vm_hwm_sum_mib": 284929.6,
+   "max_rss_kernel_mib": 284929.6
+  },
+  "breakdown_mib": [
+   {
+    "kind": "device",
+    "name": "Meta()",
+    "total": 363886,
+    "free": 52624,
+    "self": 38102,
+    "model": 37535,
+    "context": 220,
+    "compute": 346,
+    "unaccounted": 273159
+   },
+   {
+    "kind": "host",
+    "name": "Host",
+    "self": 200546,
+    "model": 200487,
+    "context": 0,
+    "compute": 58
+   }
+  ]
+ },
+ "energy": {
+  "total_j": 85339.759,
+  "serve_j_per_token": 35.0479
+ },
+ "devices_used": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "disks": {
+  "nvme0n1": {
+   "kind": "nvme",
+   "model": "SAMSUNG MZVL21T0HCLR-00B00",
+   "size_gib": 953.9
+  },
+  "sda": {
+   "kind": "hdd",
+   "model": "AsustekPIKE3108",
+   "size_gib": 50074.1
+  }
+ },
+ "cpu": {
+  "user_s": 70.019,
+  "sys_s": 42.238,
+  "major_faults": 0,
+  "voluntary_switches": 56875,
+  "involuntary_switches": 338
+ },
+ "consistency": {
+  "energy_over_power_gauge": 0.989
+ },
+ "throughput": {
+  "serve_c1": {
+   "requests": 8,
+   "failed": 0,
+   "wall_s": 16.019,
+   "completion_tokens": 512,
+   "prompt_tokens": 4704,
+   "prompt_tokens_cached": 0,
+   "tokens_exact": true,
+   "output_tokens_per_s": 31.962,
+   "ttft_ms": {
+    "n": 8,
+    "mean": 670.68,
+    "p50": 596.9,
+    "p90": 955.16,
+    "p99": 955.16,
+    "max": 955.16
+   },
+   "itl_ms": {
+    "n": 504,
+    "mean": 21.13,
+    "p50": 19.45,
+    "p90": 20.51,
+    "p99": 97.39,
+    "max": 133.7
+   },
+   "decode_tokens_per_s_mean": 47.35,
+   "prefill_tokens_per_s_mean": 902.604,
+   "concurrency": 1,
+   "j_per_output_token": 46.2252
+  },
+  "serve_c4": {
+   "requests": 8,
+   "failed": 0,
+   "wall_s": 7.083,
+   "completion_tokens": 512,
+   "prompt_tokens": 4704,
+   "prompt_tokens_cached": 0,
+   "tokens_exact": true,
+   "output_tokens_per_s": 72.281,
+   "ttft_ms": {
+    "n": 8,
+    "mean": 1696.41,
+    "p50": 1694.7,
+    "p90": 1700.97,
+    "p99": 1700.97,
+    "max": 1700.97
+   },
+   "itl_ms": {
+    "n": 504,
+    "mean": 29.27,
+    "p50": 26.84,
+    "p90": 27.66,
+    "p99": 165.16,
+    "max": 174.03
+   },
+   "decode_tokens_per_s_mean": 34.303,
+   "prefill_tokens_per_s_mean": 346.617,
+   "concurrency": 4,
+   "j_per_output_token": 23.8707
+  }
+ },
+ "workload": {
+  "ready_s": 81.459,
+  "model": "<path>/DeepSeek-V4.1-Flash-1017-Q8_0-upstream.gguf",
+  "prompts": 8,
+  "warmup_ttft_ms": 297.84,
+  "server_gauges_peak": {
+   "llamacpp:requests_processing": 4.0,
+   "llamacpp:requests_deferred": 0.0
+  },
+  "server_metrics_delta": {
+   "llamacpp:prompt_tokens_total": 9408.0,
+   "llamacpp:prompt_seconds_total": 8.570427,
+   "llamacpp:tokens_predicted_total": 1024.0,
+   "llamacpp:tokens_predicted_seconds_total": 25.391855,
+   "llamacpp:n_decode_total": 660.0,
+   "llamacpp:n_tokens_max": 616.0,
+   "llamacpp:prompt_tokens_seconds": -13.7673,
+   "llamacpp:predicted_tokens_seconds": 1.8175,
+   "llamacpp:n_busy_slots_per_decode": 0.57225
+  }
+ },
+ "notes": [],
+ "phases": [
+  {
+   "name": "baseline",
+   "group": "baseline",
+   "metrics": {
+    "wall_s": 1.000679,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 184.858,
+     "power_avg_w": 184.73,
+     "power_gauge_w": 199.99,
+     "sm_mhz_avg": 210.0,
+     "sm_mhz_min": 210,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 28,
+     "throttled": true,
+     "throttle": [
+      "sw_power_cap"
+     ],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 25.332,
+       "power_avg_w": 25.31,
+       "power_gauge_w": 29.11,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 28,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 59.1
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 24.258,
+       "power_avg_w": 24.24,
+       "power_gauge_w": 24.64,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 26,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 36.4
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 21.021,
+       "power_avg_w": 21.01,
+       "power_gauge_w": 22.14,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 28,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 65.9
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 19.448,
+       "power_avg_w": 19.43,
+       "power_gauge_w": 20.76,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 26,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 25.478,
+       "power_avg_w": 25.46,
+       "power_gauge_w": 27.32,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 26,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 68.2
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 21.361,
+       "power_avg_w": 21.35,
+       "power_gauge_w": 24.37,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 26,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 70.5
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 23.325,
+       "power_avg_w": 23.31,
+       "power_gauge_w": 24.23,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 27,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 20.5
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 24.635,
+       "power_avg_w": 24.62,
+       "power_gauge_w": 27.42,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 26,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 72.7
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 0.0,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 0.0,
+     "file_start_mib": 0.0,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 0.0,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 0,
+     "user_s": 0.0,
+     "sys_s": 0.008,
+     "major_faults": 0,
+     "busy_cores": 0.01,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.1,
+       "busy_pct": 2.3
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 998190,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 3.3,
+     "pcie_from_gpu_mib_est": 9.9,
+     "nvlink_mib": 0.0
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.1,
+     "io_full_pct": 0.1
+    },
+    "system_cpu": {
+     "busy_pct": 0.2,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 0.0,
+   "end_s": 1.000679
+  },
+  {
+   "name": "startup",
+   "group": "startup",
+   "metrics": {
+    "wall_s": 1.996268,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 24,
+     "mem_peak_mib": 24,
+     "mem_peak_max_device_mib": 3,
+     "energy_j": 411.76,
+     "power_avg_w": 206.27,
+     "power_gauge_w": 207.29,
+     "sm_mhz_avg": 210.0,
+     "sm_mhz_min": 210,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 28,
+     "throttled": true,
+     "throttle": [
+      "sw_power_cap"
+     ],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 63.74,
+       "power_avg_w": 31.93,
+       "power_gauge_w": 31.52,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 28,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 51.705,
+       "power_avg_w": 25.9,
+       "power_gauge_w": 26.53,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 26,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 62.3
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 46.769,
+       "power_avg_w": 23.43,
+       "power_gauge_w": 23.19,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 28,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 47.147,
+       "power_avg_w": 23.62,
+       "power_gauge_w": 21.57,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 27,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 55.631,
+       "power_avg_w": 27.87,
+       "power_gauge_w": 27.8,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 27,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 44.3
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 49.305,
+       "power_avg_w": 24.7,
+       "power_gauge_w": 24.78,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 27,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 45.9
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 44.129,
+       "power_avg_w": 22.11,
+       "power_gauge_w": 24.32,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 27,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 83.6
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 583,
+       "mem_end_mib": 586,
+       "mem_peak_mib": 586,
+       "energy_j": 53.336,
+       "power_avg_w": 26.72,
+       "power_gauge_w": 27.58,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 405,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 26,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 57.4
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 16.7,
+     "anon_end_mib": 122.3,
+     "anon_peak_mib": 122.3,
+     "file_start_mib": 22.1,
+     "file_end_mib": 78.3,
+     "file_peak_mib": 78.3,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 150,
+     "user_s": 0.037,
+     "sys_s": 1.739,
+     "major_faults": 0,
+     "busy_cores": 0.89,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 1.4,
+       "busy_pct": 0.5
+      },
+      "sda": {
+       "read_mib": 0.0,
+       "write_mib": 0.1,
+       "busy_pct": 0.1
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 997924,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 40.6,
+     "pcie_from_gpu_mib_est": 92.5,
+     "nvlink_mib": 0.0
+    },
+    "pressure": {
+     "cpu_some_pct": 1.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.5,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 1.000679,
+   "end_s": 2.996947
+  },
+  {
+   "name": "load",
+   "group": "load",
+   "metrics": {
+    "wall_s": 79.667621,
+    "gpu": {
+     "mem_start_mib": 24,
+     "mem_end_mib": 308752,
+     "mem_peak_mib": 308752,
+     "mem_peak_max_device_mib": 38610,
+     "energy_j": 45865.639,
+     "power_avg_w": 575.71,
+     "power_gauge_w": 592.46,
+     "sm_mhz_avg": 1785.1,
+     "sm_mhz_min": 210,
+     "util_avg": 2.0,
+     "util_min_device": 1.9,
+     "util_max_device": 2.0,
+     "util_mem_avg": 0.1,
+     "temp_c_max": 36,
+     "throttled": false,
+     "throttle": [
+      "sw_power_cap"
+     ],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39161,
+       "mem_peak_mib": 39161,
+       "energy_j": 6204.889,
+       "power_avg_w": 77.88,
+       "power_gauge_w": 80.92,
+       "sm_mhz_avg": 1797,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7590,
+       "util_avg": 1.9,
+       "util_mem_avg": 0.1,
+       "temp_c_max": 36,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 0.5
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39193,
+       "mem_peak_mib": 39193,
+       "energy_j": 5932.202,
+       "power_avg_w": 74.46,
+       "power_gauge_w": 75.72,
+       "sm_mhz_avg": 1789,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7551,
+       "util_avg": 2.0,
+       "util_mem_avg": 0.2,
+       "temp_c_max": 33,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39161,
+       "mem_peak_mib": 39161,
+       "energy_j": 5539.532,
+       "power_avg_w": 69.53,
+       "power_gauge_w": 71.46,
+       "sm_mhz_avg": 1789,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7551,
+       "util_avg": 2.0,
+       "util_mem_avg": 0.1,
+       "temp_c_max": 36,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39193,
+       "mem_peak_mib": 39193,
+       "energy_j": 5417.156,
+       "power_avg_w": 68.0,
+       "power_gauge_w": 70.06,
+       "sm_mhz_avg": 1789,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7551,
+       "util_avg": 2.0,
+       "util_mem_avg": 0.2,
+       "temp_c_max": 34,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 0.6
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39161,
+       "mem_peak_mib": 39161,
+       "energy_j": 5773.287,
+       "power_avg_w": 72.47,
+       "power_gauge_w": 74.24,
+       "sm_mhz_avg": 1780,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7511,
+       "util_avg": 2.0,
+       "util_mem_avg": 0.2,
+       "temp_c_max": 34,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39193,
+       "mem_peak_mib": 39193,
+       "energy_j": 5663.331,
+       "power_avg_w": 71.09,
+       "power_gauge_w": 74.04,
+       "sm_mhz_avg": 1780,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7510,
+       "util_avg": 2.0,
+       "util_mem_avg": 0.1,
+       "temp_c_max": 34,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39161,
+       "mem_peak_mib": 39161,
+       "energy_j": 5613.742,
+       "power_avg_w": 70.46,
+       "power_gauge_w": 71.92,
+       "sm_mhz_avg": 1779,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7508,
+       "util_avg": 2.0,
+       "util_mem_avg": 0.1,
+       "temp_c_max": 35,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 0.2
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 586,
+       "mem_end_mib": 39193,
+       "mem_peak_mib": 39193,
+       "energy_j": 5721.5,
+       "power_avg_w": 71.82,
+       "power_gauge_w": 74.1,
+       "sm_mhz_avg": 1778,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 7469,
+       "util_avg": 2.0,
+       "util_mem_avg": 0.1,
+       "temp_c_max": 34,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 0.2
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 143.2,
+     "anon_end_mib": 1379.6,
+     "anon_peak_mib": 1379.6,
+     "file_start_mib": 79.3,
+     "file_end_mib": 9235.6,
+     "file_peak_mib": 284549.0,
+     "shmem_peak_mib": 482.9,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 301,
+     "user_s": 46.76,
+     "sys_s": 36.823,
+     "major_faults": 0,
+     "busy_cores": 1.05,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 9.0,
+       "busy_pct": 0.5
+      },
+      "sda": {
+       "read_mib": 0.0,
+       "write_mib": 1.6,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 336,
+     "mem_available_min_mib": 995636,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.9,
+     "network_tx_mib": 0.9,
+     "pcie_to_gpu_mib_est": 312233.2,
+     "pcie_from_gpu_mib_est": 36763.0,
+     "nvlink_mib": 112.7
+    },
+    "pressure": {
+     "cpu_some_pct": 0.3,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.5,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 2.996947,
+   "end_s": 82.664568
+  },
+  {
+   "name": "warmup",
+   "group": "warmup",
+   "metrics": {
+    "wall_s": 1.191223,
+    "gpu": {
+     "mem_start_mib": 308752,
+     "mem_end_mib": 309056,
+     "mem_peak_mib": 309056,
+     "mem_peak_max_device_mib": 38648,
+     "energy_j": 1088.931,
+     "power_avg_w": 914.13,
+     "power_gauge_w": 693.2,
+     "sm_mhz_avg": 1815.2,
+     "sm_mhz_min": 1800,
+     "util_avg": 38.8,
+     "util_min_device": 33.5,
+     "util_max_device": 42.7,
+     "util_mem_avg": 3.0,
+     "temp_c_max": 39,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 39161,
+       "mem_end_mib": 39199,
+       "mem_peak_mib": 39199,
+       "energy_j": 140.95,
+       "power_avg_w": 118.32,
+       "power_gauge_w": 92.65,
+       "sm_mhz_avg": 1817,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 41.0,
+       "util_mem_avg": 2.8,
+       "temp_c_max": 39,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 39193,
+       "mem_end_mib": 39231,
+       "mem_peak_mib": 39231,
+       "energy_j": 140.088,
+       "power_avg_w": 117.6,
+       "power_gauge_w": 88.23,
+       "sm_mhz_avg": 1819,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 38.7,
+       "util_mem_avg": 3.4,
+       "temp_c_max": 36,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 39161,
+       "mem_end_mib": 39199,
+       "mem_peak_mib": 39199,
+       "energy_j": 130.1,
+       "power_avg_w": 109.22,
+       "power_gauge_w": 84.31,
+       "sm_mhz_avg": 1815,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 37.3,
+       "util_mem_avg": 4.3,
+       "temp_c_max": 39,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 39193,
+       "mem_end_mib": 39231,
+       "mem_peak_mib": 39231,
+       "energy_j": 126.676,
+       "power_avg_w": 106.34,
+       "power_gauge_w": 81.76,
+       "sm_mhz_avg": 1817,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 37.2,
+       "util_mem_avg": 3.2,
+       "temp_c_max": 37,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 39161,
+       "mem_end_mib": 39199,
+       "mem_peak_mib": 39199,
+       "energy_j": 137.624,
+       "power_avg_w": 115.53,
+       "power_gauge_w": 88.12,
+       "sm_mhz_avg": 1817,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 38.0,
+       "util_mem_avg": 3.2,
+       "temp_c_max": 37,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 39193,
+       "mem_end_mib": 39231,
+       "mem_peak_mib": 39231,
+       "energy_j": 135.931,
+       "power_avg_w": 114.11,
+       "power_gauge_w": 87.12,
+       "sm_mhz_avg": 1816,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 42.2,
+       "util_mem_avg": 2.0,
+       "temp_c_max": 37,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 39161,
+       "mem_end_mib": 39199,
+       "mem_peak_mib": 39199,
+       "energy_j": 137.987,
+       "power_avg_w": 115.84,
+       "power_gauge_w": 84.38,
+       "sm_mhz_avg": 1811,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 33.5,
+       "util_mem_avg": 3.0,
+       "temp_c_max": 38,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 39193,
+       "mem_end_mib": 39231,
+       "mem_peak_mib": 39231,
+       "energy_j": 139.575,
+       "power_avg_w": 117.17,
+       "power_gauge_w": 86.63,
+       "sm_mhz_avg": 1810,
+       "sm_mhz_min": 1800,
+       "mem_mhz_avg": 7601,
+       "util_avg": 42.7,
+       "util_mem_avg": 2.0,
+       "temp_c_max": 37,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 1379.7,
+     "anon_end_mib": 1738.2,
+     "anon_peak_mib": 1738.2,
+     "file_start_mib": 9235.8,
+     "file_end_mib": 9331.1,
+     "file_peak_mib": 9331.1,
+     "shmem_peak_mib": 482.9,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 294,
+     "user_s": 0.972,
+     "sys_s": 0.21,
+     "major_faults": 0,
+     "busy_cores": 0.99,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.8,
+       "busy_pct": 0.8
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 995195,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 1858.5,
+     "pcie_from_gpu_mib_est": 832.0,
+     "nvlink_mib": 655.0
+    },
+    "pressure": {
+     "cpu_some_pct": 0.4,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.4,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 82.664568,
+   "end_s": 83.855791
+  },
+  {
+   "name": "serve_c1",
+   "group": "serve",
+   "meta": {
+    "concurrency": 1
+   },
+   "tokens": 512,
+   "metrics": {
+    "wall_s": 16.019705,
+    "gpu": {
+     "mem_start_mib": 309056,
+     "mem_end_mib": 311104,
+     "mem_peak_mib": 311104,
+     "mem_peak_max_device_mib": 38904,
+     "energy_j": 23667.308,
+     "power_avg_w": 1477.39,
+     "power_gauge_w": 1491.09,
+     "sm_mhz_avg": 1915.4,
+     "sm_mhz_min": 1875,
+     "util_avg": 70.7,
+     "util_min_device": 69.6,
+     "util_max_device": 71.2,
+     "util_mem_avg": 33.1,
+     "temp_c_max": 47,
+     "throttled": true,
+     "throttle": [
+      "sw_power_cap"
+     ],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 39199,
+       "mem_end_mib": 39455,
+       "mem_peak_mib": 39455,
+       "energy_j": 3051.39,
+       "power_avg_w": 190.48,
+       "power_gauge_w": 191.27,
+       "sm_mhz_avg": 1906,
+       "sm_mhz_min": 1875,
+       "mem_mhz_avg": 7601,
+       "util_avg": 71.2,
+       "util_mem_avg": 31.9,
+       "temp_c_max": 47,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 15.7
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 39231,
+       "mem_end_mib": 39487,
+       "mem_peak_mib": 39487,
+       "energy_j": 2950.434,
+       "power_avg_w": 184.18,
+       "power_gauge_w": 186.77,
+       "sm_mhz_avg": 1907,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 71.1,
+       "util_mem_avg": 33.1,
+       "temp_c_max": 43,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 9.7
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 39199,
+       "mem_end_mib": 39455,
+       "mem_peak_mib": 39455,
+       "energy_j": 2852.852,
+       "power_avg_w": 178.08,
+       "power_gauge_w": 181.05,
+       "sm_mhz_avg": 1902,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 71.0,
+       "util_mem_avg": 32.5,
+       "temp_c_max": 46,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 9.6
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 39231,
+       "mem_end_mib": 39487,
+       "mem_peak_mib": 39487,
+       "energy_j": 2903.923,
+       "power_avg_w": 181.27,
+       "power_gauge_w": 183.15,
+       "sm_mhz_avg": 1923,
+       "sm_mhz_min": 1920,
+       "mem_mhz_avg": 7601,
+       "util_avg": 71.0,
+       "util_mem_avg": 32.6,
+       "temp_c_max": 44,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 6.2
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 39199,
+       "mem_end_mib": 39455,
+       "mem_peak_mib": 39455,
+       "energy_j": 3010.787,
+       "power_avg_w": 187.94,
+       "power_gauge_w": 189.63,
+       "sm_mhz_avg": 1924,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 70.8,
+       "util_mem_avg": 32.8,
+       "temp_c_max": 43,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 15.9
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 39231,
+       "mem_end_mib": 39487,
+       "mem_peak_mib": 39487,
+       "energy_j": 3013.74,
+       "power_avg_w": 188.13,
+       "power_gauge_w": 188.63,
+       "sm_mhz_avg": 1940,
+       "sm_mhz_min": 1935,
+       "mem_mhz_avg": 7601,
+       "util_avg": 70.6,
+       "util_mem_avg": 34.0,
+       "temp_c_max": 44,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": false,
+       "throttled_pct": 6.3
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 39199,
+       "mem_end_mib": 39455,
+       "mem_peak_mib": 39455,
+       "energy_j": 2862.214,
+       "power_avg_w": 178.67,
+       "power_gauge_w": 180.37,
+       "sm_mhz_avg": 1899,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 70.4,
+       "util_mem_avg": 33.4,
+       "temp_c_max": 44,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 12.4
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 39231,
+       "mem_end_mib": 39487,
+       "mem_peak_mib": 39487,
+       "energy_j": 3021.968,
+       "power_avg_w": 188.64,
+       "power_gauge_w": 190.22,
+       "sm_mhz_avg": 1922,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 69.6,
+       "util_mem_avg": 34.6,
+       "temp_c_max": 43,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 15.5
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 1738.3,
+     "anon_end_mib": 2422.7,
+     "anon_peak_mib": 2422.7,
+     "file_start_mib": 9331.1,
+     "file_end_mib": 10047.5,
+     "file_peak_mib": 10047.5,
+     "shmem_peak_mib": 482.9,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 294,
+     "user_s": 15.218,
+     "sys_s": 0.88,
+     "major_faults": 0,
+     "busy_cores": 1.0,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.2,
+       "busy_pct": 0.2
+      },
+      "sda": {
+       "read_mib": 0.0,
+       "write_mib": 0.3,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 994456,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.2,
+     "network_tx_mib": 0.2,
+     "pcie_to_gpu_mib_est": 122863.9,
+     "pcie_from_gpu_mib_est": 73894.4,
+     "nvlink_mib": 40556.7
+    },
+    "pressure": {
+     "cpu_some_pct": 0.5,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.5,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    },
+    "tokens": 512
+   },
+   "start_s": 83.855791,
+   "end_s": 99.875496
+  },
+  {
+   "name": "serve_c4",
+   "group": "serve",
+   "meta": {
+    "concurrency": 4
+   },
+   "tokens": 512,
+   "metrics": {
+    "wall_s": 7.085406,
+    "gpu": {
+     "mem_start_mib": 311104,
+     "mem_end_mib": 311248,
+     "mem_peak_mib": 311248,
+     "mem_peak_max_device_mib": 38922,
+     "energy_j": 12221.79,
+     "power_avg_w": 1724.92,
+     "power_gauge_w": 1752.48,
+     "sm_mhz_avg": 1905.2,
+     "sm_mhz_min": 1875,
+     "util_avg": 75.6,
+     "util_min_device": 74.6,
+     "util_max_device": 75.9,
+     "util_mem_avg": 36.9,
+     "temp_c_max": 51,
+     "throttled": true,
+     "throttle": [
+      "sw_power_cap"
+     ],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 39455,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 1567.927,
+       "power_avg_w": 221.29,
+       "power_gauge_w": 224.74,
+       "sm_mhz_avg": 1888,
+       "sm_mhz_min": 1875,
+       "mem_mhz_avg": 7601,
+       "util_avg": 75.9,
+       "util_mem_avg": 43.5,
+       "temp_c_max": 51,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 27.9
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 39487,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 1514.863,
+       "power_avg_w": 213.8,
+       "power_gauge_w": 218.3,
+       "sm_mhz_avg": 1903,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 75.6,
+       "util_mem_avg": 35.8,
+       "temp_c_max": 46,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 27.9
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 39455,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 1471.489,
+       "power_avg_w": 207.68,
+       "power_gauge_w": 213.1,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 75.9,
+       "util_mem_avg": 38.9,
+       "temp_c_max": 50,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 14.2
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 39487,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 1513.445,
+       "power_avg_w": 213.6,
+       "power_gauge_w": 216.55,
+       "sm_mhz_avg": 1919,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 75.8,
+       "util_mem_avg": 39.0,
+       "temp_c_max": 48,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 21.2
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 39455,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 1547.638,
+       "power_avg_w": 218.43,
+       "power_gauge_w": 222.23,
+       "sm_mhz_avg": 1914,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 75.8,
+       "util_mem_avg": 36.1,
+       "temp_c_max": 47,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 20.9
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 39487,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 1555.011,
+       "power_avg_w": 219.47,
+       "power_gauge_w": 221.75,
+       "sm_mhz_avg": 1934,
+       "sm_mhz_min": 1920,
+       "mem_mhz_avg": 7601,
+       "util_avg": 75.6,
+       "util_mem_avg": 33.1,
+       "temp_c_max": 48,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 21.2
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 39455,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 1474.707,
+       "power_avg_w": 208.13,
+       "power_gauge_w": 211.23,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 75.6,
+       "util_mem_avg": 34.2,
+       "temp_c_max": 48,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 14.2
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 39487,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 1576.711,
+       "power_avg_w": 222.53,
+       "power_gauge_w": 224.58,
+       "sm_mhz_avg": 1904,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 74.6,
+       "util_mem_avg": 34.7,
+       "temp_c_max": 47,
+       "throttle": [
+        "sw_power_cap"
+       ],
+       "throttled": true,
+       "throttled_pct": 28.5
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2423.1,
+     "anon_end_mib": 2650.2,
+     "anon_peak_mib": 2650.2,
+     "file_start_mib": 10047.5,
+     "file_end_mib": 10276.8,
+     "file_peak_mib": 10276.8,
+     "shmem_peak_mib": 482.9,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 294,
+     "user_s": 6.71,
+     "sys_s": 0.505,
+     "major_faults": 0,
+     "busy_cores": 1.02,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.1,
+       "busy_pct": 0.4
+      },
+      "sda": {
+       "read_mib": 0.0,
+       "write_mib": 0.1,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 994212,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.1,
+     "network_tx_mib": 0.1,
+     "pcie_to_gpu_mib_est": 54494.6,
+     "pcie_from_gpu_mib_est": 48305.1,
+     "nvlink_mib": 36991.9
+    },
+    "pressure": {
+     "cpu_some_pct": 0.3,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.5,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    },
+    "tokens": 512
+   },
+   "start_s": 99.875496,
+   "end_s": 106.960902
+  },
+  {
+   "name": "teardown",
+   "group": "teardown",
+   "metrics": {
+    "wall_s": 0.003031,
+    "gpu": {
+     "mem_start_mib": 311248,
+     "mem_end_mib": 311248,
+     "mem_peak_mib": 311248,
+     "mem_peak_max_device_mib": 38922,
+     "energy_j": 3.972,
+     "power_avg_w": 1310.33,
+     "power_gauge_w": 1797.71,
+     "sm_mhz_avg": 1905.0,
+     "sm_mhz_min": 1890,
+     "util_avg": 83.0,
+     "util_min_device": 80.0,
+     "util_max_device": 85.0,
+     "util_mem_avg": 44.9,
+     "temp_c_max": 50,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 0.485,
+       "power_avg_w": 159.92,
+       "power_gauge_w": 230.25,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 82.0,
+       "util_mem_avg": 45.0,
+       "temp_c_max": 50,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 0.493,
+       "power_avg_w": 162.47,
+       "power_gauge_w": 224.22,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 85.0,
+       "util_mem_avg": 45.0,
+       "temp_c_max": 45,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 0.493,
+       "power_avg_w": 162.52,
+       "power_gauge_w": 217.85,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 84.0,
+       "util_mem_avg": 46.0,
+       "temp_c_max": 49,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 0.521,
+       "power_avg_w": 172.01,
+       "power_gauge_w": 222.12,
+       "sm_mhz_avg": 1920,
+       "sm_mhz_min": 1920,
+       "mem_mhz_avg": 7601,
+       "util_avg": 83.0,
+       "util_mem_avg": 45.0,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 0.509,
+       "power_avg_w": 167.83,
+       "power_gauge_w": 227.6,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 82.0,
+       "util_mem_avg": 45.0,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 0.465,
+       "power_avg_w": 153.26,
+       "power_gauge_w": 228.16,
+       "sm_mhz_avg": 1935,
+       "sm_mhz_min": 1935,
+       "mem_mhz_avg": 7601,
+       "util_avg": 83.0,
+       "util_mem_avg": 44.0,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 39473,
+       "mem_peak_mib": 39473,
+       "energy_j": 0.472,
+       "power_avg_w": 155.75,
+       "power_gauge_w": 216.2,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 80.0,
+       "util_mem_avg": 44.0,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 39505,
+       "mem_peak_mib": 39505,
+       "energy_j": 0.535,
+       "power_avg_w": 176.56,
+       "power_gauge_w": 231.31,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 85.0,
+       "util_mem_avg": 45.0,
+       "temp_c_max": 46,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2637.0,
+     "anon_end_mib": 2637.0,
+     "anon_peak_mib": 2637.0,
+     "file_start_mib": 10276.8,
+     "file_end_mib": 10276.8,
+     "file_peak_mib": 10276.8,
+     "shmem_peak_mib": 482.9,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 36,
+     "user_s": 0.001,
+     "sys_s": 0.003,
+     "major_faults": 0,
+     "busy_cores": 1.32,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.0,
+       "busy_pct": 2.9
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 994301,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "nvlink_mib": 6.6
+    },
+    "pressure": {
+     "cpu_some_pct": 0.6,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.1,
+     "io_full_pct": 0.1
+    },
+    "system_cpu": {
+     "busy_pct": 0.5,
+     "iowait_pct": 0.01,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 106.960902,
+   "end_s": 106.963934
+  },
+  {
+   "name": "teardown",
+   "group": "teardown",
+   "metrics": {
+    "wall_s": 2.645567,
+    "gpu": {
+     "mem_start_mib": 311248,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 311248,
+     "mem_peak_max_device_mib": 38922,
+     "energy_j": 2080.359,
+     "power_avg_w": 786.36,
+     "power_gauge_w": 1130.43,
+     "sm_mhz_avg": 1905.0,
+     "sm_mhz_min": 1890,
+     "util_avg": 37.0,
+     "util_min_device": 35.0,
+     "util_max_device": 38.6,
+     "util_mem_avg": 8.6,
+     "temp_c_max": 50,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39473,
+       "energy_j": 270.965,
+       "power_avg_w": 102.42,
+       "power_gauge_w": 148.75,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 37.4,
+       "util_mem_avg": 8.2,
+       "temp_c_max": 50,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39505,
+       "energy_j": 255.083,
+       "power_avg_w": 96.42,
+       "power_gauge_w": 138.64,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 38.4,
+       "util_mem_avg": 7.8,
+       "temp_c_max": 45,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39473,
+       "energy_j": 251.389,
+       "power_avg_w": 95.02,
+       "power_gauge_w": 136.34,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 35.6,
+       "util_mem_avg": 8.3,
+       "temp_c_max": 49,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39505,
+       "energy_j": 259.762,
+       "power_avg_w": 98.19,
+       "power_gauge_w": 139.13,
+       "sm_mhz_avg": 1920,
+       "sm_mhz_min": 1920,
+       "mem_mhz_avg": 7601,
+       "util_avg": 35.2,
+       "util_mem_avg": 8.6,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39473,
+       "energy_j": 268.759,
+       "power_avg_w": 101.59,
+       "power_gauge_w": 145.58,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 35.0,
+       "util_mem_avg": 8.5,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39505,
+       "energy_j": 254.554,
+       "power_avg_w": 96.22,
+       "power_gauge_w": 141.68,
+       "sm_mhz_avg": 1935,
+       "sm_mhz_min": 1935,
+       "mem_mhz_avg": 7601,
+       "util_avg": 38.6,
+       "util_mem_avg": 8.9,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 39473,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39473,
+       "energy_j": 246.262,
+       "power_avg_w": 93.08,
+       "power_gauge_w": 136.09,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 37.7,
+       "util_mem_avg": 9.1,
+       "temp_c_max": 47,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 39505,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 39505,
+       "energy_j": 273.586,
+       "power_avg_w": 103.41,
+       "power_gauge_w": 144.22,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 38.4,
+       "util_mem_avg": 9.6,
+       "temp_c_max": 46,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2637.0,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 2637.0,
+     "file_start_mib": 10276.8,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 10276.8,
+     "shmem_peak_mib": 482.9,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 36,
+     "user_s": 0.281,
+     "sys_s": 1.272,
+     "major_faults": 0,
+     "busy_cores": 0.59,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.0,
+       "busy_pct": 0.5
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": -333,
+     "mem_available_min_mib": 994301,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 3566.2,
+     "pcie_from_gpu_mib_est": 2552.7,
+     "nvlink_mib": 308.2
+    },
+    "pressure": {
+     "cpu_some_pct": 0.7,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.4,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 106.963934,
+   "end_s": 109.609501
+  },
+  {
+   "name": "tail",
+   "group": "tail",
+   "metrics": {
+    "wall_s": 1.061017,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 651.482,
+     "power_avg_w": 614.02,
+     "power_gauge_w": 717.11,
+     "sm_mhz_avg": 1905.0,
+     "sm_mhz_min": 1890,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.1,
+     "temp_c_max": 45,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 88.528,
+       "power_avg_w": 83.44,
+       "power_gauge_w": 96.61,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 45,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 1,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 81.52,
+       "power_avg_w": 76.83,
+       "power_gauge_w": 87.79,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 41,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 2,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 79.667,
+       "power_avg_w": 75.09,
+       "power_gauge_w": 86.36,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 45,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 3,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 77.835,
+       "power_avg_w": 73.36,
+       "power_gauge_w": 85.8,
+       "sm_mhz_avg": 1920,
+       "sm_mhz_min": 1920,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 42,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 4,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 82.38,
+       "power_avg_w": 77.64,
+       "power_gauge_w": 92.7,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 43,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 5,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 86.378,
+       "power_avg_w": 81.41,
+       "power_gauge_w": 91.53,
+       "sm_mhz_avg": 1935,
+       "sm_mhz_min": 1935,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.6,
+       "temp_c_max": 42,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 6,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 69.592,
+       "power_avg_w": 65.59,
+       "power_gauge_w": 84.54,
+       "sm_mhz_avg": 1890,
+       "sm_mhz_min": 1890,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 43,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      },
+      {
+       "index": 7,
+       "mem_start_mib": 583,
+       "mem_end_mib": 583,
+       "mem_peak_mib": 583,
+       "energy_j": 85.581,
+       "power_avg_w": 80.66,
+       "power_gauge_w": 91.78,
+       "sm_mhz_avg": 1905,
+       "sm_mhz_min": 1905,
+       "mem_mhz_avg": 7601,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 42,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 0.0,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 0.0,
+     "file_start_mib": 0.0,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 0.0,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 0,
+     "user_s": 0.0,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": 0.0,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 0.6,
+       "busy_pct": 0.8
+      },
+      "sda": {
+       "read_mib": 0.0,
+       "write_mib": 0.1,
+       "busy_pct": 0.0
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 998214,
+     "swap_used_max_mib": 91,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 4.0,
+     "pcie_from_gpu_mib_est": 8.0,
+     "nvlink_mib": 0.0
+    },
+    "pressure": {
+     "cpu_some_pct": 1.2,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.2,
+     "io_full_pct": 0.2
+    },
+    "system_cpu": {
+     "busy_pct": 0.1,
+     "iowait_pct": 0.01,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 109.609501,
+   "end_s": 110.670518
+  }
+ ],
+ "platform": {
+  "python": "3.12.3"
+ },
+ "diagnosis": {
+  "bottlenecks": {
+   "load": {
+    "limit": "cpu (one thread)",
+    "confidence": "high",
+    "evidence": {
+     "gpu_util_pct": 2.0,
+     "cpu_cores": 1.05,
+     "busiest_thread": "llama-server 98%",
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.3,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "Thread llama-server runs at 98% while the GPU is 2% busy. Everything waits on this one thread; use --cpu-profile to see what it does."
+   },
+   "warmup": {
+    "limit": "gpu + host wait",
+    "confidence": "medium",
+    "evidence": {
+     "gpu_util_pct": 38.8,
+     "cpu_cores": 0.99,
+     "busiest_thread": "llama-server 76%",
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.4,
+     "disk": "nvme0n1 (nvme) 1% busy, 0 MiB/s read"
+    },
+    "why": "GPU 39% busy while thread llama-server runs at 76%: the host is working or spinning on a wait during the GPU's idle part. --nsys shows the gaps, --cpu-profile what the host does."
+   },
+   "serve_c1": {
+    "limit": "gpu + host wait",
+    "confidence": "medium",
+    "evidence": {
+     "gpu_util_pct": 70.7,
+     "cpu_cores": 1.0,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.5,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "GPU 71% busy with nothing else saturated, so the rest of the time is host work or synchronization. --nsys shows the gaps, --cpu-profile what the host does."
+   },
+   "serve_c4": {
+    "limit": "gpu + host wait",
+    "confidence": "medium",
+    "evidence": {
+     "gpu_util_pct": 75.6,
+     "cpu_cores": 1.02,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.3,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "GPU 76% busy with nothing else saturated, so the rest of the time is host work or synchronization. --nsys shows the gaps, --cpu-profile what the host does."
+   }
+  },
+  "memory": [
+   {
+    "severity": "info",
+    "what": "weights_mapped_in_page_cache",
+    "text": "10.04 GiB of mapped files stay in RAM during serve. These pages are reclaimable page cache, not a leak, but they are why a later run loads fast and why the machine shows little free RAM.",
+    "evidence": {
+     "file_mib": 10276.8,
+     "phase": "serve"
+    }
+   },
+   {
+    "severity": "info",
+    "what": "host_memory_growing",
+    "text": "Host memory grew 912 MiB during serve, from 1.70 GiB to 2.59 GiB. If it keeps growing with more requests it is a leak or an unbounded cache; if it levels off, a cache filling up.",
+    "evidence": {
+     "start_mib": 1738.3,
+     "end_mib": 2650.2,
+     "phase": "serve"
+    }
+   },
+   {
+    "severity": "info",
+    "what": "weights_on_host",
+    "text": "195.79 GiB of the model stays in host buffers, not on a GPU. CPU work reads it from there, so with mmap it depends on the page cache, and the disk when the cache has been evicted.",
+    "evidence": {
+     "host_model_mib": 200487
+    }
+   }
+  ],
+  "movement": [
+   {
+    "severity": "info",
+    "what": "model_on_slow_storage",
+    "text": "The model is on hdd storage (<path>/DeepSeek-V4.1-Flash-1017-Q8_0-upstream.gguf). This run did not read it from disk; --cold-start measures what a first load costs.",
+    "evidence": {
+     "storage": "hdd"
+    }
+   },
+   {
+    "severity": "info",
+    "what": "load_from_page_cache",
+    "text": "The model was 100% in the page cache, so this load time is a warm one. A cold start reads it from disk and takes longer.",
+    "evidence": {
+     "cached_fraction": 1.0
+    }
+   }
+  ],
+  "serving": [
+   {
+    "severity": "info",
+    "what": "parallel_scaling",
+    "text": "Going from 1 to 4 concurrent requests raised throughput 2.26 times, and the median first token moved from 597 to 1,695 ms.",
+    "evidence": {
+     "from": 1,
+     "to": 4,
+     "throughput_gain": 2.26,
+     "ttft_from_ms": 596.9,
+     "ttft_to_ms": 1694.7
+    }
+   }
+  ],
+  "timeline": [],
+  "next_steps": [
+   "--nsys: which kernels take the GPU's time, and what it waits on in the gaps",
+   "--cpu-profile: which functions the host threads spend their time in"
+  ]
+ }
+}

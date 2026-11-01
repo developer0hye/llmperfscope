@@ -1,0 +1,1935 @@
+{
+ "schema": "llmperfscope.run/1",
+ "tool": {
+  "name": "llmperfscope",
+  "version": "0.1.0"
+ },
+ "label": "vllm",
+ "status": "ok",
+ "exit_code": 0,
+ "stop_reason": "workload finished",
+ "perturbed": false,
+ "attached": false,
+ "wall_time_at_t0_ns": 1793531513257474088,
+ "t0_monotonic_ns": 429059303204009,
+ "gpu_driver": "580.178.04",
+ "command": [
+  "docker",
+  "run",
+  "--cidfile",
+  "<path>/container.id",
+  "-e",
+  "LLMPERFSCOPE_MARKERS=<path>/markers.log",
+  "-v",
+  "<path>/vllm:/llmperfscope-run",
+  "--rm",
+  "--gpus",
+  "all",
+  "-p",
+  "8101:8000",
+  "-v",
+  "<path>/hf-cache:/hf",
+  "-e",
+  "HF_HOME=/hf",
+  "-e",
+  "HF_HUB_OFFLINE=1",
+  "vllm/vllm-openai:v0.32.0",
+  "--model",
+  "Qwen/Qwen3-0.6B",
+  "--gpu-memory-utilization",
+  "0.6",
+  "--max-model-len",
+  "4096"
+ ],
+ "env": {
+  "CUDA_HOME": "<path>/cuda-13.0"
+ },
+ "adapter": "generic",
+ "identity": {
+  "sha256": "b6f5521ba1c355ea6f8943241435f494963b0840388543b2fca1a4062913da8f",
+  "container_image": "vllm/vllm-openai:v0.32.0",
+  "container_image_id": "sha256:bd8a5d7a8774800c92d714c0c226b32c1863f929150f36efd610aebcd12a335d"
+ },
+ "host": {
+  "hostname": "host",
+  "kernel": "7.0.0-38-generic",
+  "cpus": 12,
+  "user": "user",
+  "cpu": "Intel(R) Core(TM) i5-10400 CPU @ 2.90GHz",
+  "numa_nodes": 1,
+  "governor": "powersave",
+  "thp": "always [madvise] never"
+ },
+ "devices": [
+  {
+   "index": 0,
+   "name": "NVIDIA GeForce RTX 3070",
+   "memory_total_mib": 8192,
+   "power_limit_w": 240.0,
+   "nvlink": false
+  }
+ ],
+ "machine_before": {
+  "t_wall": 1793531513.16192,
+  "foreign_cpu_cores": 0.005,
+  "mem_available_mib": 29945,
+  "mem_total_mib": 31993,
+  "page_cache_mib": 22404,
+  "swap_used_mib": 230,
+  "loadavg": [
+   4.31982421875,
+   4.97265625,
+   2.240234375
+  ],
+  "gpus": [
+   {
+    "index": 0,
+    "mem_used_mib": 562,
+    "util": 0,
+    "temp_c": 42,
+    "throttle": []
+   }
+  ],
+  "clean": true,
+  "reasons": []
+ },
+ "machine_after": {
+  "t_wall": 1793531593.9323213,
+  "foreign_cpu_cores": 0,
+  "mem_available_mib": 30191,
+  "mem_total_mib": 31993,
+  "page_cache_mib": 22407,
+  "swap_used_mib": 230,
+  "loadavg": [
+   1.87109375,
+   4.03466796875,
+   2.13427734375
+  ],
+  "gpus": [
+   {
+    "index": 0,
+    "mem_used_mib": 562,
+    "util": 0,
+    "temp_c": 48,
+    "throttle": []
+   }
+  ],
+  "clean": true,
+  "reasons": []
+ },
+ "sampler": {
+  "hz_target": 50.0,
+  "hz_achieved": 50.0,
+  "max_gap_ms": 47.7,
+  "cpu_seconds": 2.091,
+  "pinned_cpu": null,
+  "error": null
+ },
+ "groups": {
+  "baseline": {
+   "phases": 1,
+   "wall_s": 1.000441,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 19.562,
+    "power_avg_w": 19.55,
+    "power_gauge_w": 29.5,
+    "sm_mhz_avg": 210.0,
+    "sm_mhz_min": 210,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 42,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 0.0,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 0.0,
+    "file_start_mib": 0.0,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 0.0,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 0,
+    "user_s": 0.0,
+    "sys_s": 0.0,
+    "busy_cores": 0.0,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 3.3,
+      "busy_pct": 0.3
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 0.5,
+    "pcie_from_gpu_mib_est": 6.7,
+    "mem_available_min_mib": 29946,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.0,
+    "io_full_pct": 0.1,
+    "io_some_pct": 0.1,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.4,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "startup": {
+   "phases": 1,
+   "wall_s": 0.0,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 0.0,
+    "power_avg_w": null,
+    "power_gauge_w": null,
+    "sm_mhz_avg": null,
+    "sm_mhz_min": 210,
+    "util_avg": null,
+    "util_min_device": null,
+    "util_max_device": null,
+    "util_mem_avg": null,
+    "temp_c_max": 42,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 2.7,
+    "anon_end_mib": 2.7,
+    "anon_peak_mib": 2.7,
+    "file_start_mib": 3.5,
+    "file_end_mib": 3.5,
+    "file_peak_mib": 3.5,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 1,
+    "user_s": 0.0,
+    "sys_s": 0.0,
+    "busy_cores": null,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "mem_available_min_mib": 29954,
+    "swap_used_max_mib": 230
+   }
+  },
+  "load": {
+   "phases": 1,
+   "wall_s": 72.246876,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 4657,
+    "mem_peak_mib": 5003,
+    "mem_peak_max_device_mib": 5003,
+    "energy_j": 3130.967,
+    "power_avg_w": 43.34,
+    "power_gauge_w": 46.0,
+    "sm_mhz_avg": 1267.0,
+    "sm_mhz_min": 210,
+    "util_avg": 5.0,
+    "util_min_device": 5.0,
+    "util_max_device": 5.0,
+    "util_mem_avg": 2.4,
+    "temp_c_max": 50,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 2.7,
+    "anon_end_mib": 2697.3,
+    "anon_peak_mib": 3023.0,
+    "file_start_mib": 3.5,
+    "file_end_mib": 1043.1,
+    "file_peak_mib": 2892.6,
+    "shmem_peak_mib": 26.2,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 116,
+    "user_s": 74.22,
+    "sys_s": 8.74,
+    "busy_cores": 1.15,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "VLLM::EngineCor": 44.83,
+     "python#": 23.0,
+     "vllm": 12.95,
+     "cc#": 0.3,
+     "gloo_tcp_loop": 0.18
+    },
+    "busiest_thread": {
+     "name": "python3",
+     "cpu_s": 50.22,
+     "busy": 0.695
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 2.7,
+      "write_mib": 36.1,
+      "busy_pct": 0.1
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 65,
+    "network_rx_mib": 0.3,
+    "network_tx_mib": 0.1,
+    "pcie_to_gpu_mib_est": 6904.4,
+    "pcie_from_gpu_mib_est": 828.0,
+    "mem_available_min_mib": 27212,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.1,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 10.3,
+    "iowait_pct": 0.01,
+    "steal_pct": 0.0
+   }
+  },
+  "warmup": {
+   "phases": 1,
+   "wall_s": 0.147426,
+   "gpu": {
+    "mem_start_mib": 4657,
+    "mem_end_mib": 4657,
+    "mem_peak_mib": 4657,
+    "mem_peak_max_device_mib": 4657,
+    "energy_j": 14.399,
+    "power_avg_w": 97.67,
+    "power_gauge_w": 54.5,
+    "sm_mhz_avg": 1830.0,
+    "sm_mhz_min": 1830,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 0.0,
+    "temp_c_max": 46,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 2697.3,
+    "anon_end_mib": 2697.8,
+    "anon_peak_mib": 2697.8,
+    "file_start_mib": 1043.2,
+    "file_end_mib": 1043.2,
+    "file_peak_mib": 1043.2,
+    "shmem_peak_mib": 18.2,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 117,
+    "user_s": 0.076,
+    "sys_s": 0.003,
+    "busy_cores": 0.54,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 1.7,
+      "busy_pct": 0.8
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.1,
+    "network_tx_mib": 0.0,
+    "mem_available_min_mib": 27319,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.0,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 6.4,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "serve": {
+   "phases": 2,
+   "wall_s": 5.530856,
+   "tokens": 2048,
+   "gpu": {
+    "mem_start_mib": 4657,
+    "mem_end_mib": 4679,
+    "mem_peak_mib": 4679,
+    "mem_peak_max_device_mib": 4679,
+    "energy_j": 976.951,
+    "power_avg_w": 176.64,
+    "power_gauge_w": 163.1,
+    "sm_mhz_avg": 2006.2,
+    "sm_mhz_min": 1830,
+    "util_avg": 96.3,
+    "util_min_device": 96.3,
+    "util_max_device": 96.3,
+    "util_mem_avg": 81.9,
+    "temp_c_max": 54,
+    "throttled": true,
+    "throttle": [
+     "sw_power_cap",
+     "sw_thermal"
+    ],
+    "j_per_token": 0.477
+   },
+   "host": {
+    "anon_start_mib": 2698.4,
+    "anon_end_mib": 2699.1,
+    "anon_peak_mib": 2699.1,
+    "file_start_mib": 1043.2,
+    "file_end_mib": 1043.2,
+    "file_peak_mib": 1043.2,
+    "shmem_peak_mib": 18.2,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 118,
+    "user_s": 2.512,
+    "sys_s": 0.187,
+    "busy_cores": 0.49,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "VLLM::EngineCor": 2.0,
+     "vllm": 0.68,
+     "gloo_tcp_loop": 0.04,
+     "cuda-EvtHandlr": 0.04,
+     "ZMQbg/IO/#": 0.02
+    },
+    "busiest_thread": {
+     "name": "VLLM::EngineCor",
+     "cpu_s": 1.94,
+     "busy": 0.351
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 9.4,
+      "busy_pct": 0.1
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 1,
+    "network_rx_mib": 2.1,
+    "network_tx_mib": 0.4,
+    "pcie_to_gpu_mib_est": 170.8,
+    "pcie_from_gpu_mib_est": 69.6,
+    "mem_available_min_mib": 27319,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.1,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 4.99,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  },
+  "teardown": {
+   "phases": 1,
+   "wall_s": 0.728076,
+   "gpu": {
+    "mem_start_mib": 4679,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 4679,
+    "mem_peak_max_device_mib": 4679,
+    "energy_j": 55.078,
+    "power_avg_w": 75.65,
+    "power_gauge_w": 168.0,
+    "sm_mhz_avg": 2010.0,
+    "sm_mhz_min": 2010,
+    "util_avg": 26.8,
+    "util_min_device": 26.8,
+    "util_max_device": 26.8,
+    "util_mem_avg": 87.9,
+    "temp_c_max": 54,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 2699.1,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 2699.1,
+    "file_start_mib": 1043.2,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 1043.2,
+    "shmem_peak_mib": 18.2,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 118,
+    "user_s": 0.171,
+    "sys_s": 0.21,
+    "busy_cores": 0.52,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0,
+    "threads_cpu_s": {
+     "vllm": 0.07
+    },
+    "busiest_thread": {
+     "name": "vllm",
+     "cpu_s": 0.07,
+     "busy": 0.096
+    }
+   },
+   "flows": {
+    "disks": {
+     "nvme0n1": {
+      "read_mib": 0.0,
+      "write_mib": 25.9,
+      "busy_pct": 2.8
+     }
+    },
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": -44,
+    "network_rx_mib": -1.2,
+    "network_tx_mib": -0.2,
+    "pcie_to_gpu_mib_est": 11.4,
+    "pcie_from_gpu_mib_est": 0.5,
+    "mem_available_min_mib": 29165,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.8,
+    "io_full_pct": 0.5,
+    "io_some_pct": 0.5,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 7.0,
+    "iowait_pct": 0.34,
+    "steal_pct": 0.0
+   }
+  },
+  "tail": {
+   "phases": 1,
+   "wall_s": 1.021043,
+   "gpu": {
+    "mem_start_mib": 0,
+    "mem_end_mib": 0,
+    "mem_peak_mib": 0,
+    "mem_peak_max_device_mib": 0,
+    "energy_j": 58.526,
+    "power_avg_w": 57.32,
+    "power_gauge_w": 91.7,
+    "sm_mhz_avg": 2010.0,
+    "sm_mhz_min": 2010,
+    "util_avg": 0.0,
+    "util_min_device": 0.0,
+    "util_max_device": 0.0,
+    "util_mem_avg": 28.8,
+    "temp_c_max": 49,
+    "throttled": false,
+    "throttle": []
+   },
+   "host": {
+    "anon_start_mib": 0.0,
+    "anon_end_mib": 0.0,
+    "anon_peak_mib": 0.0,
+    "file_start_mib": 0.0,
+    "file_end_mib": 0.0,
+    "file_peak_mib": 0.0,
+    "shmem_peak_mib": 0.0,
+    "pinned_peak_mib": 0.0,
+    "swap_peak_mib": 0.0,
+    "threads_max": 0,
+    "user_s": 0.0,
+    "sys_s": 0.0,
+    "busy_cores": 0.0,
+    "major_faults": 0,
+    "disk_read_mib": 0.0,
+    "disk_write_mib": 0.0
+   },
+   "flows": {
+    "swap_in_mib": 0.0,
+    "swap_out_mib": 0.0,
+    "page_cache_refault_mib": 0.0,
+    "direct_reclaim_mib": 0.0,
+    "page_cache_change_mib": 0,
+    "network_rx_mib": 0.0,
+    "network_tx_mib": 0.0,
+    "pcie_to_gpu_mib_est": 0.4,
+    "pcie_from_gpu_mib_est": 0.6,
+    "mem_available_min_mib": 30187,
+    "swap_used_max_mib": 230
+   },
+   "pressure": {
+    "cpu_some_pct": 0.2,
+    "io_full_pct": 0.0,
+    "io_some_pct": 0.0,
+    "memory_full_pct": 0.0,
+    "memory_some_pct": 0.0
+   },
+   "system_cpu": {
+    "busy_pct": 0.4,
+    "iowait_pct": 0.0,
+    "steal_pct": 0.0
+   }
+  }
+ },
+ "memory": {
+  "gpu": {
+   "devices": [
+    {
+     "index": 0,
+     "baseline_mib": 562,
+     "peak_mib": 5565,
+     "peak_above_baseline_mib": 5003,
+     "process_peak_mib": 4992,
+     "after_exit_mib": 562
+    }
+   ],
+   "peak_above_baseline_total_mib": 5003,
+   "peak_above_baseline_max_device_mib": 5003
+  },
+  "host": {
+   "anon_peak_mib": 3023.0,
+   "file_peak_mib": 2892.6,
+   "shmem_peak_mib": 26.2,
+   "pinned_peak_mib": 0.0,
+   "swap_peak_mib": 0.0,
+   "vm_hwm_sum_mib": 5688.6
+  }
+ },
+ "energy": {
+  "total_j": 4177.395,
+  "serve_j_per_token": 0.477
+ },
+ "devices_used": [
+  0
+ ],
+ "disks": {
+  "nvme0n1": {
+   "kind": "nvme",
+   "model": "WDC WDS100T2B0C-00PXH0",
+   "size_gib": 931.5
+  },
+  "nvme1n1": {
+   "kind": "nvme",
+   "model": "WDC WDS100T2B0C-00PXH0",
+   "size_gib": 931.5
+  }
+ },
+ "consistency": {
+  "energy_over_power_gauge": 1.083
+ },
+ "throughput": {
+  "serve_c1": {
+   "requests": 16,
+   "failed": 0,
+   "wall_s": 4.185,
+   "completion_tokens": 1024,
+   "prompt_tokens": 4860,
+   "prompt_tokens_cached": 0,
+   "tokens_exact": true,
+   "output_tokens_per_s": 244.707,
+   "ttft_ms": {
+    "n": 16,
+    "mean": 21.23,
+    "p50": 20.91,
+    "p90": 21.13,
+    "p99": 25.96,
+    "max": 25.96
+   },
+   "itl_ms": {
+    "n": 1008,
+    "mean": 3.81,
+    "p50": 3.81,
+    "p90": 3.91,
+    "p99": 4.02,
+    "max": 8.22
+   },
+   "decode_tokens_per_s_mean": 262.464,
+   "prefill_tokens_per_s_mean": 14349.825,
+   "concurrency": 1,
+   "j_per_output_token": 0.7314
+  },
+  "serve_c4": {
+   "requests": 16,
+   "failed": 0,
+   "wall_s": 1.339,
+   "completion_tokens": 1024,
+   "prompt_tokens": 4860,
+   "prompt_tokens_cached": 0,
+   "tokens_exact": true,
+   "output_tokens_per_s": 764.604,
+   "ttft_ms": {
+    "n": 16,
+    "mean": 44.29,
+    "p50": 48.74,
+    "p90": 53.08,
+    "p99": 53.26,
+    "max": 53.26
+   },
+   "itl_ms": {
+    "n": 1008,
+    "mean": 4.6,
+    "p50": 4.52,
+    "p90": 4.63,
+    "p99": 4.96,
+    "max": 26.63
+   },
+   "decode_tokens_per_s_mean": 217.603,
+   "prefill_tokens_per_s_mean": 7334.718,
+   "concurrency": 4,
+   "j_per_output_token": 0.2226
+  }
+ },
+ "workload": {
+  "ready_s": 72.044,
+  "model": "Qwen/Qwen3-0.6B",
+  "prompts": 16,
+  "warmup_ttft_ms": 21.81,
+  "server_gauges_peak": {
+   "vllm:num_requests_running{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 4.0,
+   "vllm:num_requests_waiting{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 0.0,
+   "vllm:num_requests_waiting_by_reason{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\",reason=\"capacity\"}": 0.0,
+   "vllm:num_requests_waiting_by_reason{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\",reason=\"deferred\"}": 0.0,
+   "vllm:kv_cache_usage_perc{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 0.05637583892617448
+  },
+  "server_metrics_delta": {
+   "python_gc_collections_total{generation=\"0\"}": 6.0,
+   "process_resident_memory_bytes": 1048576.0,
+   "process_cpu_seconds_total": 0.54,
+   "vllm:prefix_cache_queries_total{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 9720.0,
+   "vllm:prompt_tokens_total{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 9720.0,
+   "vllm:prompt_tokens_by_source_total{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\",source=\"local_compute\"}": 9720.0,
+   "vllm:generation_tokens_total{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2048.0,
+   "vllm:request_success_total{engine=\"0\",finished_reason=\"length\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prompt_tokens_bucket{engine=\"0\",le=\"500.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prompt_tokens_bucket{engine=\"0\",le=\"1000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prompt_tokens_bucket{engine=\"0\",le=\"2000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prompt_tokens_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prompt_tokens_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prompt_tokens_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 9720.0,
+   "vllm:request_generation_tokens_bucket{engine=\"0\",le=\"100.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_generation_tokens_bucket{engine=\"0\",le=\"200.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_generation_tokens_bucket{engine=\"0\",le=\"500.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_generation_tokens_bucket{engine=\"0\",le=\"1000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_generation_tokens_bucket{engine=\"0\",le=\"2000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_generation_tokens_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_generation_tokens_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_generation_tokens_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2048.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1008.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"8.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1260.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"16.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1260.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"32.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1260.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"64.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1260.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"128.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1260.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"256.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1260.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"512.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1280.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"1024.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1284.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"2048.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1284.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"4096.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1284.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"8192.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1284.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"16384.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1284.0,
+   "vllm:iteration_tokens_total_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1284.0,
+   "vllm:iteration_tokens_total_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 1284.0,
+   "vllm:iteration_tokens_total_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 11768.0,
+   "vllm:request_max_num_generation_tokens_bucket{engine=\"0\",le=\"100.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_max_num_generation_tokens_bucket{engine=\"0\",le=\"200.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_max_num_generation_tokens_bucket{engine=\"0\",le=\"500.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_max_num_generation_tokens_bucket{engine=\"0\",le=\"1000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_max_num_generation_tokens_bucket{engine=\"0\",le=\"2000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_max_num_generation_tokens_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_max_num_generation_tokens_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_max_num_generation_tokens_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2048.0,
+   "vllm:request_params_n_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_n_bucket{engine=\"0\",le=\"2.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_n_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_n_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_n_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_n_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_n_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_n_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_bucket{engine=\"0\",le=\"100.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_bucket{engine=\"0\",le=\"200.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_bucket{engine=\"0\",le=\"500.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_bucket{engine=\"0\",le=\"1000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_bucket{engine=\"0\",le=\"2000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_params_max_tokens_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2048.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.02\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 15.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.04\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 20.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.06\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.08\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.1\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.25\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"0.75\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"7.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"80.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"160.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"640.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"2560.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:time_to_first_token_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 0.995981,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.01\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2012.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.025\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2012.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.05\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.075\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.1\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.15\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.2\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.3\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.4\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"0.75\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"7.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"80.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 2016.0,
+   "vllm:inter_token_latency_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 8.492097,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.01\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.025\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.05\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.075\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.1\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.15\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.2\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.3\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.4\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"0.75\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"7.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"80.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_time_per_output_token_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 0.134795,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"0.3\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 16.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"0.8\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"1.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"2.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"15.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"30.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"50.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"60.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"120.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"240.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"480.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"960.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"1920.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"7680.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 9.479282,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"0.3\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"0.8\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"1.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"2.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"15.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"30.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"50.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"60.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"120.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"240.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"480.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"960.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"1920.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"7680.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 0.000317,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"0.3\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 16.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"0.8\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"1.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"2.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"15.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"30.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"50.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"60.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"120.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"240.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"480.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"960.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"1920.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"7680.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 9.320793,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"0.3\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"0.8\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"1.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"2.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"15.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"30.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"50.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"60.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"120.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"240.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"480.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"960.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"1920.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"7680.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 0.828696,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"0.3\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 28.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"0.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"0.8\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"1.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"2.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"2.5\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"15.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"30.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"40.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"50.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"60.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"120.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"240.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"480.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"960.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"1920.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"7680.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_decode_time_seconds_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 8.492097,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"1.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"2.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"3.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"4.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"5.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"10.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"20.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_num_preemptions_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_kv_computed_tokens_bucket{engine=\"0\",le=\"500.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_kv_computed_tokens_bucket{engine=\"0\",le=\"1000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_kv_computed_tokens_bucket{engine=\"0\",le=\"2000.0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_kv_computed_tokens_bucket{engine=\"0\",le=\"+Inf\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_kv_computed_tokens_count{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 32.0,
+   "vllm:request_prefill_kv_computed_tokens_sum{engine=\"0\",model_name=\"<path>/c1899de289a04d12100db370d81485cdf75e47ca\"}": 9720.0,
+   "http_requests_total{handler=\"<path>/completions\",method=\"POST\",status=\"2xx\"}": 32.0,
+   "http_request_size_bytes_count{handler=\"<path>/completions\"}": 32.0,
+   "http_request_size_bytes_sum{handler=\"<path>/completions\"}": 54584.0,
+   "http_response_size_bytes_count{handler=\"<path>/completions\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"0.5\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"0.75\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"1.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"1.5\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"2.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"2.5\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"3.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"3.5\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"4.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"4.5\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"5.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"7.5\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"10.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"30.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"60.0\"}": 32.0,
+   "http_request_duration_highr_seconds_bucket{le=\"+Inf\"}": 32.0,
+   "http_request_duration_highr_seconds_count": 32.0,
+   "http_request_duration_highr_seconds_sum": 9.517783,
+   "http_request_duration_seconds_bucket{handler=\"<path>/completions\",le=\"0.5\",method=\"POST\"}": 32.0,
+   "http_request_duration_seconds_bucket{handler=\"<path>/completions\",le=\"1.0\",method=\"POST\"}": 32.0,
+   "http_request_duration_seconds_bucket{handler=\"<path>/completions\",le=\"+Inf\",method=\"POST\"}": 32.0,
+   "http_request_duration_seconds_count{handler=\"<path>/completions\",method=\"POST\"}": 32.0,
+   "http_request_duration_seconds_sum{handler=\"<path>/completions\",method=\"POST\"}": 9.517783
+  }
+ },
+ "notes": [
+  "target may use every CPU: llmperfscope shares CPUs with it"
+ ],
+ "phases": [
+  {
+   "name": "baseline",
+   "group": "baseline",
+   "metrics": {
+    "wall_s": 1.000441,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 19.562,
+     "power_avg_w": 19.55,
+     "power_gauge_w": 29.48,
+     "sm_mhz_avg": 210.0,
+     "sm_mhz_min": 210,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 42,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 562,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 562,
+       "energy_j": 19.562,
+       "power_avg_w": 19.55,
+       "power_gauge_w": 29.48,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 810,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 42,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 0.0,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 0.0,
+     "file_start_mib": 0.0,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 0.0,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 0,
+     "user_s": 0.0,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": 0.0,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 3.3,
+       "busy_pct": 0.3
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29946,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 0.5,
+     "pcie_from_gpu_mib_est": 6.7
+    },
+    "pressure": {
+     "cpu_some_pct": 0.0,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.1,
+     "io_full_pct": 0.1
+    },
+    "system_cpu": {
+     "busy_pct": 0.4,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 0.0,
+   "end_s": 1.000441
+  },
+  {
+   "name": "startup",
+   "group": "startup",
+   "metrics": {
+    "wall_s": 0.0,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 0.0,
+     "power_avg_w": null,
+     "power_gauge_w": 25.75,
+     "sm_mhz_avg": 210.0,
+     "sm_mhz_min": 210,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 42,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 562,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 562,
+       "energy_j": 0.0,
+       "power_avg_w": 25.75,
+       "power_gauge_w": 25.75,
+       "sm_mhz_avg": 210,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 810,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 42,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2.7,
+     "anon_end_mib": 2.7,
+     "anon_peak_mib": 2.7,
+     "file_start_mib": 3.5,
+     "file_end_mib": 3.5,
+     "file_peak_mib": 3.5,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 1,
+     "user_s": 0.0,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": null,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 29954,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0
+    }
+   },
+   "start_s": 1.000441,
+   "end_s": 1.000441
+  },
+  {
+   "name": "load",
+   "group": "load",
+   "metrics": {
+    "wall_s": 72.246876,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 4657,
+     "mem_peak_mib": 5003,
+     "mem_peak_max_device_mib": 5003,
+     "energy_j": 3130.967,
+     "power_avg_w": 43.34,
+     "power_gauge_w": 46.02,
+     "sm_mhz_avg": 1267.0,
+     "sm_mhz_min": 210,
+     "util_avg": 5.0,
+     "util_min_device": 5.0,
+     "util_max_device": 5.0,
+     "util_mem_avg": 2.4,
+     "temp_c_max": 50,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 562,
+       "mem_end_mib": 5219,
+       "mem_peak_mib": 5565,
+       "energy_j": 3130.967,
+       "power_avg_w": 43.34,
+       "power_gauge_w": 46.02,
+       "sm_mhz_avg": 1267,
+       "sm_mhz_min": 210,
+       "mem_mhz_avg": 4465,
+       "util_avg": 5.0,
+       "util_mem_avg": 2.4,
+       "temp_c_max": 50,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2.7,
+     "anon_end_mib": 2697.3,
+     "anon_peak_mib": 3023.0,
+     "file_start_mib": 3.5,
+     "file_end_mib": 1043.1,
+     "file_peak_mib": 2892.6,
+     "shmem_peak_mib": 26.2,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 116,
+     "user_s": 74.22,
+     "sys_s": 8.74,
+     "major_faults": 0,
+     "busy_cores": 1.15,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 2.7,
+       "write_mib": 36.1,
+       "busy_pct": 0.1
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 65,
+     "mem_available_min_mib": 27212,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.3,
+     "network_tx_mib": 0.1,
+     "pcie_to_gpu_mib_est": 6904.4,
+     "pcie_from_gpu_mib_est": 828.0
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 10.3,
+     "iowait_pct": 0.01,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 1.000441,
+   "end_s": 73.247317
+  },
+  {
+   "name": "warmup",
+   "group": "warmup",
+   "metrics": {
+    "wall_s": 0.147426,
+    "gpu": {
+     "mem_start_mib": 4657,
+     "mem_end_mib": 4657,
+     "mem_peak_mib": 4657,
+     "mem_peak_max_device_mib": 4657,
+     "energy_j": 14.399,
+     "power_avg_w": 97.67,
+     "power_gauge_w": 54.55,
+     "sm_mhz_avg": 1830.0,
+     "sm_mhz_min": 1830,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 0.0,
+     "temp_c_max": 46,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 5219,
+       "mem_end_mib": 5219,
+       "mem_peak_mib": 5219,
+       "energy_j": 14.399,
+       "power_avg_w": 97.67,
+       "power_gauge_w": 54.55,
+       "sm_mhz_avg": 1830,
+       "sm_mhz_min": 1830,
+       "mem_mhz_avg": 6801,
+       "util_avg": 0.0,
+       "util_mem_avg": 0.0,
+       "temp_c_max": 46,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2697.3,
+     "anon_end_mib": 2697.8,
+     "anon_peak_mib": 2697.8,
+     "file_start_mib": 1043.2,
+     "file_end_mib": 1043.2,
+     "file_peak_mib": 1043.2,
+     "shmem_peak_mib": 18.2,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 117,
+     "user_s": 0.076,
+     "sys_s": 0.003,
+     "major_faults": 0,
+     "busy_cores": 0.54,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 1.7,
+       "busy_pct": 0.8
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 27319,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.1,
+     "network_tx_mib": 0.0
+    },
+    "pressure": {
+     "cpu_some_pct": 0.0,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 6.4,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 73.247317,
+   "end_s": 73.394743
+  },
+  {
+   "name": "serve_c1",
+   "group": "serve",
+   "meta": {
+    "concurrency": 1
+   },
+   "tokens": 1024,
+   "metrics": {
+    "wall_s": 4.185106,
+    "gpu": {
+     "mem_start_mib": 4657,
+     "mem_end_mib": 4657,
+     "mem_peak_mib": 4657,
+     "mem_peak_max_device_mib": 4657,
+     "energy_j": 749.002,
+     "power_avg_w": 178.97,
+     "power_gauge_w": 156.36,
+     "sm_mhz_avg": 2005.0,
+     "sm_mhz_min": 1830,
+     "util_avg": 95.7,
+     "util_min_device": 95.7,
+     "util_max_device": 95.7,
+     "util_mem_avg": 80.0,
+     "temp_c_max": 54,
+     "throttled": true,
+     "throttle": [
+      "sw_power_cap",
+      "sw_thermal"
+     ],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 5219,
+       "mem_end_mib": 5219,
+       "mem_peak_mib": 5219,
+       "energy_j": 749.002,
+       "power_avg_w": 178.97,
+       "power_gauge_w": 156.36,
+       "sm_mhz_avg": 2005,
+       "sm_mhz_min": 1830,
+       "mem_mhz_avg": 6801,
+       "util_avg": 95.7,
+       "util_mem_avg": 80.0,
+       "temp_c_max": 54,
+       "throttle": [
+        "sw_power_cap",
+        "sw_thermal"
+       ],
+       "throttled": true,
+       "throttled_pct": 12.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2698.4,
+     "anon_end_mib": 2698.8,
+     "anon_peak_mib": 2698.8,
+     "file_start_mib": 1043.2,
+     "file_end_mib": 1043.2,
+     "file_peak_mib": 1043.2,
+     "shmem_peak_mib": 18.2,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 118,
+     "user_s": 1.885,
+     "sys_s": 0.117,
+     "major_faults": 0,
+     "busy_cores": 0.48,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 2.0,
+       "busy_pct": 0.1
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 1,
+     "mem_available_min_mib": 27319,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 1.3,
+     "network_tx_mib": 0.2,
+     "pcie_to_gpu_mib_est": 120.2,
+     "pcie_from_gpu_mib_est": 49.7
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 4.7,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    },
+    "tokens": 1024
+   },
+   "start_s": 73.394743,
+   "end_s": 77.579849
+  },
+  {
+   "name": "serve_c4",
+   "group": "serve",
+   "meta": {
+    "concurrency": 4
+   },
+   "tokens": 1024,
+   "metrics": {
+    "wall_s": 1.34575,
+    "gpu": {
+     "mem_start_mib": 4657,
+     "mem_end_mib": 4679,
+     "mem_peak_mib": 4679,
+     "mem_peak_max_device_mib": 4679,
+     "energy_j": 227.949,
+     "power_avg_w": 169.38,
+     "power_gauge_w": 183.99,
+     "sm_mhz_avg": 2010.0,
+     "sm_mhz_min": 2010,
+     "util_avg": 98.0,
+     "util_min_device": 98.0,
+     "util_max_device": 98.0,
+     "util_mem_avg": 87.9,
+     "temp_c_max": 54,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 5219,
+       "mem_end_mib": 5241,
+       "mem_peak_mib": 5241,
+       "energy_j": 227.949,
+       "power_avg_w": 169.38,
+       "power_gauge_w": 183.99,
+       "sm_mhz_avg": 2010,
+       "sm_mhz_min": 2010,
+       "mem_mhz_avg": 6801,
+       "util_avg": 98.0,
+       "util_mem_avg": 87.9,
+       "temp_c_max": 54,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2698.9,
+     "anon_end_mib": 2699.1,
+     "anon_peak_mib": 2699.1,
+     "file_start_mib": 1043.2,
+     "file_end_mib": 1043.2,
+     "file_peak_mib": 1043.2,
+     "shmem_peak_mib": 18.2,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 118,
+     "user_s": 0.627,
+     "sys_s": 0.07,
+     "major_faults": 0,
+     "busy_cores": 0.52,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 7.4,
+       "busy_pct": 0.3
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 27332,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.8,
+     "network_tx_mib": 0.2,
+     "pcie_to_gpu_mib_est": 50.6,
+     "pcie_from_gpu_mib_est": 19.9
+    },
+    "pressure": {
+     "cpu_some_pct": 0.1,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 5.9,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    },
+    "tokens": 1024
+   },
+   "start_s": 77.579849,
+   "end_s": 78.925599
+  },
+  {
+   "name": "teardown",
+   "group": "teardown",
+   "metrics": {
+    "wall_s": 0.728076,
+    "gpu": {
+     "mem_start_mib": 4679,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 4679,
+     "mem_peak_max_device_mib": 4679,
+     "energy_j": 55.078,
+     "power_avg_w": 75.65,
+     "power_gauge_w": 168.04,
+     "sm_mhz_avg": 2010.0,
+     "sm_mhz_min": 2010,
+     "util_avg": 26.8,
+     "util_min_device": 26.8,
+     "util_max_device": 26.8,
+     "util_mem_avg": 87.9,
+     "temp_c_max": 54,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 5241,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 5241,
+       "energy_j": 55.078,
+       "power_avg_w": 75.65,
+       "power_gauge_w": 168.04,
+       "sm_mhz_avg": 2010,
+       "sm_mhz_min": 2010,
+       "mem_mhz_avg": 6845,
+       "util_avg": 26.8,
+       "util_mem_avg": 87.9,
+       "temp_c_max": 54,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 2699.1,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 2699.1,
+     "file_start_mib": 1043.2,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 1043.2,
+     "shmem_peak_mib": 18.2,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 118,
+     "user_s": 0.171,
+     "sys_s": 0.21,
+     "major_faults": 0,
+     "busy_cores": 0.52,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "disks": {
+      "nvme0n1": {
+       "read_mib": 0.0,
+       "write_mib": 25.9,
+       "busy_pct": 2.8
+      }
+     },
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": -44,
+     "mem_available_min_mib": 29165,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": -1.2,
+     "network_tx_mib": -0.2,
+     "pcie_to_gpu_mib_est": 11.4,
+     "pcie_from_gpu_mib_est": 0.5
+    },
+    "pressure": {
+     "cpu_some_pct": 0.8,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.5,
+     "io_full_pct": 0.5
+    },
+    "system_cpu": {
+     "busy_pct": 7.0,
+     "iowait_pct": 0.34,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 78.925599,
+   "end_s": 79.653675
+  },
+  {
+   "name": "tail",
+   "group": "tail",
+   "metrics": {
+    "wall_s": 1.021043,
+    "gpu": {
+     "mem_start_mib": 0,
+     "mem_end_mib": 0,
+     "mem_peak_mib": 0,
+     "mem_peak_max_device_mib": 0,
+     "energy_j": 58.526,
+     "power_avg_w": 57.32,
+     "power_gauge_w": 91.69,
+     "sm_mhz_avg": 2010.0,
+     "sm_mhz_min": 2010,
+     "util_avg": 0.0,
+     "util_min_device": 0.0,
+     "util_max_device": 0.0,
+     "util_mem_avg": 28.8,
+     "temp_c_max": 49,
+     "throttled": false,
+     "throttle": [],
+     "devices": [
+      {
+       "index": 0,
+       "mem_start_mib": 562,
+       "mem_end_mib": 562,
+       "mem_peak_mib": 562,
+       "energy_j": 58.526,
+       "power_avg_w": 57.32,
+       "power_gauge_w": 91.69,
+       "sm_mhz_avg": 2010,
+       "sm_mhz_min": 2010,
+       "mem_mhz_avg": 7001,
+       "util_avg": 0.0,
+       "util_mem_avg": 28.8,
+       "temp_c_max": 49,
+       "throttle": [],
+       "throttled": false,
+       "throttled_pct": 0.0
+      }
+     ]
+    },
+    "host": {
+     "anon_start_mib": 0.0,
+     "anon_end_mib": 0.0,
+     "anon_peak_mib": 0.0,
+     "file_start_mib": 0.0,
+     "file_end_mib": 0.0,
+     "file_peak_mib": 0.0,
+     "shmem_peak_mib": 0.0,
+     "pinned_peak_mib": 0.0,
+     "swap_peak_mib": 0.0,
+     "threads_max": 0,
+     "user_s": 0.0,
+     "sys_s": 0.0,
+     "major_faults": 0,
+     "busy_cores": 0.0,
+     "disk_read_mib": 0.0,
+     "disk_write_mib": 0.0
+    },
+    "flows": {
+     "swap_in_mib": 0.0,
+     "swap_out_mib": 0.0,
+     "page_cache_refault_mib": 0.0,
+     "direct_reclaim_mib": 0.0,
+     "page_cache_change_mib": 0,
+     "mem_available_min_mib": 30187,
+     "swap_used_max_mib": 230,
+     "network_rx_mib": 0.0,
+     "network_tx_mib": 0.0,
+     "pcie_to_gpu_mib_est": 0.4,
+     "pcie_from_gpu_mib_est": 0.6
+    },
+    "pressure": {
+     "cpu_some_pct": 0.2,
+     "memory_some_pct": 0.0,
+     "memory_full_pct": 0.0,
+     "io_some_pct": 0.0,
+     "io_full_pct": 0.0
+    },
+    "system_cpu": {
+     "busy_pct": 0.4,
+     "iowait_pct": 0.0,
+     "steal_pct": 0.0
+    }
+   },
+   "start_s": 79.653675,
+   "end_s": 80.674718
+  }
+ ],
+ "platform": {
+  "python": "3.12.3"
+ },
+ "diagnosis": {
+  "bottlenecks": {
+   "load": {
+    "limit": "cpu",
+    "confidence": "low",
+    "evidence": {
+     "gpu_util_pct": 5.0,
+     "cpu_cores": 1.15,
+     "busiest_thread": "python3 70%",
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.1,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "1.1 CPU cores busy and the GPU 5% busy: host work, spread over threads that take turns."
+   },
+   "warmup": {
+    "limit": "too short to judge",
+    "confidence": "none",
+    "evidence": {
+     "gpu_util_pct": 0.0,
+     "cpu_cores": 0.54,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.0,
+     "disk": "nvme0n1 (nvme) 1% busy, 0 MiB/s read"
+    },
+    "why": "0.15 s is too short for the GPU's utilization counter. Use a longer run."
+   },
+   "serve_c1": {
+    "limit": "gpu (throttled)",
+    "confidence": "high",
+    "evidence": {
+     "gpu_util_pct": 95.7,
+     "cpu_cores": 0.48,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.1,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "GPU clocks were held down by sw_power_cap, sw_thermal at 96% utilization, 2005.0 MHz average."
+   },
+   "serve_c4": {
+    "limit": "gpu",
+    "confidence": "high",
+    "evidence": {
+     "gpu_util_pct": 98.0,
+     "cpu_cores": 0.52,
+     "stall_io_some_pct": 0.0,
+     "stall_memory_some_pct": 0.0,
+     "stall_memory_full_pct": 0.0,
+     "stall_cpu_some_pct": 0.1,
+     "disk": "nvme0n1 (nvme) 0% busy, 0 MiB/s read"
+    },
+    "why": "GPU compute is the limit: 98% busy. Use --nsys to see which kernels take the time."
+   }
+  },
+  "memory": [
+   {
+    "severity": "info",
+    "what": "gpu_transient_peak",
+    "text": "GPU memory peaks 324 MiB above its steady level, during load. That peak decides what fits, not the steady level.",
+    "evidence": {
+     "peak_mib": 5003,
+     "steady_mib": 4679,
+     "phase": "load"
+    }
+   },
+   {
+    "severity": "info",
+    "what": "host_ram_held_while_on_gpu",
+    "text": "The process holds 2.64 GiB of its own host RAM during serve, next to 4.57 GiB on the GPU. If that is a copy of the weights it can usually be released after upload.",
+    "evidence": {
+     "host_anon_mib": 2699.1,
+     "gpu_mib": 4679,
+     "phase": "serve"
+    }
+   },
+   {
+    "severity": "info",
+    "what": "kv_cache_mostly_unused",
+    "text": "The server's cache pool peaked at 6% (vllm:kv_cache_usage_perc). Most of the memory reserved for it was never used at this load; a smaller reservation would fit, unless a heavier load is coming.",
+    "evidence": {
+     "metric": "vllm:kv_cache_usage_perc",
+     "peak": 0.05637583892617448
+    }
+   }
+  ],
+  "movement": [],
+  "serving": [
+   {
+    "severity": "info",
+    "what": "parallel_scaling",
+    "text": "Going from 1 to 4 concurrent requests raised throughput 3.12 times, and the median first token moved from 21 to 49 ms.",
+    "evidence": {
+     "from": 1,
+     "to": 4,
+     "throughput_gain": 3.12,
+     "ttft_from_ms": 20.91,
+     "ttft_to_ms": 48.74
+    }
+   }
+  ],
+  "timeline": [],
+  "next_steps": [
+   "--nsys: which kernels take the GPU's time, and what it waits on in the gaps"
+  ]
+ }
+}
