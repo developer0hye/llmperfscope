@@ -1,0 +1,417 @@
+"""Command line."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+from . import __version__, adapters, capabilities, compare, driver, html, nsys, report, runner
+
+
+def _default_out(label):
+    return f"runs/{label or 'run'}-{time.strftime('%Y%m%d-%H%M%S')}"
+
+
+def _parse_marks(values):
+    """regex=phase or regex=phase:group."""
+    marks = []
+    for value in values or []:
+        regex, _, target = value.rpartition("=")
+        if not regex:
+            raise SystemExit(f"--mark needs regex=phase, got {value!r}")
+        phase, _, group = target.partition(":")
+        marks.append((regex, phase, group or None))
+    return marks
+
+
+def _parse_env(values):
+    out = {}
+    for value in values or []:
+        key, sep, val = value.partition("=")
+        if not sep:
+            raise SystemExit(f"--env needs KEY=VALUE, got {value!r}")
+        out[key] = val
+    return out
+
+
+def _common(parser):
+    parser.add_argument("--out", help="run directory (default runs/<label>-<time>)")
+    parser.add_argument("--label", default="")
+    parser.add_argument("--hz", type=float, default=50.0, help="fast sampling rate")
+    parser.add_argument("--no-pcie", action="store_true", help="do not sample PCIe traffic")
+    parser.add_argument("--timeout", type=float, default=0.0, help="stop the target after this many seconds")
+    parser.add_argument("--stall", type=float, default=None,
+                        help="stop the target after this many seconds without output or resource change "
+                             "(default 600 for engines that report progress, otherwise off)")
+    parser.add_argument("--precheck", choices=["warn", "wait", "require", "skip"], default="warn",
+                        help="what to do when the machine is not clean before the run")
+    parser.add_argument("--adapter", default="auto")
+    parser.add_argument("--mark", action="append", help="phase from output: 'regex=phase' or 'regex=phase:group'")
+    parser.add_argument("--env", action="append", help="KEY=VALUE for the target")
+    parser.add_argument("--tee", action="store_true", help="also show the target's output")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--nsys", action="store_true", help="record the GPU timeline (perturbs speed)")
+    parser.add_argument("--nsys-arg", action="append", default=[], help="extra argument for nsys profile")
+    parser.add_argument("--cpu-profile", action="store_true", help="sample host CPU stacks, no perf needed (perturbs speed)")
+    parser.add_argument("--cpu-hz", type=int, default=200)
+    parser.add_argument("--cold-start", action="store_true", help="drop the model from the page cache first, to measure a real disk load")
+    parser.add_argument("--model-file", help="the model's path, when llmprof cannot tell from the command")
+
+
+def _options(args):
+    label = args.label
+    return runner.Options(
+        cold_start=args.cold_start,
+        model=args.model_file,
+        pcie=not args.no_pcie,
+        out=args.out or _default_out(label),
+        label=label,
+        hz=args.hz,
+        timeout_s=args.timeout,
+        stall_s=args.stall,
+        precheck=args.precheck,
+        adapter=args.adapter,
+        marks=_parse_marks(args.mark),
+        env=_parse_env(args.env),
+        tee=args.tee,
+        quiet=args.quiet,
+        nsys=args.nsys,
+        nsys_args=args.nsys_arg,
+        cpu_profile=args.cpu_profile,
+        cpu_hz=args.cpu_hz,
+    )
+
+
+def _finish(result, options):
+    print(report.render(result))
+    page = html.write(options.out)
+    print(f"[llmprof] charts: {page}\n[llmprof] all numbers: {Path(options.out) / 'run.json'}")
+    return 0 if result["status"] == "ok" else 1
+
+
+def _split_command(argv):
+    """Everything after `--` is the target."""
+    if "--" in argv:
+        i = argv.index("--")
+        return argv[:i], argv[i + 1:]
+    return argv, []
+
+
+def cmd_run(args, target):
+    if not target:
+        raise SystemExit("usage: llmprof run [options] -- command ...")
+    options = _options(args)
+    try:
+        return _finish(runner.Run(target, options).execute(), options)
+    except runner.Refused as e:
+        print(f"[llmprof] refused: {e}", file=sys.stderr)
+        return 3
+
+
+def _rows_from(args):
+    if args.prompts:
+        filters = dict(item.split("=", 1) for item in args.filter or [])
+        rows = driver.load_prompts(args.prompts, filters)
+        if not rows:
+            raise SystemExit("no prompts left after the filter")
+        return rows[:args.limit] if args.limit else rows
+    return driver.synthetic_prompts(args.synthetic_words, args.limit or 8)
+
+
+def _serve_workload(args, preset, marks_load):
+    """Waits until the server is ready, warms it up, drives each concurrency level, collects the server's own metrics."""
+
+    def workload(run):
+        if marks_load:
+            run.emit("load", t=run.t_spawn)
+        base = args.url.rstrip("/")
+        is_alive = (lambda: Path(f"/proc/{run.pid}").exists())
+        ready_s = driver.wait_ready(base + args.ready_path if args.ready_path else base + preset["ready_path"], is_alive,
+                                    timeout_s=args.ready_timeout)
+        run.log(f"server ready after {ready_s:.2f} s")
+        extra = dict(preset.get("extra_body") or {})
+        if args.extra_body:
+            extra.update(json.loads(args.extra_body))
+        client = driver.Client(base + preset["base_path"], model=args.model, max_tokens=args.max_tokens, extra_body=extra,
+                               ignore_eos=not args.allow_eos, api_key=args.api_key)
+        if args.pull:
+            run.emit("download")
+            driver.pull_ollama_model(base, args.model)
+        if not client.model:
+            try:
+                client.discover_model()
+            except (OSError, ValueError, KeyError) as e:
+                run.log(f"could not read the model name from /models: {e!r}")
+        rows = _rows_from(args)
+        result = {"ready_s": round(ready_s, 3), "model": client.model, "prompts": len(rows)}
+
+        run.emit("warmup")
+        # A longer reply than strictly needed: a model that thinks first shows no text for its first tokens.
+        warm = client.request({"prompt": "Warm up.", "max_tokens": 32} if "messages" not in rows[0]
+                              else {"messages": [{"role": "user", "content": "Warm up."}], "max_tokens": 32})
+        if not warm["ok"]:
+            raise RuntimeError(f"warmup request failed: {warm.get('error')}")
+        result["warmup_ttft_ms"] = round(warm["ttft_s"] * 1000, 2)
+
+        metrics_path = args.metrics_path if args.metrics_path is not None else preset.get("metrics_path")
+        metrics_before = driver.fetch_metrics(base + metrics_path) if metrics_path else None
+        watcher = driver.GaugeWatcher(base + metrics_path) if metrics_before else None
+        if watcher:
+            watcher.start()
+        throughput = {}
+        with open(run.dir / "requests.jsonl", "w") as log:
+            def record(item):
+                log.write(json.dumps({k: v for k, v in item.items() if k != "itl_s"}) + "\n")
+
+            for concurrency in [int(x) for x in str(args.concurrency).split(",")]:
+                name = f"serve_c{concurrency}"
+                run.emit(name, group="serve", concurrency=concurrency)
+                results, wall = driver.run_load(client, rows, concurrency=concurrency, repeat=args.repeat, seed=args.seed,
+                                                emit_each=record, level=f"c{concurrency}", unique=not args.reuse_prompts)
+                summary = driver.summarize_load(results, wall)
+                summary["concurrency"] = concurrency
+                throughput[name] = summary
+                run.log(f"{name}: {summary.get('output_tokens_per_s')} tokens/s, {summary.get('failed')} failed")
+                # Tokens go on the phase, so energy per token comes out of the same bookkeeping as everywhere else.
+                with run.lock:
+                    for phase in run.phases:
+                        if phase["name"] == name:
+                            phase["tokens"] = summary.get("completion_tokens", 0)
+        if watcher:
+            watcher.stop()
+            result["server_gauges_peak"] = watcher.peaks
+        if metrics_path:
+            after = driver.fetch_metrics(base + metrics_path)
+            if metrics_before is not None and after is not None:
+                result["server_metrics_delta"] = driver.metrics_delta(metrics_before, after)
+        result["throughput"] = throughput
+        return result
+
+    return workload
+
+
+def _add_energy_per_token(result):
+    """Energy per output token for each concurrency level, from the phase it ran in."""
+    for phase in result.get("phases", []):
+        if phase["group"] != "serve" or not phase.get("tokens"):
+            continue
+        energy = (phase.get("metrics", {}).get("gpu") or {}).get("energy_j")
+        entry = result.get("throughput", {}).get(phase["name"])
+        if energy is not None and entry is not None:
+            entry["j_per_output_token"] = round(energy / phase["tokens"], 4)
+
+
+def cmd_serve(args, target):
+    if not target:
+        raise SystemExit("usage: llmprof serve [options] -- server command ...")
+    options = _options(args)
+    options.stop_timeout_s = args.stop_timeout
+    preset_name = args.preset or adapters.preset_for(target)
+    preset = adapters.SERVER_PRESETS[preset_name]
+    options.stop_signal = preset.get("stop_signal", "TERM")
+    if not args.url:
+        args.url = adapters.guess_url(target, preset_name)
+    for extra in preset.get("extra_args", []):
+        if extra not in target:
+            target = target + [extra]
+    if preset_name == "ollama" and not args.model:
+        raise SystemExit("Ollama starts with no model: name one with --model, for example --model qwen3:0.6b --pull")
+    print(f"[llmprof] server preset {preset_name}, expecting it at {args.url}")
+    knows_load_lines = adapters.select(options.adapter, target).name == "llama.cpp:llama-server"
+    run = runner.Run(target, options, workload=_serve_workload(args, preset, marks_load=not knows_load_lines))
+    try:
+        result = run.execute()
+    except runner.Refused as e:
+        print(f"[llmprof] refused: {e}", file=sys.stderr)
+        return 3
+    _add_energy_per_token(result)
+    with open(Path(options.out) / "run.json", "w") as f:
+        json.dump(result, f, indent=1)
+    return _finish(result, options)
+
+
+def _docker_pid(name):
+    done = subprocess.run(["docker", "inspect", "-f", "{{.State.Pid}}", name], capture_output=True, text=True, check=False)
+    if done.returncode != 0 or not done.stdout.strip().isdigit():
+        raise SystemExit(f"no running container {name!r}: {done.stderr.strip()}")
+    return int(done.stdout.strip())
+
+
+def cmd_attach(args, _target):
+    """Profile something already running, such as a container. Load phases are gone, everything after is measured."""
+    pid = args.pid or (_docker_pid(args.docker) if args.docker else None)
+    if not pid:
+        raise SystemExit("attach needs --pid or --docker")
+    options = _options(args)
+    options.stall_s = 0
+    if args.url:
+        preset = adapters.SERVER_PRESETS[args.preset or "openai"]
+        workload = _serve_workload(args, preset, marks_load=False)
+    else:
+        def workload(run):
+            run.emit("observe")
+            time.sleep(args.duration)
+            return {}
+    run = runner.Run([f"/proc/{pid}/exe"], options, workload=workload, attach_pid=pid)
+    result = run.execute()
+    _add_energy_per_token(result)
+    with open(Path(options.out) / "run.json", "w") as f:
+        json.dump(result, f, indent=1)
+    return _finish(result, options)
+
+
+def _serve_args(parser):
+    parser.add_argument("--url", help="server address (default: from --port, a container's published port, or the engine's usual port)")
+    parser.add_argument("--pull", action="store_true", help="Ollama: download --model first; this time is its own phase")
+    parser.add_argument("--preset", choices=sorted(adapters.SERVER_PRESETS), help="default: guessed from the command")
+    parser.add_argument("--model", help="model name for requests (default: first of /v1/models)")
+    parser.add_argument("--prompts", help="JSONL with `prompt` or `messages` per row")
+    parser.add_argument("--filter", action="append", help="keep rows where column=value")
+    parser.add_argument("--limit", type=int, help="at most this many prompts")
+    parser.add_argument("--synthetic-words", type=int, default=512, help="length of generated prompts when --prompts is not given")
+    parser.add_argument("--concurrency", default="1", help="comma-separated levels, each runs the whole prompt list")
+    parser.add_argument("--repeat", type=int, default=1)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--max-tokens", type=int, default=64)
+    parser.add_argument("--allow-eos", action="store_true", help="let the model stop early (default: fixed output length)")
+    parser.add_argument("--reuse-prompts", action="store_true",
+                        help="send prompts unchanged, to measure a server's prefix cache (default: a short nonce in front defeats it)")
+    parser.add_argument("--extra-body", help="JSON merged into every request")
+    parser.add_argument("--api-key", help="bearer token (never stored in the report)")
+    parser.add_argument("--ready-path", help="health path (default from the preset)")
+    parser.add_argument("--ready-timeout", type=float, default=3600.0)
+    parser.add_argument("--metrics-path", help="Prometheus path (default from the preset, empty to turn off)")
+    parser.add_argument("--stop-timeout", type=float, default=120.0, help="seconds between the stop signal and SIGKILL")
+
+
+def cmd_show(args, _target):
+    print(report.render(compare.load_run(args.run)))
+    return 0
+
+
+def cmd_html(args, _target):
+    print(html.write(args.run))
+    return 0
+
+
+def cmd_diff(args, _target):
+    runs_a = [compare.load_run(p) for p in args.a]
+    runs_b = [compare.load_run(p) for p in args.b]
+    print(compare.render_diff(compare.diff(runs_a, runs_b), args.a_name, args.b_name))
+    return 0
+
+
+def cmd_matrix(args, _target):
+    def side(value):
+        name, sep, path = value.partition("=")
+        if not sep:
+            raise SystemExit(f"expected NAME=BIN_DIR, got {value!r}")
+        return name, path
+
+    noise = None
+    if args.noise:
+        with open(args.noise) as f:
+            noise = json.load(f)
+    table = compare.run_matrix(compare.load_cases(args.cases), side(args.a), side(args.b), args.out, order=args.order,
+                               timeout_s=args.timeout, a_env=_parse_env(args.a_env), b_env=_parse_env(args.b_env), only=args.only,
+                               noise=noise)
+    print(Path(args.out, "table.md").read_text())
+    worse = [c["label"] for c in table["cases"] if c.get("verdict") in ("regression", "tradeoff")]
+    if worse:
+        print("worse in some metric: " + ", ".join(worse))
+    return 1 if worse else 0
+
+
+def cmd_noise(args, _target):
+    floors = compare.noise_from_null(args.matrix)
+    with open(args.out, "w") as f:
+        json.dump(floors, f, indent=1)
+    print(f"noise floors for {len(floors)} cases written to {args.out}")
+    return 0
+
+
+def cmd_nsys_report(args, _target):
+    print(json.dumps(nsys.analyze(args.sqlite, comm_regex=args.comm_regex), indent=1))
+    return 0
+
+
+def cmd_check(_args, _target):
+    print(capabilities.render(capabilities.collect()))
+    return 0
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    argv, target = _split_command(argv)
+    parser = argparse.ArgumentParser(prog="llmprof", description="Whole-lifecycle profiler for LLM inference engines.")
+    parser.add_argument("--version", action="version", version=__version__)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("run", help="profile any command: llmprof run -- command ...")
+    _common(p)
+    p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("serve", help="start an OpenAI-compatible server, load it, stop it, profile the whole life")
+    _common(p)
+    _serve_args(p)
+    p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("attach", help="profile a running process or container")
+    _common(p)
+    _serve_args(p)
+    p.add_argument("--pid", type=int)
+    p.add_argument("--docker", help="container name")
+    p.add_argument("--duration", type=float, default=60.0, help="seconds to observe when no --url is given")
+    p.set_defaults(func=cmd_attach)
+
+    p = sub.add_parser("show", help="print the report of a run")
+    p.add_argument("run")
+    p.set_defaults(func=cmd_show)
+
+    p = sub.add_parser("html", help="write the charts of a run to report.html")
+    p.add_argument("run")
+    p.set_defaults(func=cmd_html)
+
+    p = sub.add_parser("diff", help="compare finished runs")
+    p.add_argument("--a", nargs="+", required=True)
+    p.add_argument("--b", nargs="+", required=True)
+    p.add_argument("--a-name", default="A")
+    p.add_argument("--b-name", default="B")
+    p.set_defaults(func=cmd_diff)
+
+    p = sub.add_parser("matrix", help="A/B across many cases, alternating order, machine re-checked before every arm")
+    p.add_argument("--cases", required=True)
+    p.add_argument("--a", required=True, help="NAME=BIN_DIR")
+    p.add_argument("--b", required=True, help="NAME=BIN_DIR")
+    p.add_argument("--a-env", action="append")
+    p.add_argument("--b-env", action="append")
+    p.add_argument("--order", default="ABBA")
+    p.add_argument("--only", help="regex on case labels")
+    p.add_argument("--noise", help="floors from `llmprof noise`")
+    p.add_argument("--timeout", type=float, default=1800.0)
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_matrix)
+
+    p = sub.add_parser("noise", help="noise floors from a null matrix (same binary on both sides)")
+    p.add_argument("matrix")
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_noise)
+
+    p = sub.add_parser("nsys-report", help="analyze an exported nsys sqlite file")
+    p.add_argument("sqlite")
+    p.add_argument("--comm-regex", default=nsys.DEFAULT_COMM_REGEX)
+    p.set_defaults(func=cmd_nsys_report)
+
+    p = sub.add_parser("check", help="what can be measured on this machine")
+    p.set_defaults(func=cmd_check)
+
+    args = parser.parse_args(argv)
+    return args.func(args, target)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

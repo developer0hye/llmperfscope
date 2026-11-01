@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmprof"
+version = "0.1.0"
+description = "Whole-lifecycle profiler for LLM inference engines: load, warmup, prefill, decode, serving and teardown; speed, memory and energy. Works with any engine, needs no code changes."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+dependencies = []
+
+[project.scripts]
+llmprof = "llmprof.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+llmprof = ["native/*.c"]

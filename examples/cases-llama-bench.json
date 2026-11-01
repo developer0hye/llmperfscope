@@ -1,0 +1,13 @@
+{
+  "defaults": {
+    "binary": "llama-bench",
+    "args": ["-ngl", "99", "-p", "512", "-n", "128", "-r", "3"],
+    "env": {}
+  },
+  "cases": [
+    {"label": "small model, 1 GPU", "model": "/models/small.gguf", "gpus": "0", "args": ["-sm", "none"]},
+    {"label": "small model, layer split", "model": "/models/small.gguf", "gpus": "0,1", "args": ["-sm", "layer"]},
+    {"label": "small model, tensor split", "model": "/models/small.gguf", "gpus": "0,1", "args": ["-sm", "tensor"]},
+    {"label": "large model, tensor split", "model": "/models/large.gguf", "gpus": "0,1,2,3", "args": ["-sm", "tensor"]}
+  ]
+}
