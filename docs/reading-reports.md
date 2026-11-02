@@ -96,6 +96,7 @@ These need the model's header. See [llm-structure.md](llm-structure.md).
 - `decode_against_memory_bound`: the least time a token needs to read its weights, against decode.
 - `moe_share_of_a_token`: how much of the model and how much of a token the experts are.
 - `kv_cache_cost_grows_with_context`: what each 1000 tokens of context add between tokens.
+- `speed_depends_on_content`: the time between tokens differs by language or domain.
 - `speculative_decoding`: tokens drafted and accepted.
 - `graphs_reserved_per_request`: how often llama-server reserved graph memory again.
 - `prompt_cache_used`: how much of the prompts came from the server's cache.

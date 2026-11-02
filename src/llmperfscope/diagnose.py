@@ -553,8 +553,8 @@ def structure_findings(run):
         gpus = expected["gpus_sharing"]
         speed = expected["memory_bandwidth"]["gb_per_s"]
         add("decode_against_memory_bound",
-            f"A token reads {expected['weights_read_per_token_mib']:,.0f} MiB of weights. At the memory's {speed:,.0f} GB/s "
-            f"{'on each of ' + str(gpus) + ' GPUs' if gpus > 1 else ''} that takes at least {expected['decode_floor_ms']:.2f} ms, of {expected['decode_ms']:.2f} ms per token: "
+            f"A token reads {expected['weights_read_per_token_mib']:,.0f} MiB of weights. At the memory's {speed:,.0f} GB/s"
+            f"{' on each of ' + str(gpus) + ' GPUs' if gpus > 1 else ''} that takes at least {expected['decode_floor_ms']:.2f} ms, of {expected['decode_ms']:.2f} ms per token: "
             f"reading weights can explain {share * 100:.0f}% of decode at most. The rest is what kernels do besides reading, the KV cache, collectives and the host.",
             floor_ms=expected["decode_floor_ms"], decode_ms=expected["decode_ms"], share=share, gb_per_s=speed)
     parts = {row["part"]: row for row in model.get("parts") or []}
@@ -575,6 +575,13 @@ def structure_findings(run):
                 f"Each 1000 tokens of context add {line['per_1000_context_tokens_ms']:.2f} ms between tokens, on {line['base_ms']:.2f} ms: "
                 f"at the median context of {line['median_context_tokens']} tokens the KV cache and what grows with it take {growth / (line['base_ms'] + growth) * 100:.0f}% of a token.",
                 **line)
+    for column, rows in (first.get("by_content") or {}).items():
+        fastest, slowest = rows[0], rows[-1]
+        if slowest["itl_p50_ms"] > 1.1 * fastest["itl_p50_ms"]:
+            add("speed_depends_on_content",
+                f"The time between tokens depends on the {column}: {fastest['itl_p50_ms']:.1f} ms for {fastest['group']}, {slowest['itl_p50_ms']:.1f} ms for {slowest['group']}. "
+                "Context length differs between them too, so check that first. What is left comes from what the model does with the content: experts it routes to, tables it reads.",
+                column=column, fastest=fastest, slowest=slowest)
     speculative = first.get("speculative")
     if speculative:
         add("speculative_decoding",

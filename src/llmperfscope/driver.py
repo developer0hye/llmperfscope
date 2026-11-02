@@ -156,6 +156,9 @@ class Client:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         result = {"id": row.get("id"), "ok": False, "chunks": 0, "itl_s": []}
+        for column in CONTENT_COLUMNS:
+            if row.get(column):
+                result[column] = row[column]
         connection = self._connection()
         t_send = time.monotonic()
         result["t_send"] = t_send
@@ -297,6 +300,32 @@ def by_turn(results):
                      "ttft_p50_ms": round(percentile([r["ttft_s"] for r in items], 50) * 1000.0, 2),
                      "cached_share": round(cached / prompt, 3) if prompt else 0.0})
     return rows
+
+
+# Columns of a prompt set that say what a prompt is about. What a model does can depend on it: experts get routed by content, table lookups miss
+# by language.
+CONTENT_COLUMNS = ("language", "domain")
+CONTENT_MIN_REQUESTS = 5
+
+
+def by_content(results):
+    """Per language and domain: the time between tokens and per prompt token, for groups with enough requests to say something."""
+    out = {}
+    for column in CONTENT_COLUMNS:
+        groups = {}
+        for r in results:
+            if r.get("ok") and r.get(column):
+                groups.setdefault(r[column], []).append(r)
+        rows = []
+        for name, items in groups.items():
+            gaps = [gap for r in items for gap in (r.get("itl_s") or [])[3:]]
+            per_token = [r["ttft_s"] / tokens for r in items if (tokens := (r.get("usage") or {}).get("prompt_tokens")) and r.get("ttft_s") is not None]
+            if len(items) >= CONTENT_MIN_REQUESTS and gaps and per_token:
+                rows.append({"group": name, "requests": len(items), "itl_p50_ms": round(percentile(gaps, 50) * 1000.0, 3),
+                             "first_token_ms_per_prompt_token": round(percentile(per_token, 50) * 1000.0, 3)})
+        if len(rows) > 1:
+            out[column] = sorted(rows, key=lambda row: row["itl_p50_ms"])
+    return {"by_content": out} if out else {}
 
 
 # Upper ends of the prompt length groups of `first_token_by_length`, in tokens.
@@ -442,6 +471,7 @@ def summarize_load(results, wall_s):
     turns = by_turn(ok)
     if turns:
         out["by_turn"] = turns
+    out.update(by_content(ok))
     return out
 
 

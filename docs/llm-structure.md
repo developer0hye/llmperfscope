@@ -28,6 +28,7 @@ deepseek41, 8 layers, embedding 5120, 16 experts per layer, 6 used per token: 4.
 | **Mixture of Experts** | `moe_share_of_a_token`, the part table, `kernels` | How much of a token the experts are. Kernel names cannot tell an expert's matrix multiply from a dense one, so `kernels` shows both as matrix multiplies |
 | **KV cache and attention** | `between_tokens_fit`, `kv_cache_cost_grows_with_context`, the memory table's `context` | What each 1000 tokens of context add between tokens. Flat for attention with a window or a compressed cache. Needs replies at many prompt lengths: `--prompts mix` has them |
 | **Prompt cache, context checkpoints** | `--turns N`, `first_token_by_turn`, `prompt_cached_share` | First token as a conversation grows, and how much of each prompt the cache held. A working cache keeps it flat |
+| **Routing by content** | `by_content`, `speed_depends_on_content` | Speed per language and domain, with a prompt set that says them. Experts are routed by content, so a difference here can be routing. Context length differs too, so check that first |
 | **Work per request** | `first_token_fit`, `first_token_fixed_part` | What a prompt costs before its tokens count: rebuilding graphs, checkpoints, the first batch |
 | **Graph reuse, llama.cpp** | `engine_counters`, `graphs_reserved_per_request` | How often the server reused a graph and how often it reserved memory for a new one |
 | **Batching** | `first_token_fit.per_token_ms`, `prefill_tera_params_per_s` | The cost of one more token in a batch, and how many parameters per second that reaches. The second number compares runs and hardware |
@@ -36,6 +37,10 @@ deepseek41, 8 layers, embedding 5120, 16 experts per layer, 6 used per token: 4.
 | **Layer split, pipeline** | per-GPU memory and busy tables | A token still goes through the GPUs one after the other, so the floor is not divided |
 | **Waiting for the GPU** | `host_waits_for_gpu` | Which host code waits, see [deep-dives.md](deep-dives.md) |
 | **Weights on the host** | `weights_on_host`, the data movement table | What stays in host buffers, and whether the page cache or the disk serves it |
+
+## Time by what the kernels do
+
+`llmperfscope kernels` also sums kernel time by what kernels do for the model: attention, matrix multiplies, expert routing, normalization, table lookups, KV cache writes. It goes by kernel names, which are known for llama.cpp's CUDA backend, and another engine's kernels land in `other`. An expert's matrix multiply and a dense one run the same kernel, so they stay one row. To split that row, compare with the part table: what a token reads of each part says how the reading divides.
 
 ## How the floor is worked out
 

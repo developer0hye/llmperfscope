@@ -6,7 +6,7 @@ import struct
 import unittest
 
 import helpers
-from llmperfscope import adapters, anatomy, diagnose, driver, gguf, report
+from llmperfscope import adapters, anatomy, diagnose, driver, gguf, kernels, report
 
 MIB = 1024 * 1024
 
@@ -229,6 +229,21 @@ class EngineSettings(unittest.TestCase):
         self.assertEqual(adapter.report["engine_counters"], {"graphs_reused": 31, "graph_reallocs_same_size": 2, "graph_reallocs_changed": 7, "checkpoints_created": 1})
 
 
+class Components(unittest.TestCase):
+    def test_names_of_real_kernels(self):
+        for name, component in (("flash_attn_ext_f16", "attention"), ("soft_max_f32", "attention"), ("mul_mat_vec_q", "matrix multiply, dense or expert"),
+                                ("mul_mat_q", "matrix multiply, dense or expert"), ("quantize_mmq_q8_1", "matrix multiply, dense or expert"), ("topk_moe_weights", "expert routing and sums"),
+                                ("argsort_f32_i32", "expert routing and sums"), ("dsv4_hc_post_f32", "mixing between streams"), ("rms_norm_f32", "normalization"),
+                                ("get_rows_cuda_q", "table lookups"), ("set_rows_cuda", "KV cache writes"), ("scale_f32", "element-wise"), ("cpy_scalar", "copies and reshapes"),
+                                ("ncclDevKernel_AllReduce_f32_RING", "collectives"), ("ggml_cuda_ar_ll_kernel", "collectives"), ("some_torch_kernel", "other")):
+            self.assertEqual(kernels.component_of(name), component, name)
+
+    def test_totals(self):
+        rows = [{"name": "mul_mat_vec_q", "cost_ms_per_token": 3.0}, {"name": "mul_mat_q", "cost_ms_per_token": 1.0}, {"name": "rms_norm_f32", "cost_ms_per_token": 0.5},
+                {"name": "ncclDevKernel_AllReduce", "cost_ms_per_token": 1.5}]
+        self.assertEqual(kernels.by_component(rows), [("matrix multiply, dense or expert", 4.0), ("collectives", 1.5), ("normalization", 0.5)])
+
+
 class Context(unittest.TestCase):
     @staticmethod
     def reply(prompt_tokens, gap_ms, n=20, spike_ms=None):
@@ -268,6 +283,20 @@ class Context(unittest.TestCase):
         self.assertEqual(summary["prompt_cached_share"], round(392 / 900, 3))
         self.assertEqual([t["turn"] for t in summary["by_turn"]], [1, 2, 3])
         self.assertEqual(summary["by_turn"][1], {"turn": 2, "requests": 1, "prompt_tokens_mean": 300, "ttft_p50_ms": 120.0, "cached_share": 0.32})
+
+    def test_speed_by_content(self):
+        replies = []
+        for language, gap in (("ko", 12.0), ("en", 10.0), ("rare", 50.0)):
+            for _ in range(5 if language != "rare" else 2):
+                replies.append(dict(self.reply(100, gap), language=language))
+        summary = driver.summarize_load(replies, 1.0)
+        summary["concurrency"] = 1
+        rows = summary["by_content"]["language"]
+        self.assertEqual([r["group"] for r in rows], ["en", "ko"])
+        self.assertEqual(rows[0]["itl_p50_ms"], 10.0)
+        self.assertEqual(rows[0]["first_token_ms_per_prompt_token"], 1.0)
+        found = {f["what"]: f for f in diagnose.structure_findings({"throughput": {"serve_c1": summary}})}
+        self.assertEqual(found["speed_depends_on_content"]["evidence"]["slowest"]["group"], "ko")
 
     def test_reserving_the_graph_every_request(self):
         run = {"engine_counters": {"graph_reallocs_changed": 30, "graph_reallocs_same_size": 2}, "throughput": {"serve_c1": {"concurrency": 1, "requests": 10}}}

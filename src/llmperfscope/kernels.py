@@ -9,7 +9,41 @@ time in collectives shows what they really cost, and the rest of what the others
 
 from __future__ import annotations
 
+import re
+
 from . import nsys
+
+# What a kernel does for the model, from its name. The names are ggml's for CUDA; another engine's kernels land in `other`.
+# A matrix multiply cannot be told apart by name: an expert's and a dense layer's run the same kernel, and so does the output head.
+COMPONENTS = [
+    ("attention", r"flash_attn|fattn|soft_max|softmax|gated_linear_attn|diag_mask|rope|lightning_indexer|top_k_mask|wkv"),
+    ("matrix multiply, dense or expert", r"mul_mat|mmvq|mmvf|\bmmq\b|mmf|quantize|gemm|cublas"),
+    ("expert routing and sums", r"top_k|topk|argsort|moe|add_id"),
+    ("mixing between streams", r"dsv4_hc|\bhc_"),
+    ("normalization", r"norm"),
+    ("table lookups", r"get_rows"),
+    ("KV cache writes", r"set_rows|\bset\b|set_f"),
+    ("element-wise", r"\badd|\bsub|\bmul\b|\bdiv|scale|unary|clamp|sqr|bin_bcast|softcap|\bsum|cumsum|mean"),
+    ("copies and reshapes", r"cpy|concat|convert|\bpad|dequantize|memset|repeat|fill"),
+]
+
+
+def component_of(name):
+    if nsys.is_collective(name):
+        return "collectives"
+    for component, pattern in COMPONENTS:
+        if re.search(pattern, name, re.I):
+            return component
+    return "other"
+
+
+def by_component(rows):
+    """Time per token by what the kernels do for the model, waiting for other GPUs left out."""
+    totals = {}
+    for row in rows:
+        component = component_of(row["name"])
+        totals[component] = totals.get(component, 0.0) + row["cost_ms_per_token"]
+    return sorted(totals.items(), key=lambda item: -item[1])
 
 
 def _phase_tables(run, phases):
@@ -82,6 +116,12 @@ def render(run, speed=None, phases=("decode", "prefill"), top=12):
             for label, value in (("kernels", data["kernel_ms"]), ("collectives, without waiting", data["collective_ms"]), ("copies", data["copy_ms"]),
                                  ("gaps, host work and waiting between kernels", max(rest, 0.0))):
                 out.append(f"| {label} | {value:.2f} | {100 * value / token_ms:.0f}% |")
+            out.append("")
+        components = by_component(data["kernels"])
+        if components:
+            spent = sum(value for _, value in components) or 1.0
+            out += ["| what the kernels do for the model | ms/token | share of kernel time |", "|---|---:|---:|"]
+            out += [f"| {component} | {value:.2f} | {100 * value / spent:.0f}% |" for component, value in components]
             out.append("")
         headers = ["kernel", "ms/token", "calls/token", "us/call"]
         if token_ms:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import bisect
 import glob
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -186,17 +187,30 @@ def wait_sites(tree):
 
     def walk(node, name, site):
         calls = [(k, v) for k, v in node.get("calls", {}).items() if v["count"] >= floor]
-        if len(calls) == 1 and calls[0][1]["count"] >= 0.9 * node["count"]:
+        # What this function waits for itself, and what its rare callees wait for.
+        rest = node.get("count", 0) - sum(v["count"] for _, v in calls)
+        if len(calls) == 1 and rest <= 0.1 * node["count"]:
             walk(calls[0][1], calls[0][0], site)
-        elif calls:
-            for k, v in calls:
-                walk(v, k, k)
-        elif name:
-            # with one caller in the whole phase there is no parting, the innermost name is the one that says something
-            sites.append((site or name, node["count"]))
+            return
+        if name and (rest >= floor or not calls):
+            # At the end of a chain the first function after the parting says who waits. With one caller in the whole phase there is no
+            # parting, so the innermost name is the one that says something.
+            sites.append((name if calls else site or name, rest))
+        for k, v in calls:
+            walk(v, k, k)
 
     walk(tree, None, None)
     return sorted(sites, key=lambda site: -site[1])
+
+
+def function_label(name):
+    """A C++ name without its return type, template arguments and parameters."""
+    previous = None
+    while previous != name:
+        previous = name
+        name = re.sub(r"<[^<>]*>", "", name)
+        name = re.sub(r"\([^()]*\)", "", name)
+    return name.split("@", 1)[0].strip().split(" ")[-1]
 
 
 def summarize(run_dir, phases, t_baseline_ns, top=20):
@@ -293,7 +307,7 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
             "inclusive": [{"name": k[:96], "share": round(v / n, 4), "waiting_share": round(bucket["waiting"][k] / n, 4)}
                           for k, v in bucket["inclusive"].most_common(top)],
             "gpu_wait": {"share": round(bucket["wait_tree"].get("count", 0) / n, 4),
-                         "sites": [{"name": k[:96], "share": round(v / n, 4)} for k, v in wait_sites(bucket["wait_tree"])[:8]]},
+                         "sites": [{"name": function_label(k)[:96], "share": round(v / n, 4)} for k, v in wait_sites(bucket["wait_tree"])[:8]]},
             "threads": [{"name": k, "share": round(v / n, 4)} for k, v in bucket["threads"].most_common(6)],
             "busiest_threads": [{"tid": tid, "name": bucket["tid_names"][tid], "cpu_s": round(count * period_s, 3)}
                                 for tid, count in bucket["per_tid"].most_common(8)],

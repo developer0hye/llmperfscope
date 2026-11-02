@@ -39,7 +39,7 @@ def _model_section(run):
     if model.get("experts"):
         used = f", {model['experts_used']} used per token" if model.get("experts_used") else ""
         facts.append(f"{model['experts']} experts per layer{used}")
-    out = ["\n## Model\n", ", ".join(facts) + f": {_gib(model['file_mib'])} in {model['tensors']} tensors.\n"]
+    out = ["\n## Model\n", ", ".join(facts) + f": {_gib(model['file_mib'])} GiB in {model['tensors']} tensors.\n"]
     rows = [[row["part"], f"{row['mib']:,.0f}", f"{row['share'] * 100:.0f}%", f"{row['read_mib']:,.0f}", ", ".join(row["types"])]
             for row in model["parts"] if row["mib"] >= 1.0 or row["read_mib"] >= 1.0]
     out.append(_table(["part", "MiB", "share", "a token reads, MiB", "types"], rows))
@@ -212,6 +212,9 @@ def render(run):
                     out.append(f"- between tokens by context, median ms (replies): {cells}")
                 if t.get("prompt_cached_share"):
                     out.append(f"- {t['prompt_cached_share'] * 100:.0f}% of the prompt tokens came from the server's cache")
+                for column, rows in (t.get("by_content") or {}).items():
+                    cells = ", ".join(f"{r['group']} {r['itl_p50_ms']:.1f}" for r in rows)
+                    out.append(f"- between tokens by {column}, median ms: {cells}")
                 if t.get("speculative"):
                     d = t["speculative"]
                     out.append(f"- speculative decoding: {d['drafted']:,} tokens drafted, {d['accepted_share'] * 100:.0f}% accepted")
