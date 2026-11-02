@@ -7,6 +7,7 @@ from __future__ import annotations
 import http.client
 import json
 import math
+import os
 import queue
 import random
 import re
@@ -15,6 +16,37 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
+
+# Public prompts in several languages, domains and lengths. Pinned, so a number measured with it today means the same next year. Each row
+# carries its own license and source.
+MIX_REVISION = "9460b6e9195f0ccb48562a945464f57fdac1b25b"
+MIX_URL = "https://huggingface.co/datasets/developer0hye/llm-speed-prompt-mix/resolve/{revision}/data/{name}.jsonl"
+MIX_FILES = ("belebele", "gsm8k_en", "hrm8k_ko", "humaneval", "humaneval_x", "long_code", "long_wiki_en", "long_wiki_ko", "mbpp", "mgsm", "mmlu_en", "mmmlu", "mt_bench")
+
+
+def prompt_mix_path(directory=None, opener=None):
+    """The prompt set as one local JSONL file, downloaded the first time."""
+    root = Path(directory) if directory else Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "llmperfscope"
+    path = root / f"prompt-mix-{MIX_REVISION[:10]}.jsonl"
+    if path.exists():
+        return path
+    root.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(f".tmp{os.getpid()}")
+    print(f"[llmperfscope] downloading the prompt set to {path}", flush=True)
+    try:
+        with open(temporary, "wb") as out:
+            for name in MIX_FILES:
+                url = MIX_URL.format(revision=MIX_REVISION, name=name)
+                with (opener or urllib.request.urlopen)(url, timeout=120) as response:
+                    data = response.read()
+                out.write(data if data.endswith(b"\n") else data + b"\n")
+        os.replace(temporary, path)
+    except OSError as e:
+        if temporary.exists():
+            temporary.unlink()
+        raise SystemExit(f"could not download the prompt set: {e}. Pass your own file with --prompts.") from e
+    return path
 
 
 def percentile(values, q):
@@ -253,6 +285,11 @@ def summarize_load(results, wall_s):
         itl += r["itl_s"]
         if r["itl_s"]:
             per_request_decode.append(len(r["itl_s"]) / sum(r["itl_s"]))
+    timings = [r["server_timings"] for r in ok if r.get("server_timings")]
+    for key, count, spent in (("server_prefill_tokens_per_s", "prompt_n", "prompt_ms"), ("server_decode_tokens_per_s", "predicted_n", "predicted_ms")):
+        milliseconds = sum(t.get(spent) or 0.0 for t in timings)
+        if milliseconds:
+            out[key] = round(sum(t.get(count) or 0 for t in timings) / milliseconds * 1000, 3)
     hidden = sum(1 for r in ok if r.get("hidden_tokens"))
     if hidden:
         out["requests_with_hidden_tokens"] = hidden

@@ -9,6 +9,7 @@ import os
 import platform
 import signal
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -52,7 +53,15 @@ class Options:
 
 
 class Refused(Exception):
-    """The machine is not clean and the options say not to measure."""
+    """The machine is not clean and the options say not to measure, or the request cannot be measured at all."""
+
+
+def platform_refusal():
+    """Why measuring cannot work on this system, or None. It reads /proc for processes, disks and memory."""
+    if sys.platform.startswith("linux"):
+        return None
+    return (f"measuring needs Linux for now, and this is {sys.platform}. "
+            "Finished runs can be read and drawn here: show, html, figure, anonymize and diff work on any system.")
 
 
 def _set_subreaper():
@@ -273,6 +282,9 @@ class Run:
     # Main -----------------------------------------------------------------------------------------------------------
 
     def execute(self):
+        refusal = platform_refusal()
+        if refusal:
+            raise Refused(refusal)
         if (self.opts.nsys or self.opts.cpu_profile) and (self.attach_pid or adapters.docker_index(self.cmd) is not None):
             # They would profile the docker client, or nothing, and the report would look fine.
             raise Refused("--nsys and --cpu-profile have to start the engine themselves, so they cannot reach a container or a running process. "
@@ -552,6 +564,12 @@ class Run:
             report["nsys"] = nsys_tool.finish(self.dir, phases, self.wall_baseline_ns, log=self.log)
         if self.opts.cpu_profile:
             report["cpu_profile"] = cpuprof.summarize(self.dir, phases, self.t_baseline)
+            covered = cpuprof.coverage(report["cpu_profile"], sections.get("groups") or {})
+            if covered is not None:
+                report.setdefault("consistency", {})["cpu_profile_coverage"] = covered
+                if covered < cpuprof.GOOD_COVERAGE:
+                    notes.append(f"the CPU profile accounts for only {covered * 100:.0f}% of the CPU time measured from outside: "
+                                 "hot-spot shares may be missing something, such as a process it was not loaded into")
         report["notes"] = notes
         report["phases"] = phases
         report["platform"] = {"python": platform.python_version()}

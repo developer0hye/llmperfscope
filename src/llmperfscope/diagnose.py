@@ -443,7 +443,7 @@ def cpu_findings(run):
         if not group or group.get("samples", 0) < 50:
             continue
         in_driver = sum(m["share"] for m in group["modules"] if m["name"].startswith(_DRIVER_MODULES))
-        own = [x for x in group["self"] if not x["name"].endswith("!?") and x["share"] >= 0.03 and not x["name"].startswith(("[", "__", "ioctl", "cu"))]
+        own = [x for x in group["self"] if not x["name"].endswith("!?") and x["share"] >= 0.03 and (_is_long_system_call(x["name"]) or not x["name"].startswith(("[", "__", "ioctl", "cu")))]
         top = ", ".join(_describe_function(x) for x in own[:4])
         text = f"{name}: {in_driver * 100:.0f}% of host CPU samples are inside the GPU driver (submitting, or spinning on a wait)."
         if top:
@@ -452,11 +452,17 @@ def cpu_findings(run):
     return findings
 
 
+def _is_long_system_call(name):
+    """libc's wrappers around calls where a phase can spend real time in the kernel. Other names starting with __ are libc internals."""
+    return name.lstrip("_").split("@")[0] in ("munmap", "mmap", "mmap64", "madvise", "mprotect", "read", "pread", "pread64", "write", "pwrite", "pwrite64", "fsync")
+
+
 def _describe_function(row):
     """A function's share, how many threads ran it, and how much of the phase it holds up: the part a speed-up could win back."""
     threads = row.get("threads", 1)
     where = "on 1 thread" if threads == 1 else f"on {threads} threads"
-    text = f"{row['name'][:48]} {row['share'] * 100:.0f}% {where}"
+    name = row["name"].split("@")[0].lstrip("_") if _is_long_system_call(row["name"]) else row["name"]
+    text = f"{name[:48]} {row['share'] * 100:.0f}% {where}"
     held = row.get("pct_of_wall_on_busiest_thread")
     if held is not None:
         text += f" (at most {held:.0f}% of the phase)"

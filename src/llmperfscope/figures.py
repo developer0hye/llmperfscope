@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import __version__
+from . import __version__, nsys
 from .gpu import G_MEM, G_POWER, G_SM, G_UTIL
 from .procfs import CLK_TCK
 from .sampler import H_ANON, H_FILE, H_STICKS, H_UTICKS, energy_series, load_ticks
@@ -793,7 +793,8 @@ def gpu_time_figure(plt, run, out):
         _letter(ax, 2 * r, style)
         top = entry.get("top_kernels", [])[:8]
         ax2 = fig.add_subplot(grid[r, 1] if wide else grid[2 * r + 1, 0])
-        _hbars(ax2, [_short(k["name"], 30) for k in top], [100 * k["share"] for k in top], lambda v: f"{v:.0f}%", f"{group}: top kernels, share of kernel time")
+        _hbars(ax2, [_short(k["name"], 30) for k in top], [100 * k["share"] for k in top], lambda v: f"{v:.0f}%", f"{group}: top kernels, share of kernel time",
+               color=[SERIES[1] if nsys.is_collective(k["name"]) else SERIES[0] for k in top])
         rows += [[group, k["name"], "kernel share", round(100 * k["share"], 2)] for k in top]
         _letter(ax2, 2 * r + 1, style)
     out.save(fig, "gpu_time", ["phase", "row", "part", "percent"], rows,
@@ -868,6 +869,8 @@ def _method(run):
     text = ", ".join(parts) + "."
     if report.get("perturbed"):
         text += " This run was traced or sampled for detail; its speed is not representative."
+    if report.get("adapter") == "llama.cpp:llama-bench":
+        text += " llama-bench feeds random tokens, not real text."
     before = report.get("machine_before") or {}
     if before.get("model_page_cache_fraction") is not None:
         text += f" {before['model_page_cache_fraction'] * 100:.0f}% of the model was in the page cache at the start."
@@ -1033,8 +1036,8 @@ def make_compare_figures(specs, out_dir, style, kinds=COMPARE_KINDS):
     return out.written, skipped
 
 
-MATRIX_METRICS = [("prefill_tps", "Prefill speed"), ("decode_tps", "Decode speed"), ("gpu_peak_mib", "GPU memory"), ("host_anon_peak_mib", "Host memory"), ("load_s", "Load time"),
-                  ("decode_j_per_token", "Decode energy")]
+MATRIX_METRICS = [("prefill_tps", "Prefill speed"), ("decode_tps", "Decode speed"), ("output_tps", "Output speed"), ("ttft_ms", "Time to first token"), ("gpu_peak_mib", "GPU memory"),
+                  ("host_anon_peak_mib", "Host memory"), ("load_s", "Load time"), ("decode_j_per_token", "Decode energy"), ("serve_j_per_token", "Serving energy")]
 
 
 def make_matrix_figure(path, out_dir, style):
@@ -1065,9 +1068,11 @@ def make_matrix_figure(path, out_dir, style):
                     continue
                 ratio = value["ratio"]
                 ratios.append(ratio)
-                marker, face, edge = looks.get(value["verdict"], looks["same"])
+                # A difference resting on too few runs is a hint. A paper figure should not call it a result.
+                verdict = "same" if value.get("weak") else value["verdict"]
+                marker, face, edge = looks.get(verdict, looks["same"])
                 ax.scatter([ratio], [i], marker=marker, s=16, facecolor=face, edgecolor=edge, linewidth=0.7, zorder=3)
-                rows.append([case["label"], key, value["a"], value["b"], ratio, value["verdict"]])
+                rows.append([case["label"], key, value["a"], value["b"], ratio, verdict])
             ax.axvline(1.0, color=AXIS, linewidth=0.7, zorder=1)
             ax.set_title(title)
             furthest = max([abs(r - 1.0) for r in ratios] + [0.01])

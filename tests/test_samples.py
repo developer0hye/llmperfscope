@@ -1,13 +1,16 @@
 """The runs in examples/sample-runs: they read and plot on any machine, and they name nobody. Works on any OS. Not in the source archive."""
 
+import contextlib
 import gzip
+import io
 import json
 import os
 import re
 import unittest
+from unittest import mock
 
 import helpers
-from llmperfscope import compare, figures, report
+from llmperfscope import capabilities, cli, compare, figures, kernels, report
 
 SAMPLES = os.path.join(os.path.dirname(helpers.HERE), "examples", "sample-runs")
 PRIVATE = re.compile(r"/home/|/Users/|/tmp/|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-|GPU-[0-9a-f]{6}", re.I)
@@ -21,6 +24,36 @@ except ImportError:
 
 def runs():
     return sorted(root for root, _, files in os.walk(SAMPLES) if "run.json" in files)
+
+
+class OtherSystems(unittest.TestCase):
+    """Measuring needs Linux. Elsewhere it has to say so, and not fall over on a missing /proc."""
+
+    def _refused(self, argv):
+        stderr = io.StringIO()
+        with mock.patch("sys.platform", "darwin"), contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(argv), 3)
+        self.assertIn("needs Linux", stderr.getvalue())
+        self.assertIn("figure", stderr.getvalue())
+
+    def test_run(self):
+        self._refused(["run", "--quiet", "--out", helpers.temp_dir(), "--", "true"])
+
+    def test_serve(self):
+        self._refused(["serve", "--quiet", "--out", helpers.temp_dir(), "--url", "http://127.0.0.1:1", "--", "llama-server"])
+
+    def test_attach(self):
+        self._refused(["attach", "--quiet", "--out", helpers.temp_dir(), "--pid", "1"])
+
+    def test_matrix(self):
+        self._refused(["matrix", "--cases", "/nonexistent", "--a", "x=/x", "--b", "y=/y", "--out", helpers.temp_dir()])
+
+    def test_check_tells_what_works(self):
+        with mock.patch("sys.platform", "darwin"):
+            text = capabilities.render(capabilities.collect())
+        self.assertIn("needs Linux", text)
+        self.assertIn("reading runs", text)
+        self.assertNotIn("nsys", text)
 
 
 @unittest.skipUnless(os.path.isdir(SAMPLES), "the sample runs are not in the source archive")
@@ -57,6 +90,18 @@ class SampleRuns(unittest.TestCase):
                     for line in f:
                         row = json.loads(line)
                         self.assertFalse({"prompt", "messages", "id", "text"} & set(row), requests)
+
+    def test_kernel_table_from_a_real_trace(self):
+        traced = compare.load_run(os.path.join(SAMPLES, "deepseek-v4.1-flash-8gpu-nsys"))
+        untraced = compare.load_run(os.path.join(SAMPLES, "deepseek-v4.1-flash-8gpu-cpu-profile"))
+        text = kernels.render(traced, untraced)
+        self.assertIn("ms per token without tracing", text)
+        self.assertIn("mul_mat_vec_q", text)
+        self.assertIn("(collective)", text)
+        data = kernels.per_token(traced["nsys"]["groups"]["decode"])
+        token_ms = 1000.0 / untraced["throughput"]["decode"]["tokens_per_s"]
+        # What the trace says kernels and collectives cost has to fit inside a token measured without it.
+        self.assertLess(data["kernel_ms"] + data["collective_ms"], token_ms)
 
     def test_ram_limited_run_says_ram(self):
         data = compare.load_run(os.path.join(SAMPLES, "cpu-ram-limited"))

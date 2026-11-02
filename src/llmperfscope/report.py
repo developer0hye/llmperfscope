@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .nsys import is_collective
+
 
 def _num(value, digits=1):
     if value is None:
@@ -224,7 +226,8 @@ def render(run):
         for name in ("decode", "prefill"):
             top = (nsys["groups"].get(name) or {}).get("top_kernels")
             if top:
-                out.append(f"\nTop kernels, {name}: " + ", ".join(f"{k['name']} {k['share'] * 100:.0f}%" for k in top[:6]))
+                out.append(f"\nTop kernels, {name}: " + ", ".join(f"{k['name']}{' (collective)' if is_collective(k['name']) else ''} {k['share'] * 100:.0f}%" for k in top[:6]))
+        out.append("\n`llmperfscope kernels RUN --speed OTHER_RUN` says how much of a token each one is, with OTHER_RUN the same command without --nsys.")
     if nsys.get("error"):
         out.append(f"\nnsys: {nsys['error']}")
 
@@ -247,6 +250,8 @@ def render(run):
         out.append(f"\nSelf-check: phase time / engine's own timer = {consistency['phase_wall_over_engine_time']:.4f} (should be near 1).")
     if consistency.get("energy_over_power_gauge"):
         out.append(f"\nSelf-check: power from the energy counter / power gauge = {consistency['energy_over_power_gauge']:.3f} (should be near 1).")
+    if consistency.get("cpu_profile_coverage"):
+        out.append(f"\nSelf-check: the CPU profile accounts for {consistency['cpu_profile_coverage'] * 100:.0f}% of the CPU time measured from outside (should be near 100%).")
     sampler = run.get("sampler") or {}
     if sampler.get("hz_achieved"):
         pinned = f", on CPU {sampler['pinned_cpu']}" if sampler.get("pinned_cpu") is not None else ""

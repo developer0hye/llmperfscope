@@ -129,6 +129,8 @@ class Profile:
             self.events.append(record)
 
     def __enter__(self):
+        if not sys.platform.startswith("linux"):
+            raise OSError(f"measuring needs Linux for now, and this is {sys.platform}")
         self.dir.mkdir(parents=True, exist_ok=True)
         self.backend = open_backend()
         self.before = machine.snapshot(self.backend, cpu_seconds=0.0, ignore={os.getpid()})

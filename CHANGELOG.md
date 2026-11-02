@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `matrix` runs 4 arms per side by default, and runs a case that looks worse again (`--recheck`) before calling it. With 2 per side, arms miss each other by chance 1 time in 3.
+- `--cpu-profile` counts the time inside long system calls, which used to show as one sample, and every profile is checked against the CPU time measured from outside.
+- On a system other than Linux, `run`, `serve`, `attach` and `matrix` say what works there, instead of failing on a missing `/proc`.
+- `llmperfscope kernels`: each GPU kernel's time per token, its share of a token and the most it could win, with collectives counted without their waiting. `--vs` compares two traces kernel by kernel.
+- `--prompts mix` downloads a public set of real prompts once. Reports from `llama-bench` note that it feeds random tokens, and `matrix` can compare builds with a server and real prompts.
+- `diff` and `matrix` mark a difference resting on too few runs as a hint, `better?` or `worse?`, and a comparison with only hints as `inconclusive`. Figures do not show hints as results.
+
 ## 0.1.0
 
 First public release.

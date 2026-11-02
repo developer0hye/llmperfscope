@@ -12,7 +12,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import cli, cpuprof, machine, procfs, runner
+from llmperfscope import cli, compare, cpuprof, machine, procfs, runner
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -223,6 +223,25 @@ class Serving(unittest.TestCase):
 
 
 @unittest.skipUnless(os.path.exists("/proc/self/status") and shutil.which("cc"), "needs Linux and a C compiler")
+class MatrixWithServer(unittest.TestCase):
+    def test_a_server_case_is_judged_on_what_a_client_saw(self):
+        port = free_port()
+        case = {"label": "server", "binary": os.path.basename(sys.executable), "prefix": [], "args": [SERVER, str(port), "0.1", "0.02", "0.002"], "env": {}, "model": None, "gpus": None,
+                "serve": {"preset": "vllm", "url": f"http://127.0.0.1:{port}", "synthetic_words": 16, "limit": 2, "max_tokens": 8, "stop_timeout": 10.0}}
+        out = helpers.temp_dir()
+        directory = os.path.dirname(sys.executable)
+        with mock.patch("llmperfscope.runner.open_backend", lambda: helpers.ScriptedGpu()):
+            table = compare.run_matrix([case], ("a", directory), ("b", directory), out, order="ABBA", precheck="skip", log=lambda text: None, recheck=0, timeout_s=60.0)
+        result = table["cases"][0]
+        self.assertEqual(result["dropped_runs"], 0)
+        self.assertIn("output_tps", result["metrics"])
+        self.assertIn("ttft_ms", result["metrics"])
+        self.assertAlmostEqual(result["metrics"]["ttft_ms"]["a"], 20.0, delta=15.0)
+        with open(os.path.join(out, "table.md")) as f:
+            self.assertIn("first token", f.read())
+
+
+@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
 class CpuProfile(unittest.TestCase):
     def test_samples_name_the_function_that_burns_the_cpu(self):
         directory = helpers.temp_dir()
@@ -289,6 +308,44 @@ class CpuProfile(unittest.TestCase):
         # Three threads for twice as long as one: about six times the samples.
         self.assertGreater(rows["llmperfscope_test_worker_burn"]["share"], 3 * rows["llmperfscope_test_main_burn"]["share"])
         self.assertAlmostEqual(rows["llmperfscope_test_worker_burn"]["busiest_thread_s"], 1.2, delta=0.4)
+
+    def test_a_long_system_call_counts_for_all_of_its_time(self):
+        """A signal only arrives when the call returns. Real case: one munmap of 12 s showed as 8 samples, 0.06% of the load."""
+        directory = helpers.temp_dir()
+        source = os.path.join(directory, "kernel.c")
+        with open(source, "w") as f:
+            f.write(textwrap.dedent("""
+                #define _GNU_SOURCE
+                #include <sys/mman.h>
+                int main(void) {
+                    size_t size = (size_t) 1 << 31;
+                    /* One call each, in the kernel from start to end: filling in the pages cannot be interrupted by a signal. */
+                    for (int i = 0; i < 4; i++) {
+                        void *p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+                        if (p == MAP_FAILED) return 1;
+                        madvise(p, size, MADV_NOHUGEPAGE);
+                        munmap(p, size);
+                    }
+                    return 0;
+                }
+            """))
+        binary = os.path.join(directory, "kernel")
+        subprocess.run(["cc", "-O1", "-o", binary, source], check=True)
+        report = run([binary], cpu_profile=True, cpu_hz=1000)
+        self.assertEqual(report["status"], "ok")
+        group = report["cpu_profile"]["groups"]["run"]
+        self.assertGreater(group["samples"], 10 * group["raw_samples"], "samples should stand for the periods merged during each call")
+        calls = sum(x["share"] for x in group["self"] if "mmap" in x["name"] or "madvise" in x["name"])
+        self.assertGreater(calls, 0.7)
+        self.assertGreater(report["consistency"]["cpu_profile_coverage"], 0.8)
+
+    def test_coverage_compares_the_profile_with_what_was_measured(self):
+        profile = {"groups": {"load": {"cpu_s": 67.5}, "decode": {"cpu_s": 1.0}, "startup": {"cpu_s": 0.1}}}
+        groups = {"load": {"host": {"user_s": 45.0, "sys_s": 35.0}}, "decode": {"host": {"user_s": 1.0, "sys_s": 0.0}}, "startup": {"host": {"user_s": 0.1, "sys_s": 0.0}}}
+        self.assertEqual(cpuprof.coverage(profile, groups), round(68.6 / 81.1, 3))
+        self.assertEqual(profile["groups"]["load"]["coverage"], round(67.5 / 80.0, 3))
+        self.assertNotIn("coverage", profile["groups"]["startup"])
+        self.assertIsNone(cpuprof.coverage({"groups": {"run": {"cpu_s": 0.1}}}, {"run": {"host": {"user_s": 0.1, "sys_s": 0.0}}}))
 
     def test_stripped_code_gets_no_made_up_name(self):
         table = cpuprof._Symbols("/nonexistent")

@@ -12,6 +12,8 @@ import os
 import re
 
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+RANDOM_TOKENS_NOTE = ("llama-bench feeds random tokens. Caches, expert routing and table lookups behave differently with real text, so a gain here can be "
+                      "much smaller there: confirm it with `llmperfscope serve --prompts mix`, or a server case in `llmperfscope matrix`.")
 WRAPPERS = {"env", "taskset", "numactl", "timeout", "nice", "ionice", "chrt", "flock", "stdbuf", "setsid", "nohup", "sudo"}
 
 
@@ -187,6 +189,7 @@ class LlamaBench(Adapter):
             throughput["decode"] = _merge_tests(decode)
         out["throughput"] = throughput
         out["consistency"] = _phase_vs_samples(phases, summary)
+        out["notes"] = [RANDOM_TOKENS_NOTE]
         return out
 
 

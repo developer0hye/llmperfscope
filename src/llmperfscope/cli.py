@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, adapters, capabilities, compare, driver, figures, html, nsys, report, runner, share
+from . import __version__, adapters, capabilities, compare, figures, html, kernels, nsys, report, runner, serving, share
 
 
 def _default_out(label):
@@ -112,131 +112,15 @@ def cmd_run(args, target):
         return 3
 
 
-def _rows_from(args):
-    if args.prompts:
-        filters = dict(item.split("=", 1) for item in args.filter or [])
-        rows = driver.load_prompts(args.prompts, filters)
-        if not rows:
-            raise SystemExit("no prompts left after the filter")
-        return rows[:args.limit] if args.limit else rows
-    return driver.synthetic_prompts(args.synthetic_words, args.limit or 8)
-
-
-def _serve_workload(args, preset, marks_load):
-    """Waits until the server is ready, warms it up, drives each concurrency level, collects the server's own metrics."""
-
-    def workload(run):
-        if marks_load:
-            run.emit("load", t=run.t_spawn)
-        base = args.url.rstrip("/")
-        is_alive = (lambda: Path(f"/proc/{run.pid}").exists())
-        ready_s = driver.wait_ready(base + args.ready_path if args.ready_path else base + preset["ready_path"], is_alive,
-                                    timeout_s=args.ready_timeout)
-        run.log(f"server ready after {ready_s:.2f} s")
-        extra = dict(preset.get("extra_body") or {})
-        if args.extra_body:
-            extra.update(json.loads(args.extra_body))
-        client = driver.Client(base + preset["base_path"], model=args.model, max_tokens=args.max_tokens, extra_body=extra,
-                               ignore_eos=not args.allow_eos, api_key=args.api_key)
-        if args.pull:
-            run.emit("download")
-            driver.pull_ollama_model(base, args.model)
-        if not client.model:
-            try:
-                client.discover_model()
-            except (OSError, ValueError, KeyError) as e:
-                run.log(f"could not read the model name from /models: {e!r}")
-        rows = _rows_from(args)
-        result = {"ready_s": round(ready_s, 3), "model": client.model, "prompts": len(rows)}
-
-        run.emit("warmup")
-        # A longer reply than strictly needed: a model that thinks first shows no text for its first tokens.
-        warm = client.request({"prompt": "Warm up.", "max_tokens": 32} if "messages" not in rows[0]
-                              else {"messages": [{"role": "user", "content": "Warm up."}], "max_tokens": 32})
-        if not warm["ok"]:
-            raise RuntimeError(f"warmup request failed: {warm.get('error')}")
-        result["warmup_ttft_ms"] = round(warm["ttft_s"] * 1000, 2)
-
-        metrics_path = args.metrics_path if args.metrics_path is not None else preset.get("metrics_path")
-        metrics_before = driver.fetch_metrics(base + metrics_path) if metrics_path else None
-        watcher = driver.GaugeWatcher(base + metrics_path) if metrics_before else None
-        if watcher:
-            watcher.start()
-        throughput = {}
-        with open(run.dir / "requests.jsonl", "w") as log:
-            current = {}
-
-            def record(item):
-                row = {k: v for k, v in item.items() if k not in ("t_send", "t_done")}
-                row["level"] = current.get("concurrency")
-                row["itl_s"] = [round(gap, 6) for gap in item.get("itl_s", [])]
-                log.write(json.dumps(row) + "\n")
-
-            for concurrency in [int(x) for x in str(args.concurrency).split(",")]:
-                name = f"serve_c{concurrency}"
-                current["concurrency"] = concurrency
-                run.emit(name, group="serve", concurrency=concurrency)
-                results, wall = driver.run_load(client, rows, concurrency=concurrency, repeat=args.repeat, seed=args.seed,
-                                                emit_each=record, level=f"c{concurrency}", unique=not args.reuse_prompts)
-                summary = driver.summarize_load(results, wall)
-                summary["concurrency"] = concurrency
-                throughput[name] = summary
-                run.log(f"{name}: {summary.get('output_tokens_per_s')} tokens/s, {summary.get('failed')} failed")
-                # Tokens go on the phase, so energy per token comes out of the same bookkeeping as everywhere else.
-                with run.lock:
-                    for phase in run.phases:
-                        if phase["name"] == name:
-                            phase["tokens"] = summary.get("completion_tokens", 0)
-        if watcher:
-            watcher.stop()
-            result["server_gauges_peak"] = watcher.peaks
-        if metrics_path:
-            after = driver.fetch_metrics(base + metrics_path)
-            if metrics_before is not None and after is not None:
-                result["server_metrics_delta"] = driver.metrics_delta(metrics_before, after)
-        result["throughput"] = throughput
-        return result
-
-    return workload
-
-
-def _add_energy_per_token(result):
-    """Energy per output token for each concurrency level, from the phase it ran in."""
-    for phase in result.get("phases", []):
-        if phase["group"] != "serve" or not phase.get("tokens"):
-            continue
-        energy = (phase.get("metrics", {}).get("gpu") or {}).get("energy_j")
-        entry = result.get("throughput", {}).get(phase["name"])
-        if energy is not None and entry is not None:
-            entry["j_per_output_token"] = round(energy / phase["tokens"], 4)
-
-
 def cmd_serve(args, target):
     if not target:
         raise SystemExit("usage: llmperfscope serve [options] -- server command ...")
     options = _options(args)
-    options.stop_timeout_s = args.stop_timeout
-    preset_name = args.preset or adapters.preset_for(target)
-    preset = adapters.SERVER_PRESETS[preset_name]
-    options.stop_signal = preset.get("stop_signal", "TERM")
-    if not args.url:
-        args.url = adapters.guess_url(target, preset_name)
-    for extra in preset.get("extra_args", []):
-        if extra not in target:
-            target = target + [extra]
-    if preset_name == "ollama" and not args.model:
-        raise SystemExit("Ollama starts with no model: name one with --model, for example --model qwen3:0.6b --pull")
-    print(f"[llmperfscope] server preset {preset_name}, expecting it at {args.url}")
-    knows_load_lines = adapters.select(options.adapter, target).name == "llama.cpp:llama-server"
-    run = runner.Run(target, options, workload=_serve_workload(args, preset, marks_load=not knows_load_lines))
     try:
-        result = run.execute()
+        result = serving.serve(target, options, args)
     except runner.Refused as e:
         print(f"[llmperfscope] refused: {e}", file=sys.stderr)
         return 3
-    _add_energy_per_token(result)
-    with open(Path(options.out) / "run.json", "w") as f:
-        json.dump(result, f, indent=1)
     return _finish(result, options)
 
 
@@ -256,7 +140,7 @@ def cmd_attach(args, _target):
     options.stall_s = 0
     if args.url:
         preset = adapters.SERVER_PRESETS[args.preset or "openai"]
-        workload = _serve_workload(args, preset, marks_load=False)
+        workload = serving.workload(args, preset, marks_load=False)
     else:
         def workload(run):
             run.emit("observe")
@@ -268,34 +152,10 @@ def cmd_attach(args, _target):
     except runner.Refused as e:
         print(f"[llmperfscope] refused: {e}", file=sys.stderr)
         return 3
-    _add_energy_per_token(result)
+    serving.add_energy_per_token(result)
     with open(Path(options.out) / "run.json", "w") as f:
         json.dump(result, f, indent=1)
     return _finish(result, options)
-
-
-def _serve_args(parser):
-    parser.add_argument("--url", help="server address (default: from --port, a container's published port, or the engine's usual port)")
-    parser.add_argument("--pull", action="store_true", help="Ollama: download --model first; this time is its own phase")
-    parser.add_argument("--preset", choices=sorted(adapters.SERVER_PRESETS), help="default: guessed from the command")
-    parser.add_argument("--model", help="model name for requests (default: first of /v1/models)")
-    parser.add_argument("--prompts", help="JSONL with `prompt` or `messages` per row")
-    parser.add_argument("--filter", action="append", help="keep rows where column=value")
-    parser.add_argument("--limit", type=int, help="at most this many prompts")
-    parser.add_argument("--synthetic-words", type=int, default=512, help="length of generated prompts when --prompts is not given")
-    parser.add_argument("--concurrency", default="1", help="comma-separated levels, each runs the whole prompt list")
-    parser.add_argument("--repeat", type=int, default=1)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--max-tokens", type=int, default=64)
-    parser.add_argument("--allow-eos", action="store_true", help="let the model stop early (default: fixed output length)")
-    parser.add_argument("--reuse-prompts", action="store_true",
-                        help="send prompts unchanged, to measure a server's prefix cache (default: a short nonce in front defeats it)")
-    parser.add_argument("--extra-body", help="JSON merged into every request")
-    parser.add_argument("--api-key", help="bearer token (never stored in the report)")
-    parser.add_argument("--ready-path", help="health path (default from the preset)")
-    parser.add_argument("--ready-timeout", type=float, default=3600.0)
-    parser.add_argument("--metrics-path", help="Prometheus path (default from the preset, empty to turn off)")
-    parser.add_argument("--stop-timeout", type=float, default=120.0, help="seconds between the stop signal and SIGKILL")
 
 
 def cmd_show(args, _target):
@@ -363,6 +223,11 @@ def cmd_diff(args, _target):
 
 
 def cmd_matrix(args, _target):
+    refusal = runner.platform_refusal()
+    if refusal:
+        print(f"[llmperfscope] refused: {refusal}", file=sys.stderr)
+        return 3
+
     def side(value):
         name, sep, path = value.partition("=")
         if not sep:
@@ -373,10 +238,13 @@ def cmd_matrix(args, _target):
     if args.noise:
         with open(args.noise) as f:
             noise = json.load(f)
-    table = compare.run_matrix(compare.load_cases(args.cases), side(args.a), side(args.b), args.out, order=args.order,
+    cases = compare.load_cases(args.cases)
+    table = compare.run_matrix(cases, side(args.a), side(args.b), args.out, order=args.order,
                                timeout_s=args.timeout, a_env=_parse_env(args.a_env), b_env=_parse_env(args.b_env), only=args.only,
-                               noise=noise)
+                               noise=noise, recheck=args.recheck)
     print(Path(args.out, "table.md").read_text())
+    if any(not case.get("serve") and case.get("binary") == "llama-bench" for case in cases):
+        print(f"Note: {adapters.RANDOM_TOKENS_NOTE}")
     worse = [c["label"] for c in table["cases"] if c.get("verdict") in ("regression", "tradeoff")]
     if worse:
         print("worse in some metric: " + ", ".join(worse))
@@ -388,6 +256,16 @@ def cmd_noise(args, _target):
     with open(args.out, "w") as f:
         json.dump(floors, f, indent=1)
     print(f"noise floors for {len(floors)} cases written to {args.out}")
+    return 0
+
+
+def cmd_kernels(args, _target):
+    run = compare.load_run(args.run)
+    phases = tuple(args.phase.split(",")) if args.phase else ("decode", "prefill")
+    if args.vs:
+        print(kernels.render_diff(run, compare.load_run(args.vs), args.run_name, args.vs_name, phases))
+    else:
+        print(kernels.render(run, compare.load_run(args.speed) if args.speed else None, phases))
     return 0
 
 
@@ -412,12 +290,12 @@ def build_parser():
 
     p = sub.add_parser("serve", help="start an OpenAI-compatible server, load it, stop it, profile the whole life")
     _common(p)
-    _serve_args(p)
+    serving.add_arguments(p)
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("attach", help="profile a running process or container")
     _common(p)
-    _serve_args(p)
+    serving.add_arguments(p)
     p.add_argument("--pid", type=int)
     p.add_argument("--docker", help="container name")
     p.add_argument("--duration", type=float, default=60.0, help="seconds to observe when no --url is given")
@@ -469,7 +347,8 @@ def build_parser():
     p.add_argument("--b", required=True, help="NAME=BIN_DIR")
     p.add_argument("--a-env", action="append")
     p.add_argument("--b-env", action="append")
-    p.add_argument("--order", default="ABBA")
+    p.add_argument("--order", default=compare.DEFAULT_ORDER, help="arms per case, A and B in turn. Fewer than 3 per side only gives hints")
+    p.add_argument("--recheck", type=int, default=1, help="when a case looks worse, run this many more rounds of arms before calling it")
     p.add_argument("--only", help="regex on case labels")
     p.add_argument("--noise", help="floors from `llmperfscope noise`")
     p.add_argument("--timeout", type=float, default=1800.0)
@@ -480,6 +359,15 @@ def build_parser():
     p.add_argument("matrix")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_noise)
+
+    p = sub.add_parser("kernels", help="which GPU kernels to speed up, from a run with --nsys")
+    p.add_argument("run")
+    p.add_argument("--speed", help="the same command without --nsys, for each kernel's share of a token and what it could win")
+    p.add_argument("--vs", help="another run with --nsys: what changed, kernel by kernel")
+    p.add_argument("--phase", help="comma-separated phases (default: decode,prefill)")
+    p.add_argument("--run-name", default="A")
+    p.add_argument("--vs-name", default="B")
+    p.set_defaults(func=cmd_kernels)
 
     p = sub.add_parser("nsys-report", help="analyze an exported nsys sqlite file")
     p.add_argument("sqlite")
