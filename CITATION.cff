@@ -7,8 +7,8 @@ authors:
     given-names: Yonghye
 repository-code: "https://github.com/developer0hye/llmperfscope"
 license: Apache-2.0
-version: 0.1.0
-date-released: "2026-11-01"
+version: 0.2.0
+date-released: "2026-11-03"
 keywords:
   - llm
   - profiling

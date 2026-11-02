@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - `--turns` and `--reuse-prompts` make vLLM and SGLang report how much came from their cache. A server that does not report it now shows no share, instead of 0%.
 - The memory floor also works for servers without timers of their own, from the time between tokens as the client saw it.
