@@ -37,6 +37,8 @@ METRICS = {
     "output_tps": (lambda r: _level(r, -1, "output_tokens_per_s"), +1),
     "ttft_ms": (lambda r: _level(r, 0, "ttft_ms", "p50"), -1),
     "itl_ms": (lambda r: _level(r, 0, "itl_ms", "p50"), -1),
+    "ttft_fixed_ms": (lambda r: _level(r, 0, "first_token_fit", "fixed_ms"), -1),
+    "ttft_per_token_ms": (lambda r: _level(r, 0, "first_token_fit", "per_token_ms"), -1),
     "serve_j_per_token": (lambda r: _get(r, "energy", "serve_j_per_token"), -1),
 }
 # Smallest difference that can mean anything, per metric: relative, then absolute. Memory rounds to whole MiB and allocators
@@ -53,6 +55,8 @@ FLOORS = {
     "output_tps": (0.003, 0.0),
     "ttft_ms": (0.01, 1.0),
     "itl_ms": (0.005, 0.01),
+    "ttft_fixed_ms": (0.02, 2.0),
+    "ttft_per_token_ms": (0.02, 0.005),
     "serve_j_per_token": (0.03, 0.0),
 }
 
@@ -257,6 +261,9 @@ def run_matrix(cases, a, b, out_dir, order=DEFAULT_ORDER, timeout_s=1800.0, a_en
             result = diff(runs["A"], runs["B"], floors)
         result["label"] = case["label"]
         result["arms"] = {"a": len(runs["A"]), "b": len(runs["B"])}
+        lengths = _first_token_by_length(runs["A"], runs["B"])
+        if lengths:
+            result["first_token_by_length"] = lengths
         table["cases"].append(result)
         with open(out_dir / "matrix.json", "w") as f:
             json.dump(table, f, indent=1)
@@ -264,6 +271,28 @@ def run_matrix(cases, a, b, out_dir, order=DEFAULT_ORDER, timeout_s=1800.0, a_en
         log(f"  -> {result['verdict']}: " + ", ".join(f"{m} {v['ratio']}" for m, v in result["metrics"].items()
                                                       if m in ("prefill_tps", "decode_tps")))
     return table
+
+
+def _first_token_by_length(runs_a, runs_b):
+    """First token per group of prompt lengths, the mean over the arms of each side."""
+    def means(runs):
+        groups = {}
+        for run in runs:
+            level = min((t for t in (run.get("throughput") or {}).values() if isinstance(t, dict) and "concurrency" in t),
+                        key=lambda t: t["concurrency"], default={})
+            for group in level.get("first_token_by_length") or []:
+                entry = groups.setdefault(group["tokens"], {"ms": [], "requests": group["requests"]})
+                entry["ms"].append(group["mean_ms"])
+        return groups
+    a, b = means(runs_a), means(runs_b)
+    rows = []
+    for tokens in a:
+        if tokens in b:
+            mean_a = sum(a[tokens]["ms"]) / len(a[tokens]["ms"])
+            mean_b = sum(b[tokens]["ms"]) / len(b[tokens]["ms"])
+            rows.append({"tokens": tokens, "requests": a[tokens]["requests"], "a_ms": round(mean_a, 1), "b_ms": round(mean_b, 1),
+                         "ratio": round(mean_b / mean_a, 3) if mean_a else None})
+    return rows
 
 
 def write_table(table, path):
@@ -300,6 +329,16 @@ def write_table(table, path):
     weak = [v for case in table["cases"] for v in case.get("metrics", {}).values() if v.get("weak")]
     if weak:
         lines += ["", _weak_note(min(min(len(v["a_runs"]), len(v["b_runs"])) for v in weak))]
+    for case in table["cases"]:
+        rows = case.get("first_token_by_length")
+        if not rows:
+            continue
+        lines += ["", f"First token by prompt tokens, {case['label']}:", "",
+                  f"| tokens | requests | {table['a']} ms | {table['b']} ms | {table['b']}/{table['a']} |", "|---|---:|---:|---:|---:|"]
+        lines += [f"| {r['tokens']} | {r['requests']} | {r['a_ms']:.0f} | {r['b_ms']:.0f} | {r['ratio']:.3f} |" for r in rows]
+        fixed, per_token = (case["metrics"].get(m) for m in ("ttft_fixed_ms", "ttft_per_token_ms"))
+        if fixed and per_token and fixed.get("ratio") is not None and per_token.get("ratio") is not None:
+            lines += ["", f"Fixed part of the first token {table['b']}/{table['a']}: {fixed['ratio']:.3f}; per prompt token: {per_token['ratio']:.3f}."]
     with open(path, "w") as f:
         f.write("\n".join(lines) + "\n")
 

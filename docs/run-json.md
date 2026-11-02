@@ -78,7 +78,7 @@ GPU figures cover the GPUs in `devices_used`, and memory is above the idle basel
 | Key | Content |
 |---|---|
 | `throughput.prefill`, `.decode` | `tokens_per_s`, `stddev`, `samples`, `tokens_per_run`. With `serve`, from the server's own timers at the lowest concurrency, with `real_prompts` set |
-| `throughput.serve_c4` (one per level) | `concurrency`, `requests`, `failed`, `output_tokens_per_s`, `server_prefill_tokens_per_s`, `server_decode_tokens_per_s`, `ttft_ms` and `itl_ms` with `mean`, `p50`, `p90`, `p99`, `max`, and `j_per_output_token` |
+| `throughput.serve_c4` (one per level) | `concurrency`, `requests`, `failed`, `output_tokens_per_s`, `server_prefill_tokens_per_s`, `server_decode_tokens_per_s`, `first_token_fit` (`fixed_ms`, `per_token_ms`, `requests`, `median_prompt_tokens`, `fixed_share_at_median`), `first_token_by_length` (`tokens`, `requests`, `mean_ms`, `p50_ms`), `ttft_ms` and `itl_ms` with `mean`, `p50`, `p90`, `p99`, `max`, and `j_per_output_token` |
 | `memory.gpu` | `devices` with baseline, peak, process peak and what stays after exit, and `peak_above_baseline_total_mib` |
 | `memory.host` | anonymous, file-backed, shared, pinned and swap peaks, kernel max RSS |
 | `memory.breakdown_mib` | the engine's own table, where it has one |
@@ -86,7 +86,7 @@ GPU figures cover the GPUs in `devices_used`, and memory is above the idle basel
 | `workload` | with `serve`: model, prompts, readiness time, server gauges and metrics |
 | `torch_memory` | PyTorch's allocated and reserved peaks, from markers |
 | `nsys` | with `--nsys`, per group: `devices`, `top_kernels`, `copies`, `host_api`, `per_token_ms` |
-| `cpu_profile` | with `--cpu-profile`, per group: `samples`, `self`, `inclusive`, `modules`, `threads` |
+| `cpu_profile` | with `--cpu-profile`, per group: `samples`, `self`, `inclusive` (with `waiting_share`), `modules`, `threads`, `gpu_wait` (`share`, `sites`) |
 
 ### Diagnosis
 

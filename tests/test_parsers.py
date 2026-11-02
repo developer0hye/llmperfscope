@@ -7,7 +7,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import adapters, analyze, compare, container, diagnose, driver, kernels, machine, markers, nsys, procfs, report, serving, system
+from llmperfscope import adapters, analyze, compare, container, cpuprof, diagnose, driver, kernels, machine, markers, nsys, procfs, report, serving, system
 
 BENCH_JSON = """[
   {
@@ -223,6 +223,100 @@ class Driver(unittest.TestCase):
         self.assertAlmostEqual(out["prefill_tokens_per_s_mean"], 200.0)
         self.assertAlmostEqual(out["decode_tokens_per_s_mean"], 10.0)
         self.assertTrue(out["tokens_exact"])
+
+
+class FirstTokenByLength(unittest.TestCase):
+    @staticmethod
+    def request(tokens, ms, cached=0):
+        return {"ok": True, "ttft_s": ms / 1000.0, "itl_s": [], "chunks": 1, "cached_tokens": cached,
+                "usage": {"prompt_tokens": tokens, "completion_tokens": 1}}
+
+    def test_the_line_through_known_costs(self):
+        lengths = [20, 40, 60, 80, 100, 150, 200, 300, 400, 800, 1600, 3200, 6400]
+        out = driver.first_token_by_length([self.request(n, 150.0 + 0.7 * n) for n in lengths])
+        fit = out["first_token_fit"]
+        self.assertAlmostEqual(fit["fixed_ms"], 150.0, delta=0.5)
+        self.assertAlmostEqual(fit["per_token_ms"], 0.7, delta=0.001)
+        self.assertEqual(fit["median_prompt_tokens"], 200)
+        self.assertAlmostEqual(fit["fixed_share_at_median"], 150.0 / 290.0, delta=0.002)
+
+    def test_slow_requests_and_long_prompts_do_not_decide_the_line(self):
+        lengths = [20, 40, 60, 80, 100, 150, 200, 300, 400]
+        results = [self.request(n, 150.0 + 0.7 * n) for n in lengths * 3]
+        results += [self.request(60, 900.0), self.request(80, 1200.0), self.request(30000, 90000.0)]
+        fit = driver.first_token_by_length(results)["first_token_fit"]
+        self.assertAlmostEqual(fit["fixed_ms"], 150.0, delta=8.0)
+        self.assertAlmostEqual(fit["per_token_ms"], 0.7, delta=0.05)
+
+    def test_tokens_from_the_cache_do_not_count(self):
+        results = [self.request(1000, 100.0 + n, cached=1000 - n) for n in (10, 20, 40, 80, 160, 320, 640, 900)]
+        fit = driver.first_token_by_length(results)["first_token_fit"]
+        self.assertAlmostEqual(fit["per_token_ms"], 1.0, delta=0.001)
+        self.assertAlmostEqual(fit["fixed_ms"], 100.0, delta=0.5)
+
+    def test_groups(self):
+        out = driver.first_token_by_length([self.request(50, 10.0), self.request(60, 30.0), self.request(5000, 100.0)])
+        self.assertEqual(out["first_token_by_length"], [
+            {"tokens": "0-99", "requests": 2, "mean_ms": 20.0, "p50_ms": 10.0},
+            {"tokens": "4000+", "requests": 1, "mean_ms": 100.0, "p50_ms": 100.0}])
+
+    def test_no_line_when_lengths_do_not_differ_enough(self):
+        self.assertNotIn("first_token_fit", driver.first_token_by_length([self.request(100 + i, 50.0) for i in range(20)]))
+        self.assertNotIn("first_token_fit", driver.first_token_by_length([self.request(2 ** i, 50.0) for i in range(4)]))
+
+    def test_summary_carries_them_and_the_report_prints_them(self):
+        results = [self.request(n, 150.0 + 0.7 * n) for n in (20, 40, 60, 80, 100, 150, 200, 300)]
+        out = driver.summarize_load(results, 2.0)
+        out["concurrency"] = 1
+        text = report.render({"status": "ok", "throughput": {"serve_c1": out}})
+        self.assertIn("first token = 150 ms + 0.70 ms per prompt token", text)
+        self.assertIn("0-99:", text)
+
+    def test_a_finding_when_most_of_it_does_not_depend_on_length(self):
+        results = [self.request(n, 150.0 + 0.7 * n) for n in (20, 40, 60, 80, 100, 150, 200, 300)] * 3
+        summary = driver.summarize_load(results, 2.0)
+        summary["concurrency"] = 1
+        found = {f["what"] for f in diagnose.serving_findings({"throughput": {"serve_c1": summary}})}
+        self.assertIn("first_token_fixed_part", found)
+        results = [self.request(n, 1.0 + 2.0 * n) for n in (20, 40, 60, 80, 100, 150, 200, 300)] * 3
+        summary = driver.summarize_load(results, 2.0)
+        summary["concurrency"] = 1
+        found = {f["what"] for f in diagnose.serving_findings({"throughput": {"serve_c1": summary}})}
+        self.assertNotIn("first_token_fixed_part", found)
+
+
+class WaitsForTheGpu(unittest.TestCase):
+    @staticmethod
+    def tree(stacks):
+        tree = {}
+        for frames, weight in stacks:
+            cpuprof._add_wait(tree, frames, weight)
+        return tree
+
+    def test_sites_are_where_the_calls_part(self):
+        wait = ["cuStreamSynchronize", "cudaStreamSynchronize", "backend_synchronize"]
+        tree = self.tree([
+            (wait + ["alloc_graph", "process_ubatch", "decode", "loop", "main"], 30),
+            (wait[:2] + ["allreduce", "compute", "process_ubatch", "decode", "loop", "main"], 60),
+            (wait + ["read_state", "create_checkpoint", "pre_decode", "loop", "main"], 10),
+        ])
+        self.assertEqual(tree["count"], 100)
+        self.assertEqual(cpuprof.wait_sites(tree), [("compute", 60), ("alloc_graph", 30), ("pre_decode", 10)])
+
+    def test_one_caller_is_named_by_its_innermost_function(self):
+        tree = self.tree([(["cudaEventSynchronize", "allreduce", "compute", "main"], 5)])
+        self.assertEqual(cpuprof.wait_sites(tree), [("allreduce", 5)])
+
+    def test_a_rare_caller_is_not_a_site(self):
+        tree = self.tree([(["cudaEventSynchronize", "a", "main"], 980), (["cudaEventSynchronize", "b", "main"], 10)])
+        self.assertEqual(cpuprof.wait_sites(tree), [("a", 980)])
+
+    def test_nothing_waited(self):
+        self.assertEqual(cpuprof.wait_sites({}), [])
+
+    def test_versioned_symbols_count(self):
+        self.assertTrue(cpuprof._is_gpu_wait("cudaStreamSynchronize@@libcudart.so.13"))
+        self.assertFalse(cpuprof._is_gpu_wait("cudaLaunchKernel@@libcudart.so.13"))
 
 
 class Secrets(unittest.TestCase):
