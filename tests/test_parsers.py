@@ -70,6 +70,24 @@ class Procfs(unittest.TestCase):
 
 
 class Adapters(unittest.TestCase):
+    def test_mlx_generate_says_how_fast_it_was(self):
+        output = os.path.join(helpers.temp_dir(), "stdout.log")
+        with open(output, "w") as f:
+            f.write("Some text.\n==========\nPrompt: 30 tokens, 97.041 tokens-per-sec\nGeneration: 256 tokens, 106.873 tokens-per-sec\nPeak memory: 0.887 GB\n")
+        adapter = adapters.select("auto", ["python", "-m", "mlx_lm.generate", "--model", "x"])
+        self.assertEqual(adapter.name, "mlx_lm.generate")
+        result = adapter.finalize([], output, "/nonexistent")
+        self.assertEqual(result["throughput"]["prefill"]["tokens_per_s"], 97.041)
+        self.assertEqual(result["throughput"]["decode"], {"tokens_per_s": 106.873, "tokens": 256, "source": "engine"})
+        self.assertEqual(result["engine_peak_memory_gb"], 0.887)
+
+    def test_mlx_server_gets_its_preset(self):
+        self.assertEqual(adapters.preset_for(["python", "-m", "mlx_lm.server", "--model", "x"]), "mlx")
+        self.assertEqual(adapters.preset_for(["mlx_lm.server", "--model", "x"]), "mlx")
+        self.assertTrue(adapters.SERVER_PRESETS["mlx"]["uses_default_model"])
+        self.assertEqual(adapters.model_flag_value(["python", "-m", "mlx_lm.server", "--model", "a/b"]), "a/b")
+        self.assertIsNone(adapters.model_flag_value(["python", "-m", "mlx_lm.server"]))
+
     def test_finds_the_engine_behind_wrappers(self):
         cmd = ["timeout", "-k", "30", "600", "env", "A=B", "taskset", "-c", "16-23,80-87", "numactl", "--interleave=all", "/x/llama-bench", "-m", "y"]
         self.assertEqual(adapters._skip_wrappers(cmd), 11)
@@ -538,6 +556,116 @@ class Analyze(unittest.TestCase):
         self.assertAlmostEqual(flows["pcie_from_gpu_mib_est"], 10.0, delta=1.0)
         self.assertAlmostEqual(decode["pressure"]["io_some_pct"], 25.0, delta=0.5)
         self.assertAlmostEqual(decode["system_cpu"]["busy_pct"], 25.0, delta=0.5)
+
+
+class OnAMac(unittest.TestCase):
+    run_info = {"disks": {"disk0": {"kind": "ssd"}}, "host": {"cpus": 8, "os": "macOS 27.2"},
+                "devices": [{"index": 0, "memory_total_mib": 12124, "memory_total_is_working_set_limit": True, "unified_memory": True}], "devices_used": [0]}
+
+    def phase(self, **kwargs):
+        return diagnose.classify_phase("decode", helpers.group(**kwargs), self.run_info)
+
+    def test_the_compressor_alone_does_not_make_ram_the_limit(self):
+        # Measured: a machine in normal use, nothing short of memory.
+        self.assertEqual(self.phase(flows={"compressed_mib": 5000.0}, gpu={"util_avg": 10}, host={"busy_cores": 0.1})["limit"], "none visible")
+
+    def test_swapping_other_programs_does_not_override_a_busy_gpu(self):
+        # Measured on llama-server at warning pressure: 43 MiB/s of swap, decode speed within 3% of an unloaded machine.
+        result = self.phase(flows={"swap_out_mib": 430.0, "compressed_mib": 850.0}, pressure={"memory_some_pct": 100.0}, gpu={"util_avg": 89})
+        self.assertEqual(result["limit"], "gpu")
+
+    def test_pressure_with_traffic_and_nothing_busy_is_ram_but_not_certain(self):
+        result = self.phase(flows={"compressed_mib": 9980.0}, pressure={"memory_some_pct": 83.0}, gpu={"util_avg": 16}, host={"busy_cores": 0.3})
+        self.assertEqual((result["limit"], result["confidence"]), ("ram", "medium"))
+        self.assertIn("memory compressor", result["why"])
+        self.assertIn("memory pressure", result["why"])
+        self.assertNotIn("stalled", result["why"])
+
+    def test_critical_pressure_is_ram_whatever_else_is_busy(self):
+        result = self.phase(pressure={"memory_full_pct": 20.0, "memory_some_pct": 100.0}, gpu={"util_avg": 99})
+        self.assertEqual((result["limit"], result["confidence"]), ("ram", "high"))
+
+    def test_heat_is_named_and_needs_no_clock(self):
+        gpu = {"util_avg": 88, "throttled": True, "throttle": ["sw_thermal"]}
+        result = self.phase(gpu=gpu)
+        self.assertEqual(result["limit"], "gpu (throttled)")
+        self.assertIn("thermal pressure", result["why"])
+        self.assertNotIn("MHz", result["why"])
+        self.assertIn("1243 MHz", self.phase(gpu={**gpu, "sm_mhz_avg": 1243.0})["why"])
+
+    def test_advice_names_what_a_mac_has(self):
+        result = self.phase(gpu={"util_avg": 95})
+        self.assertIn("Metal System Trace", result["why"])
+        self.assertNotIn("--nsys", result["why"])
+        steps = diagnose.next_steps(self.run_info, {"decode": {"limit": "gpu + host wait"}})
+        self.assertTrue(steps)
+        self.assertFalse([step for step in steps if "--nsys" in step or "--cpu-profile" in step])
+        linux = diagnose.next_steps({"host": {"cpus": 8}}, {"decode": {"limit": "gpu"}})
+        self.assertIn("--nsys", linux[0])
+
+    def _memory(self, gpu_peak=1000, **host):
+        group = helpers.group(gpu={"mem_peak_mib": gpu_peak, "mem_start_mib": gpu_peak, "mem_end_mib": gpu_peak}, host={"anon_peak_mib": 8000, "file_peak_mib": 8000, **host})
+        run = {**self.run_info, "groups": {"decode": group}, "memory": {"gpu": {"devices": [{"index": 0, "peak_mib": gpu_peak, "peak_above_baseline_mib": gpu_peak, "baseline_mib": 0}]}, "host": host}}
+        return {f["what"]: f for f in diagnose.memory_findings(run)}
+
+    def test_gpu_and_host_memory_are_not_called_a_copy(self):
+        findings = self._memory()
+        self.assertNotIn("host_ram_held_while_on_gpu", findings)
+        self.assertNotIn("weights_mapped_in_page_cache", findings)
+
+    def test_full_means_what_macos_recommends(self):
+        finding = self._memory(gpu_peak=12000)["gpu_memory_nearly_full"]
+        self.assertIn("recommends", finding["text"])
+        self.assertIn("iogpu.wired_limit_mb", finding["text"])
+
+    def test_a_compressed_process_is_not_called_swapped_to_disk(self):
+        finding = self._memory(swap_peak_mib=431.0)["process_swapped"]
+        self.assertIn("compressed", finding["text"])
+
+    def test_the_compressor_finding(self):
+        group = helpers.group(flows={"compressed_mib": 2000.0, "decompressed_mib": 264.0}, pressure={"memory_some_pct": 100.0})
+        findings = {f["what"]: f for f in diagnose.movement_findings({**self.run_info, "groups": {"serve": group}})}
+        self.assertIn("2,264 MiB", findings["memory_compressor_busy"]["text"])
+
+    def test_shaders_compiled_elsewhere_are_explained(self):
+        # Measured: the first run of llama.cpp on Metal, 8.7 s of startup at 0.01 cores with the machine 66% busy.
+        startup = helpers.group(wall_s=8.7, host={"busy_cores": 0.01}, system_cpu={"busy_pct": 65.5})
+        findings = {f["what"]: f for f in diagnose.movement_findings({**self.run_info, "groups": {"startup": startup}})}
+        self.assertIn("Metal shader compiler", findings["work_in_another_process"]["text"])
+        quiet = helpers.group(wall_s=8.7, host={"busy_cores": 0.01}, system_cpu={"busy_pct": 5.0})
+        self.assertFalse(diagnose.movement_findings({**self.run_info, "groups": {"startup": quiet}}))
+        elsewhere = diagnose.movement_findings({"host": {"cpus": 8}, "groups": {"startup": startup}})
+        self.assertNotIn("Metal", elsewhere[0]["text"])
+
+    def test_the_model_disk_is_named_even_if_another_is_busier(self):
+        load = helpers.group(wall_s=1.0, host={"disk_read_mib": 600.0}, flows={"disks": {"disk0": {"read_mib": 260.0, "busy_pct": 90.0}, "disk4": {"read_mib": 590.0, "busy_pct": 50.0}}})
+        before = {"model_storage": {"path": "/x", "disks": [{"name": "disk4", "kind": "ssd"}]}, "model_page_cache_fraction": 0.0}
+        findings = {f["what"]: f for f in diagnose.movement_findings({**self.run_info, "groups": {"load": load}, "machine_before": before})}
+        self.assertIn("disk4", findings["load_read_from_disk"]["text"])
+
+
+class ReportTables(unittest.TestCase):
+    def test_links_a_machine_lacks_get_no_column(self):
+        run = {"status": "ok", "groups": {"decode": helpers.group(flows={"disks": {"disk0": {"read_mib": 5.0, "write_mib": 1.0}}, "swap_in_mib": 0.0, "swap_out_mib": 0.0, "compressed_mib": 3.0, "decompressed_mib": 1.0}, host={"disk_read_mib": 2.0, "major_faults": 7})}}
+        text = report.render(run)
+        self.assertIn("compressed", text)
+        self.assertNotIn("RAM to GPU", text)
+        self.assertNotIn("GPU to GPU", text)
+        row = next(line for line in text.splitlines() if line.startswith("| decode | 2 |"))
+        self.assertTrue(row.endswith("| 7 |"), row)
+
+    def test_all_the_links_on_a_machine_that_has_them(self):
+        run = {"status": "ok", "groups": {"decode": helpers.group(flows={"pcie_to_gpu_mib_est": 5.0, "pcie_from_gpu_mib_est": 3.0, "nvlink_mib": 9.0, "swap_in_mib": 0.0, "swap_out_mib": 0.0}, host={"disk_read_mib": 2.0})}}
+        text = report.render(run)
+        self.assertIn("RAM to GPU (est)", text)
+        self.assertIn("GPU to GPU", text)
+        self.assertNotIn("compressed", text)
+
+    def test_one_pool_of_memory_is_explained(self):
+        run = {"status": "ok", "devices": [{"index": 0, "unified_memory": True}], "groups": {"decode": helpers.group(gpu={"mem_peak_mib": 100, "mem_end_mib": 100})}}
+        self.assertIn("one pool of memory", report.render(run))
+        run["devices"][0].pop("unified_memory")
+        self.assertNotIn("one pool of memory", report.render(run))
 
 
 class Bottlenecks(unittest.TestCase):

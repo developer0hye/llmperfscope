@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, adapters, capabilities, compare, figures, html, kernels, nsys, report, runner, serving, share
+from . import __version__, adapters, capabilities, compare, figures, html, kernels, nsys, procfs, report, runner, serving, share
 
 
 def _default_out(label):
@@ -146,7 +146,7 @@ def cmd_attach(args, _target):
             run.emit("observe")
             time.sleep(args.duration)
             return {}
-    run = runner.Run([f"/proc/{pid}/exe"], options, workload=workload, attach_pid=pid)
+    run = runner.Run([procfs.exe_path(pid)], options, workload=workload, attach_pid=pid)
     try:
         result = run.execute()
     except runner.Refused as e:

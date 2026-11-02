@@ -40,7 +40,7 @@ The format is identified by `schema`, currently `llmperfscope.run/1`. New keys c
 | `adapter` | which adapter read the engine's output |
 | `host`, `platform` | machine, kernel, CPUs, governor, transparent huge pages, Python version |
 | `cpu` | totals over the run: user and system CPU seconds, major faults, context switches |
-| `devices`, `devices_used`, `gpu_driver` | every GPU, and those the target held memory on |
+| `devices`, `devices_used`, `gpu_driver` | every GPU, and those the target held memory on or, on a Mac, used. On Apple Silicon `unified_memory` is true, and `memory_total_mib` is what macOS recommends the GPU hold, which `memory_total_is_working_set_limit` marks |
 | `disks` | model and kind per disk: `nvme`, `ssd`, `hdd` |
 | `machine_before`, `machine_after` | foreign load, available RAM, page cache, how much of the model was cached, where it is stored, `clean` and the `reasons` if not |
 | `sampler` | achieved rate, largest gap, its own CPU time and pinned CPU |
@@ -64,6 +64,7 @@ groups.decode
             shmem_peak_mib, pinned_peak_mib, swap_peak_mib, threads_max, user_s, sys_s, busy_cores,
             major_faults, disk_read_mib, disk_write_mib, threads_cpu_s, busiest_thread
   flows     disks.<name>.{read_mib, write_mib, busy_pct}, swap_in_mib, swap_out_mib,
+            compressed_mib, decompressed_mib (macOS),
             page_cache_refault_mib, direct_reclaim_mib, page_cache_change_mib, network_rx_mib, network_tx_mib,
             pcie_to_gpu_mib_est, pcie_from_gpu_mib_est, nvlink_mib, mem_available_min_mib, swap_used_max_mib
   pressure  cpu_some_pct, io_some_pct, io_full_pct, memory_some_pct, memory_full_pct
@@ -109,7 +110,7 @@ One tick per line:
 - `t`: `CLOCK_MONOTONIC` in nanoseconds.
 - `g`: one row per GPU, about 50 times a second: memory MiB, power W, energy counter, core clock, memory clock, utilization, memory utilization, throttle bits, temperature. The columns are `G_*` in `gpu.py`. The energy column is empty here, because the counter is slow to read.
 - `h`: the target's process tree: anonymous, file-backed, shared, high-water mark, swap, pinned (MiB), threads, processes, user and system ticks, major and minor faults. The columns are `H_*` in `sampler.py`. Counters only grow: a process that exited keeps its last values.
-- `s`: on slow ticks, about twice a second: `energy`, `pcie`, `nvlink`, `util` (the driver's utilization history), `self_mib`, `foreign_mib`, and `sys` with system-wide `disk`, `vm`, `mem`, `psi`, `cpu` and `net` counters.
+- `s`: on slow ticks, about twice a second: `energy`, `pcie`, `nvlink`, `util` (the driver's utilization history, or on a Mac the target's share of GPU time), `gpu_ns` (on a Mac, the target's cumulative GPU time per GPU), `self_mib`, `foreign_mib`, and `sys` with system-wide `disk`, `vm`, `mem`, `psi`, `cpu` and `net` counters.
 
 ```python
 from llmperfscope.sampler import load_ticks

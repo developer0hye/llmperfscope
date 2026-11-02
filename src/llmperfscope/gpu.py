@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import ctypes as C
 import os
+import sys
+import time
 
 # Columns of one device in the fast sample.
 G_MEM, G_POWER, G_ENERGY, G_SM, G_MEMCLK, G_UTIL, G_UTILMEM, G_THROTTLE, G_TEMP = range(9)
@@ -53,6 +55,9 @@ class GpuBackend:
     def slow(self):
         """Costlier reads, per device: {"procs": {pid: MiB}, "nvlink": (tx KiB, rx KiB) or None}."""
         return []
+
+    def set_target(self, pids):
+        """The processes being measured, for a backend that reports something per process."""
 
     def util_samples(self):
         """Per device, new utilization samples as (wall ns, %). Empty when the backend keeps no history."""
@@ -267,10 +272,89 @@ class NvmlBackend(GpuBackend):
             pass
 
 
+class AppleBackend(GpuBackend):
+    """Apple Silicon, from IOKit and IOReport, with no root needed. There is one pool of memory, so GPU memory is what the driver has in use of it, and that is everything on the
+    machine: macOS does not say which process holds it, though it does say which process used how much GPU time. No temperature, no PCIe."""
+
+    name = "apple"
+
+    def __init__(self):
+        super().__init__(reason="")
+        from . import darwin
+        self.darwin = darwin
+        self.accelerator = darwin.Accelerator()
+        self.energy = darwin.EnergyCounter()
+        self.clock = darwin.GpuClock()
+        self.mhz = None
+        self.devices = [{"index": 0, "name": self.accelerator.name(), "uuid": "apple-gpu", "memory_total_mib": darwin.gpu_working_set_mib() or (darwin.sysctl_int("hw.memsize") or 0) >> 20,
+                         "memory_total_is_working_set_limit": True, "power_limit_w": None, "nvlink": False, "unified_memory": True}]
+        self.target = set()
+        self.client_ns = {}  # GPU client -> (pid, GPU time seen so far). A client that is gone keeps its last value, or a process that exits would take its time with it.
+        self.target_ns = None
+        self.t_wall = None
+        self.samples = []
+
+    def fast(self):
+        memory, util = self.accelerator.read() or (None, None)
+        # Moderate thermal pressure is when macOS starts holding clocks down, which a fanless Mac reaches within minutes of full load.
+        throttle = 0x20 if (self.darwin.thermal_level() or 0) >= 1 else 0
+        return [[memory, None, None, self.mhz, None, util, None, throttle, None]]
+
+    def energy_mj(self, index):
+        """The clock is an average since its last read, so it goes with the other reads on the slow thread."""
+        self.mhz = self.clock.read()
+        return self.energy.millijoules()
+
+    def set_target(self, pids):
+        self.target = set(pids)
+
+    def slow(self):
+        """The target's share of GPU time, as this GPU's utilization: the machine-wide figure includes the display. Reading it on slow ticks is enough, because it is a
+        cumulative counter."""
+        clients = self.accelerator.clients()
+        if not any(ns for _pid, ns in clients.values()):
+            # The display always has some, so no time anywhere means this macOS does not publish it. Then GPU numbers are the machine's, and memory growth says what was used.
+            return [{"procs": {}, "nvlink": None}]
+        for client, (pid, ns) in clients.items():
+            _old_pid, old = self.client_ns.get(client, (pid, 0))
+            self.client_ns[client] = (pid, max(ns, old))
+        now = time.time_ns()
+        total = sum(ns for pid, ns in self.client_ns.values() if pid in self.target)
+        if self.target and self.target_ns is not None and now > self.t_wall:
+            self.samples.append(((now + self.t_wall) // 2, min(100.0, round(100 * (total - self.target_ns) / (now - self.t_wall), 1))))
+        if self.target:
+            self.target_ns, self.t_wall = total, now
+        return [{"procs": {}, "nvlink": None, "gpu_ns": {pid: ns for pid, ns in self.client_ns.values() if pid in self.target}}]
+
+    def foreign_busy(self, seconds=0.5):
+        """(process id, share of the GPU in %) of whoever else used the GPU over a short wait, for the check before a run."""
+        def per_process():
+            out = {}
+            for pid, ns in self.accelerator.clients().values():
+                out[pid] = out.get(pid, 0) + ns
+            return out
+        before, t0 = per_process(), time.monotonic()
+        time.sleep(seconds)
+        after, wall = per_process(), time.monotonic() - t0
+        return {pid: round(100 * (ns - before.get(pid, ns)) / (wall * 1e9), 1) for pid, ns in after.items() if ns > before.get(pid, ns)}
+
+    def util_samples(self):
+        out, self.samples = self.samples, []
+        return [out]
+
+    def close(self):
+        self.accelerator.close()
+
+
 def open_backend():
     """The best backend on this machine. Never raises: no GPU still gives a host-only profile."""
     if os.environ.get("LLMPERFSCOPE_NO_GPU"):
         return GpuBackend(reason="LLMPERFSCOPE_NO_GPU is set")
+    if sys.platform == "darwin":
+        try:
+            return AppleBackend()
+        except (OSError, AttributeError) as e:
+            return GpuBackend(reason=f"GPU statistics not available: {e}")
     try:
         return NvmlBackend()
     except (OSError, AttributeError) as e:

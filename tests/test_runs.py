@@ -12,7 +12,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import cli, compare, cpuprof, machine, procfs, runner
+from llmperfscope import cli, compare, cpuprof, machine, procfs, runner, serving
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -38,7 +38,7 @@ def free_port():
         return s.getsockname()[1]
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class KnownEngine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -97,7 +97,7 @@ class KnownEngine(unittest.TestCase):
         self.assertEqual(self.report["schema"], "llmperfscope.run/1")
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Failures(unittest.TestCase):
     def test_tracers_refuse_what_they_cannot_reach(self):
         """They would profile the docker client, and the report would look fine."""
@@ -140,14 +140,14 @@ class Failures(unittest.TestCase):
         self.assertEqual([p for p in procfs.children_of(os.getpid()) if (procfs.stat(p) or {}).get("state") not in (None, "Z")], [])
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class ProcessTree(unittest.TestCase):
     def test_memory_of_children_counts(self):
         report = run(engine("child"))
         self.assertGreater(report["memory"]["host"]["anon_peak_mib"], 140)
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Markers(unittest.TestCase):
     def test_plain_text_markers_from_any_language(self):
         report = run(engine("plain_marker"))
@@ -167,19 +167,58 @@ class Markers(unittest.TestCase):
         self.assertIn("run", report["groups"])
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Serving(unittest.TestCase):
-    def serve(self, ttft=0.2, inter=0.02, ready=0.6, extra=()):
+    def serve(self, ttft=0.2, inter=0.02, ready=0.6, extra=(), preset="vllm", target_extra=()):
         port = free_port()
         out = helpers.temp_dir()
-        argv = ["serve", "--out", out, "--precheck", "skip", "--quiet", "--preset", "vllm", "--url", f"http://127.0.0.1:{port}",
+        argv = ["serve", "--out", out, "--precheck", "skip", "--quiet", "--preset", preset, "--url", f"http://127.0.0.1:{port}",
                 "--synthetic-words", "16", "--limit", "4", "--max-tokens", "11", "--concurrency", "1,2", *extra,
-                "--", sys.executable, SERVER, str(port), str(ready), str(ttft), str(inter)]
+                "--", sys.executable, SERVER, str(port), str(ready), str(ttft), str(inter), *target_extra]
         gpu = helpers.ScriptedGpu(count=1, power_w=100.0, used_mib=1000)
         with mock.patch("llmperfscope.runner.open_backend", lambda: gpu), mock.patch("builtins.print"):
             cli.main(argv)
         with open(os.path.join(out, "run.json")) as f:
             return json.load(f)
+
+    def test_a_server_that_loads_what_it_is_asked_for_is_not_asked_for_anything(self):
+        # Measured: mlx_lm.server lists every model in the Hugging Face cache. Naming the first loaded a 9B model instead of the 0.6B one on its command line.
+        bodies = os.path.join(helpers.temp_dir(), "bodies.jsonl")
+        with mock.patch.dict(os.environ, {"FAKE_SERVER_MODELS": "other/huge,mine/small", "FAKE_SERVER_BODIES": bodies}):
+            report = self.serve(preset="mlx", extra=["--limit", "2"], target_extra=["--model", "mine/small"])
+        with open(bodies) as f:
+            asked = [json.loads(line) for line in f]
+        self.assertTrue(asked)
+        self.assertFalse([body for body in asked if "model" in body])
+        self.assertEqual(report["workload"]["model"], "mine/small")
+        self.assertFalse([note for note in report["notes"] if "lists" in note])
+
+    def test_a_server_with_several_models_gets_a_note(self):
+        with mock.patch.dict(os.environ, {"FAKE_SERVER_MODELS": "first,second"}):
+            report = self.serve(extra=["--limit", "2"])
+        self.assertEqual(report["workload"]["model"], "first")
+        self.assertTrue([note for note in report["notes"] if "lists 2 models" in note])
+
+    def test_prompts_are_read_before_the_server_starts(self):
+        calls = []
+        real = serving.rows_from
+
+        def rows_from(args):
+            calls.append(args.limit)
+            return real(args)
+
+        spawned = []
+        original = subprocess.Popen
+
+        def popen(*args, **kwargs):
+            spawned.append(list(calls))
+            return original(*args, **kwargs)
+
+        with mock.patch("llmperfscope.serving.rows_from", rows_from), mock.patch("subprocess.Popen", popen):
+            report = self.serve(extra=["--limit", "2"])
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(spawned[0])
 
     def test_client_timing_matches_the_server_script(self):
         report = self.serve()
@@ -241,7 +280,7 @@ class MatrixWithServer(unittest.TestCase):
             self.assertIn("first token", f.read())
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(sys.platform.startswith("linux"), "Linux only")
 class CpuProfile(unittest.TestCase):
     def test_samples_name_the_function_that_burns_the_cpu(self):
         directory = helpers.temp_dir()
@@ -354,7 +393,7 @@ class CpuProfile(unittest.TestCase):
         self.assertIsNone(table.lookup(5000))
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class PageCache(unittest.TestCase):
     def test_cold_start_drops_the_file(self):
         path = os.path.join(helpers.temp_dir(), "weights")
@@ -374,7 +413,7 @@ class PageCache(unittest.TestCase):
         self.assertLess(after, 0.2)
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Library(unittest.TestCase):
     def test_profile_inside_a_process(self):
         import llmperfscope

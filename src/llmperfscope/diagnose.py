@@ -54,6 +54,24 @@ def really_throttled(gpu, run):
     return gpu["power_avg_w"] / len(limits) >= 0.9 * (sum(limits) / len(limits))
 
 
+def _on_macos(run):
+    return str((run.get("host") or {}).get("os", "")).startswith("macOS")
+
+
+def _unified_memory(run):
+    return any(d.get("unified_memory") for d in run.get("devices") or [])
+
+
+def _gpu_tool(run):
+    """Where to look next for what the GPU does."""
+    return "Instruments' Metal System Trace shows which shaders take the time" if _on_macos(run) else "Use --nsys to see which kernels take the time"
+
+
+def _host_tool(run):
+    """Where to look next for what the host does."""
+    return "`sample` shows what it does" if _on_macos(run) else "use --cpu-profile to see what it does"
+
+
 def classify_phase(name, group, run):
     """What limited this phase. Returns {"limit", "confidence", "why": text, "evidence": {...}}."""
     wall = group.get("wall_s", 0.0)
@@ -84,7 +102,19 @@ def classify_phase(name, group, run):
     memory_stall = pressure.get("memory_some_pct", 0.0)
     refault_rate = _rate(flows.get("page_cache_refault_mib", 0.0), wall)
     thrashing = refault_rate > 50.0 and memory_stall > 2.0
-    if swap_rate > 1.0 or pressure.get("memory_full_pct", 0.0) > 5.0 or thrashing:
+    if _on_macos(run):
+        # macOS swaps and compresses other programs' idle memory as a matter of course, and it has no measure of tasks waiting on memory. Its critical pressure level says that RAM
+        # is short. Short of that, RAM is only the limit if nothing else is busy.
+        compressor_rate = _rate(flows.get("compressed_mib", 0.0) + flows.get("decompressed_mib", 0.0), wall)
+        critical = pressure.get("memory_full_pct", 0.0) > 5.0
+        squeezed = memory_stall > 2.0 and (swap_rate > 1.0 or compressor_rate > 50.0) and (util is None or util < 50) and (busy_cores or 0.0) < 2.0
+        if critical or squeezed:
+            causes = [f"{swap_rate:,.0f} MiB/s of swap" if swap_rate > 1.0 else None,
+                      f"{compressor_rate:,.0f} MiB/s through the memory compressor" if compressor_rate > 1.0 else None,
+                      f"macOS's memory pressure at warning or above {memory_stall:.0f}% of the time"]
+            evidence["swap_mib_per_s"], evidence["compressor_mib_per_s"] = round(swap_rate, 1), round(compressor_rate, 1)
+            return {"limit": "ram", "confidence": "high" if critical else "medium", "evidence": evidence, "why": "Host RAM is short: " + ", ".join(c for c in causes if c) + "."}
+    elif swap_rate > 1.0 or pressure.get("memory_full_pct", 0.0) > 5.0 or thrashing:
         causes = []
         if swap_rate > 1.0:
             causes.append(f"{swap_rate:,.0f} MiB/s of swap")
@@ -104,23 +134,24 @@ def classify_phase(name, group, run):
     if read_mib and _rate(read_mib, wall) > 5.0 and (io_stall > 25.0 or (disk and (disk.get("busy_pct") or 0) > 60.0)):
         kind = disk["kind"] if disk else "disk"
         return {"limit": f"disk ({kind})", "confidence": "high", "evidence": evidence,
-                "why": f"Waiting on {kind} reads: {_rate(read_mib, wall):.0f} MiB/s, I/O stall {io_stall:.0f}% of the time."}
+                "why": f"Waiting on {kind} reads: {_rate(read_mib, wall):.0f} MiB/s, " + (f"I/O stall {io_stall:.0f}% of the time." if "io_some_pct" in pressure else f"the disk {(disk or {}).get('busy_pct', 0):.0f}% busy.")}
 
     if wall < MIN_WALL_FOR_UTILIZATION_S:
         return {"limit": "too short to judge", "confidence": "none", "evidence": evidence,
                 "why": f"{wall:.2f} s is too short for the GPU's utilization counter. Use a longer run."}
 
     if util is not None and util > 50 and really_throttled(gpu, run):
-        reasons = ", ".join(gpu.get("throttle", []))
+        reasons = "macOS's thermal pressure" if _on_macos(run) else ", ".join(gpu.get("throttle", []))
+        clock = f", {gpu['sm_mhz_avg']:.0f} MHz average" if gpu.get("sm_mhz_avg") else ""
         return {"limit": "gpu (throttled)", "confidence": "high", "evidence": evidence,
-                "why": f"GPU clocks were held down by {reasons} at {util:.0f}% utilization, {gpu.get('sm_mhz_avg')} MHz average."}
+                "why": f"GPU clocks were held down by {reasons} at {util:.0f}% utilization{clock}."}
 
     if util is not None and util_max is not None and util_min is not None and util_max - util_min > 25 and util_max >= 80:
         return {"limit": "gpu imbalance", "confidence": "high", "evidence": evidence,
                 "why": f"Work is uneven across GPUs: {util_min:.0f}% to {util_max:.0f}%. The busiest one sets the pace."}
     if util is not None and util >= 85:
         return {"limit": "gpu", "confidence": "high", "evidence": evidence,
-                "why": f"GPU compute is the limit: {util:.0f}% busy. Use --nsys to see which kernels take the time."}
+                "why": f"GPU compute is the limit: {util:.0f}% busy. {_gpu_tool(run)}."}
 
     cpu_stall = pressure.get("cpu_some_pct", 0.0)
     if cpu_stall > 30.0 and (run.get("host", {}).get("cpus") or 0) > 0:
@@ -135,7 +166,7 @@ def classify_phase(name, group, run):
     if (util is None or util < 30) and thread_busy is not None and thread_busy >= 0.7:
         return {"limit": "cpu (one thread)", "confidence": "high", "evidence": evidence,
                 "why": f"Thread {busiest.get('name')} runs at {thread_busy * 100:.0f}% while the GPU is {gpu_percent:.0f}% busy. Everything waits on "
-                       "this one thread; use --cpu-profile to see what it does."}
+                       f"this one thread; {_host_tool(run)}."}
 
     # The GPU does a real part of the work and also sits idle: the idle part goes to host work, or to the two waiting for each other.
     if util is not None and util >= 30:
@@ -145,7 +176,7 @@ def classify_phase(name, group, run):
             detail = (f"GPU {util:.0f}% busy while thread {busiest.get('name')} runs at {thread_busy * 100:.0f}%: the host is working or spinning "
                       "on a wait during the GPU's idle part.")
         return {"limit": "gpu + host wait", "confidence": "medium", "evidence": evidence,
-                "why": detail + " --nsys shows the gaps, --cpu-profile what the host does."}
+                "why": detail + (" Instruments' Metal System Trace shows the gaps, `sample` what the host does." if _on_macos(run) else " --nsys shows the gaps, --cpu-profile what the host does.")}
 
     if busy_cores is not None and busy_cores >= 0.7:
         return {"limit": "cpu", "confidence": "low", "evidence": evidence,
@@ -170,11 +201,17 @@ def memory_findings(run):
         findings.append({"severity": severity, "what": what, "text": text, "evidence": evidence})
 
     for entry in gpu_devices:
-        total = devices.get(entry["index"], {}).get("memory_total_mib")
+        device = devices.get(entry["index"], {})
+        total = device.get("memory_total_mib")
         if total and entry["peak_mib"] >= 0.95 * total:
-            add("warning", "gpu_memory_nearly_full",
-                f"GPU {entry['index']} reached {entry['peak_mib']:,} of {total:,} MiB. There is no headroom left: a longer prompt or more "
-                "parallel requests can run out of memory.", peak_mib=entry["peak_mib"], total_mib=total)
+            if device.get("memory_total_is_working_set_limit"):
+                add("warning", "gpu_memory_nearly_full",
+                    f"The GPU reached {entry['peak_mib']:,} MiB of the {total:,} MiB macOS recommends it hold. Past that, Metal starts paging and inference slows down sharply. "
+                    "`sudo sysctl iogpu.wired_limit_mb=N` raises the limit until the next restart, at the expense of everything else in RAM.", peak_mib=entry["peak_mib"], total_mib=total)
+            else:
+                add("warning", "gpu_memory_nearly_full",
+                    f"GPU {entry['index']} reached {entry['peak_mib']:,} of {total:,} MiB. There is no headroom left: a longer prompt or more "
+                    "parallel requests can run out of memory.", peak_mib=entry["peak_mib"], total_mib=total)
     peaks = [e["peak_above_baseline_mib"] for e in gpu_devices]
     if len(peaks) >= 2 and min(peaks) > 0 and max(peaks) > 1.25 * min(peaks) and max(peaks) - min(peaks) > 256:
         add("info", "gpu_memory_uneven",
@@ -197,12 +234,14 @@ def memory_findings(run):
         gpu = group.get("gpu") or {}
         anon = host.get("anon_peak_mib", 0)
         gpu_mem = gpu.get("mem_peak_mib", 0)
-        if anon > 2048 and gpu_mem > 0 and anon > 0.25 * gpu_mem:
+        # In one pool of memory the two are the same pages, not a copy.
+        separate = not _unified_memory(run)
+        if separate and anon > 2048 and gpu_mem > 0 and anon > 0.25 * gpu_mem:
             add("info", "host_ram_held_while_on_gpu",
                 f"The process holds {_gib(anon)} of its own host RAM during {name}, next to {_gib(gpu_mem)} on the GPU. If that is a copy of "
                 "the weights it can usually be released after upload.", host_anon_mib=anon, gpu_mib=gpu_mem, phase=name)
         file_mib = host.get("file_peak_mib", 0)
-        if file_mib > 4096 and gpu_mem > 0:
+        if separate and file_mib > 4096 and gpu_mem > 0:
             add("info", "weights_mapped_in_page_cache",
                 f"{_gib(file_mib)} of mapped files stay in RAM during {name}. These pages are reclaimable page cache, not a leak, but they "
                 "are why a later run loads fast and why the machine shows little free RAM.", file_mib=file_mib, phase=name)
@@ -221,6 +260,8 @@ def memory_findings(run):
     host_memory = memory.get("host") or {}
     if host_memory.get("swap_peak_mib", 0) > 64:
         add("warning", "process_swapped",
+            f"{host_memory['swap_peak_mib']:,.0f} MiB of the process was compressed by macOS. Touching those pages later means decompressing them, or reading them from disk if they "
+            "went on to swap, in the middle of inference." if _on_macos(run) else
             f"{host_memory['swap_peak_mib']:,.0f} MiB of the process was in swap. Touching those pages later means disk reads in the middle of "
             "inference.", swap_mib=host_memory["swap_peak_mib"])
     lowest = None
@@ -299,6 +340,17 @@ def movement_findings(run):
     def add(severity, what, text, **evidence):
         findings.append({"severity": severity, "what": what, "text": text, "evidence": evidence})
 
+    for name in ("startup", "load", "warmup"):
+        group = groups.get(name) or {}
+        cores = (group.get("host") or {}).get("busy_cores")
+        busy = (group.get("system_cpu") or {}).get("busy_pct")
+        if group.get("wall_s", 0.0) >= 2.0 and cores is not None and cores < 0.1 and busy is not None and busy > 25.0:
+            # Measured: Metal compiled llama.cpp's shaders in a system process for 8.7 s on a first run, and took milliseconds on the next.
+            add("info", "work_in_another_process",
+                f"During {name} the process used {cores:.2f} CPU cores for {group['wall_s']:,.1f} s while the machine's CPUs were {busy:.0f}% busy, so another process is doing the work or "
+                "competing with it." + (" On a Mac this is usually the Metal shader compiler on first use. macOS keeps the result, so the next run does not pay for it." if _on_macos(run) else ""),
+                wall_s=group["wall_s"], cores=cores, system_busy_pct=busy, phase=name)
+
     warmup = groups.get("warmup") or {}
     if warmup.get("wall_s", 0.0) > 5.0:
         grown = (warmup.get("gpu") or {}).get("mem_end_mib", 0) - (warmup.get("gpu") or {}).get("mem_start_mib", 0)
@@ -330,6 +382,11 @@ def movement_findings(run):
         wall = load.get("wall_s", 0.0)
         cached = before.get("model_page_cache_fraction")
         disk = _busiest_disk(load, disks)
+        # The busiest disk may be busy with something else. If the model's own disk was read at all, that is the one.
+        for candidate in (location or {}).get("disks") or []:
+            traffic = ((load.get("flows") or {}).get("disks") or {}).get(candidate.get("name"))
+            if traffic and traffic.get("read_mib"):
+                disk = {"name": candidate["name"], "kind": candidate.get("kind", "disk"), **traffic}
         if read_mib and read_mib > 256:
             where = f" from {disk['name']} ({disk['kind']})" if disk else ""
             add("info", "load_read_from_disk",
@@ -361,6 +418,12 @@ def movement_findings(run):
             add("info", "disk_writes_during_inference",
                 f"{_gib(written)} written to disk during {name}: a cache being offloaded to disk, or logging. Either way those writes share the "
                 "disk with any reads the engine needs.", write_mib=written, phase=name)
+        compressed = flows.get("decompressed_mib", 0.0) + flows.get("compressed_mib", 0.0)
+        if compressed > 256 and _rate(compressed, wall) > 50.0:
+            add("info", "memory_compressor_busy",
+                f"{compressed:,.0f} MiB went through macOS's memory compressor during {name}, {_rate(compressed, wall):,.0f} MiB/s" +
+                (f", with memory pressure at warning or above {(group.get('pressure') or {})['memory_some_pct']:.0f}% of the time" if (group.get("pressure") or {}).get("memory_some_pct") else "") +
+                ". That is CPU time spent on memory, and other programs being squeezed to make room: closing them gives a steadier measurement.", compressed_mib=compressed, phase=name)
         swap_in = flows.get("swap_in_mib", 0.0)
         swap_out = flows.get("swap_out_mib", 0.0)
         if swap_in + swap_out > 16:
@@ -502,10 +565,13 @@ def next_steps(run, bottlenecks):
     steps = []
     limits = {b["limit"] for b in bottlenecks.values()}
     if not run.get("perturbed"):
+        macos = _on_macos(run)
         if limits & {"gpu", "gpu + host wait", "gpu imbalance"}:
-            steps.append("--nsys: which kernels take the GPU's time, and what it waits on in the gaps")
+            steps.append("Instruments' Metal System Trace, which comes with Xcode: which shaders take the GPU's time, and what it waits on in the gaps" if macos else
+                         "--nsys: which kernels take the GPU's time, and what it waits on in the gaps")
         if limits & {"cpu (one thread)", "cpu (many threads)", "gpu + host wait"}:
-            steps.append("--cpu-profile: which functions the host threads spend their time in")
+            steps.append("`sample PID 10` while it runs: which functions the host threads spend their time in" if macos else
+                         "--cpu-profile: which functions the host threads spend their time in")
     return steps
 
 

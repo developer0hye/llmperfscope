@@ -48,7 +48,7 @@ def _diagnosis(run):
                 out.append(f"- {mark}{finding['text']}")
     steps = diagnosis.get("next_steps") or []
     if steps:
-        out.append("\nTo look deeper, run again with:\n")
+        out.append("\nTo look deeper:\n")
         out.extend(f"- {step}" for step in steps)
     return out
 
@@ -66,16 +66,19 @@ def _movement_table(run):
         system_read = sum(d.get("read_mib", 0.0) for d in (flows.get("disks") or {}).values())
         write = sum(d.get("write_mib", 0.0) for d in (flows.get("disks") or {}).values())
         names |= set(flows.get("disks") or {})
-        cells = [read, system_read, write, flows.get("swap_in_mib"), flows.get("swap_out_mib"), flows.get("page_cache_change_mib"),
+        cells = [read, system_read, write, flows.get("swap_in_mib"), flows.get("swap_out_mib"), flows.get("compressed_mib"), flows.get("decompressed_mib"), flows.get("page_cache_change_mib"),
                  flows.get("pcie_to_gpu_mib_est"), flows.get("pcie_from_gpu_mib_est"), flows.get("nvlink_mib"), host.get("major_faults")]
         if any(cell for cell in cells):
-            rows.append([name] + [_num(float(c), 0) if isinstance(c, (int, float)) and not isinstance(c, bool) and i < 9 else _num(c)
-                                  for i, c in enumerate(cells)])
+            rows.append([name] + cells)
     if not rows:
         return []
+    headers = ["phase", "target disk read", "all disk read", "all disk write", "swap in", "swap out", "compressed", "decompressed", "page cache +/-",
+               "RAM to GPU (est)", "GPU to RAM (est)", "GPU to GPU", "major faults"]
+    # Links this machine does not have are not worth a column of dashes.
+    kept = [i for i in range(len(headers)) if i == 0 or any(row[i] is not None for row in rows)]
+    cells = [[row[i] if i == 0 else _num(float(row[i]), 0) if headers[i] != "major faults" and row[i] is not None else _num(row[i]) for i in kept] for row in rows]
     out = ["\n## Data movement (MiB)\n"]
-    out.append(_table(["phase", "target disk read", "all disk read", "all disk write", "swap in", "swap out", "page cache +/-",
-                       "RAM to GPU (est)", "GPU to RAM (est)", "GPU to GPU", "major faults"], rows))
+    out.append(_table([headers[i] for i in kept], cells))
     disks = run.get("disks") or {}
     active = [f"{name}: {disks.get(name, {}).get('kind', 'disk')}" for name in sorted(names)]
     if active:
@@ -134,6 +137,9 @@ def render(run):
         out.append(_table(["phase", "wall s", "tokens", "GPU GiB end", "GPU GiB peak", "host anon GiB", "host file GiB", "GPU J",
                            "GPU W", "SM MHz", "util %", "CPU cores"], rows))
         out.append("\nGPU memory is above the idle baseline, over the GPUs this run used.")
+        if any(d.get("unified_memory") for d in run.get("devices") or []):
+            out.append("This machine has one pool of memory: GPU memory is part of RAM, and it is what the whole machine's GPU work holds. What the process's GPU buffers hold also "
+                       "counts in its host memory, so the two do not add up.")
 
     throughput = run.get("throughput") or {}
     if throughput:
@@ -173,7 +179,7 @@ def render(run):
     if gpu.get("devices"):
         out.append("\n## Memory\n")
         rows = [[d["index"], _num(d["baseline_mib"]), _num(d["peak_mib"]), _num(d["peak_above_baseline_mib"]),
-                 _num(d["process_peak_mib"])] for d in gpu["devices"]]
+                 _num(d["process_peak_mib"] or None)] for d in gpu["devices"]]
         out.append(_table(["GPU", "idle MiB", "peak MiB", "above idle MiB", "process peak MiB"], rows))
     host_memory = memory.get("host") or {}
     if host_memory:

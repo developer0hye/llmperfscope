@@ -57,10 +57,10 @@ class Refused(Exception):
 
 
 def platform_refusal():
-    """Why measuring cannot work on this system, or None. It reads /proc for processes, disks and memory."""
-    if sys.platform.startswith("linux"):
+    """Why measuring cannot work on this system, or None."""
+    if sys.platform.startswith("linux") or sys.platform == "darwin":
         return None
-    return (f"measuring needs Linux for now, and this is {sys.platform}. "
+    return (f"measuring needs Linux or macOS, and this is {sys.platform}. "
             "Finished runs can be read and drawn here: show, html, figure, anonymize and diff work on any system.")
 
 
@@ -81,6 +81,7 @@ def _reap_orphans():
 
 
 class Run:
+    marker_entry = None
     t_spawn = None
     stop_requested_at = None
     killed = False
@@ -183,6 +184,15 @@ class Run:
             pass
         return out
 
+    def _our_processes(self):
+        """Everything the target started that is still alive. Linux hands orphans to this process, because of the subreaper. macOS hands them to launchd, and they are told
+        by the marker path in their environment instead."""
+        pids = procfs.tree(set(procfs.children_of(os.getpid())))
+        if sys.platform == "darwin" and self.marker_entry:
+            from . import darwin
+            pids |= procfs.tree(darwin.with_environment(self.marker_entry) - {os.getpid()})
+        return pids
+
     def _signal_tree(self, sig):
         if self.attach_pid:
             return
@@ -191,7 +201,7 @@ class Run:
         except (ProcessLookupError, PermissionError):
             pass
         # Only processes that left the group. A second signal is not harmless: servers take it as "exit right now, skip cleanup".
-        for pid in procfs.tree(set(procfs.children_of(os.getpid()))):
+        for pid in self._our_processes():
             try:
                 if os.getpgid(pid) != self.pid:
                     os.kill(pid, sig)
@@ -210,7 +220,7 @@ class Run:
 
     def _poll_exit(self):
         if self.attach_pid:
-            return bool(self.stop_reason) or not os.path.exists(f"/proc/{self.attach_pid}")
+            return bool(self.stop_reason) or not procfs.alive(self.attach_pid)
         try:
             pid, status, rusage = os.wait4(self.pid, os.WNOHANG)
         except ChildProcessError:
@@ -289,6 +299,12 @@ class Run:
             # They would profile the docker client, or nothing, and the report would look fine.
             raise Refused("--nsys and --cpu-profile have to start the engine themselves, so they cannot reach a container or a running process. "
                           "Run the engine directly, or run llmperfscope inside the container.")
+        if sys.platform == "darwin":
+            if self.opts.nsys or self.opts.cpu_profile:
+                raise Refused("--nsys and --cpu-profile need Linux for now.")
+            if adapters.docker_index(self.cmd) is not None:
+                # A container there runs in a virtual machine, whose processes macOS cannot see.
+                raise Refused("containers run in a virtual machine on macOS, out of sight of the host. Run the engine directly, or run llmperfscope inside the container.")
         self.dir.mkdir(parents=True, exist_ok=True)
         env = dict(os.environ)
         env.update(self.opts.env)
@@ -340,6 +356,7 @@ class Run:
 
         marker_file = self.dir / "markers.log"
         env[markers.ENV] = str(marker_file)
+        self.marker_entry = f"{markers.ENV}={marker_file}"
         # A run directory can be reused. Old events must not become phases of this run.
         try:
             marker_file.unlink()
@@ -423,12 +440,12 @@ class Run:
             identity = {**identity, **self.docker.identity()}
         # Leftover children of an exited root are part of this run: ending them is what keeps the GPU free for the next one.
         if not self.attach_pid:
-            left = procfs.tree(set(procfs.children_of(os.getpid())))
+            left = self._our_processes()
             if left:
                 self.notes.append(f"{len(left)} processes outlived the target and were stopped")
                 self._signal_tree(signal.SIGTERM)
                 deadline = time.monotonic() + 10
-                while time.monotonic() < deadline and procfs.tree(set(procfs.children_of(os.getpid()))):
+                while time.monotonic() < deadline and self._our_processes():
                     _reap_orphans()
                     time.sleep(0.2)
                 self._signal_tree(signal.SIGKILL)
@@ -522,7 +539,9 @@ class Run:
         report["disks"] = sampler.system.disks
         # The kernel's totals describe the process llmperfscope started. For a container that is only the docker client.
         if self.rusage is not None and not self.docker:
-            report.setdefault("memory", {}).setdefault("host", {})["max_rss_kernel_mib"] = round(self.rusage.ru_maxrss / 1024, 1)
+            # Bytes on macOS, kilobytes on Linux.
+            kilobytes = self.rusage.ru_maxrss / 1024 if sys.platform == "darwin" else self.rusage.ru_maxrss
+            report.setdefault("memory", {}).setdefault("host", {})["max_rss_kernel_mib"] = round(kilobytes / 1024, 1)
             report["cpu"] = {"user_s": round(self.rusage.ru_utime, 3), "sys_s": round(self.rusage.ru_stime, 3),
                              "major_faults": self.rusage.ru_majflt, "voluntary_switches": self.rusage.ru_nvcsw,
                              "involuntary_switches": self.rusage.ru_nivcsw}

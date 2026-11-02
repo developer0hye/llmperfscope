@@ -11,6 +11,7 @@ from llmperfscope import procfs  # noqa: E402
 from llmperfscope.gpu import GpuBackend  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+CAN_MEASURE = sys.platform.startswith("linux") or sys.platform == "darwin"
 
 
 class ScriptedGpu(GpuBackend):

@@ -19,6 +19,8 @@ Note that `llmperfscope html` writes `report.html` into the run directory.
 | `deepseek-v4.1-flash-8gpu-cpu-profile` | the same with `--cpu-profile`: host functions per phase. Sampled, so not for speed | `llama-bench -sm tensor` |
 | `engines/llama.cpp`, `vllm`, `sglang`, `tgi`, `ollama` | each engine serving at 1 and 4 clients with default settings | one RTX 3070 |
 | `engines/transformers`, `vllm-library` | engines used as libraries, with markers in the script | one RTX 3070, in a container |
+| `apple-m2-long-decode` | heat on a fanless Mac: the GPU clock falls by half after about 85 s, and decode from 56.8 to 37.4 tokens/s, with utilization unchanged | `llama-bench -p 0 -n 8192 -r 3` on Metal, M2 MacBook Air, 16 GB |
+| `apple-m2/llama.cpp`, `mlx` | the same model size and prompts on the two engines, 1 and 2 clients. These do not rank them either | `llama-server` and `mlx_lm.server` on the same machine, Qwen3-0.6B at 8 bits |
 | `matrix.json` | a patched llama.cpp against upstream over three cases, for `llmperfscope figure --matrix` | 8 RTX A6000 |
 
 The engine runs show what the tool reports, and **they do not rank the engines**. Nothing was tuned, they are not all the same model or format (llama.cpp ran a Qwen3-0.6B Q8_0 GGUF; vLLM, SGLang, TGI and transformers ran the original Qwen3-0.6B weights; Ollama ran qwen2.5:0.5b), and vLLM, SGLang, TGI and Ollama ran in containers.

@@ -36,9 +36,14 @@ def _torch_memory():
     if torch is None:
         return None
     try:
+        mib = 1 << 20
+        mps = getattr(getattr(torch, "backends", None), "mps", None)
+        if mps is not None and mps.is_available():
+            # Metal keeps no peaks, so those come from the highest values the marks saw. What it has is what tensors use, and what the driver holds for them.
+            allocated, reserved = round(torch.mps.current_allocated_memory() / mib, 1), round(torch.mps.driver_allocated_memory() / mib, 1)
+            return {"allocated_mib": allocated, "reserved_mib": reserved, "max_allocated_mib": allocated, "max_reserved_mib": reserved}
         if not torch.cuda.is_available():
             return None
-        mib = 1 << 20
         return {
             "allocated_mib": round(sum(torch.cuda.memory_allocated(i) for i in range(torch.cuda.device_count())) / mib, 1),
             "reserved_mib": round(sum(torch.cuda.memory_reserved(i) for i in range(torch.cuda.device_count())) / mib, 1),
@@ -129,8 +134,8 @@ class Profile:
             self.events.append(record)
 
     def __enter__(self):
-        if not sys.platform.startswith("linux"):
-            raise OSError(f"measuring needs Linux for now, and this is {sys.platform}")
+        if not (sys.platform.startswith("linux") or sys.platform == "darwin"):
+            raise OSError(f"measuring needs Linux or macOS, and this is {sys.platform}")
         self.dir.mkdir(parents=True, exist_ok=True)
         self.backend = open_backend()
         self.before = machine.snapshot(self.backend, cpu_seconds=0.0, ignore={os.getpid()})

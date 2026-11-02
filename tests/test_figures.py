@@ -58,7 +58,7 @@ def add_deep_sections(run_dir):
 
 
 @unittest.skipUnless(HAVE_MATPLOTLIB, "needs matplotlib")
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class FromARun(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -171,7 +171,7 @@ class FromARun(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_MATPLOTLIB, "needs matplotlib")
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Serving(unittest.TestCase):
     def test_serving_and_compare(self):
         a, b = make_serving_run(), make_serving_run()
@@ -226,7 +226,7 @@ class WithoutMatplotlib(unittest.TestCase):
         self.assertIn("llmperfscope[figures]", str(caught.exception))
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Anonymize(unittest.TestCase):
     def setUp(self):
         self.run_dir = make_run()
@@ -237,8 +237,10 @@ class Anonymize(unittest.TestCase):
         report["identity"]["exe"] = "/home/alice/private/engine"
         report["command"] = ["/home/alice/private/engine", "-m", "/data/alice/model.gguf", "--port", "1", "vendor/image:v1"]
         report["devices"][0]["uuid"] = "GPU-1234"
-        report["machine_before"] = {"top_processes": [{"comm": "secret-tool"}], "model_storage": {"path": "/data/alice/model.gguf"}, "clean": True}
-        report["notes"] = ["seen on secret-box by alice"]
+        report["machine_before"] = {"top_processes": [{"comm": "secret-tool"}], "model_storage": {"path": "/data/alice/model.gguf"}, "clean": False,
+                                    "reasons": ["foreign process above 0.10 cores: secret-tool=0.20, other-secret=0.15"],
+                                    "gpus": [{"index": 0, "foreign_gpu_pct": {"1234": 14.0}}]}
+        report["notes"] = ["seen on secret-box by alice", "machine was not clean before the run: foreign process above 0.10 cores: secret-tool=0.20; foreign CPU 0.61 cores above 0.20"]
         with open(self.path, "w") as f:
             json.dump(report, f)
         self.out = os.path.join(helpers.temp_dir(), "shared")
@@ -250,10 +252,11 @@ class Anonymize(unittest.TestCase):
         self.report = json.loads(self.text)
 
     def test_names_paths_and_serial_numbers_are_gone(self):
-        for secret in ("secret-box", "alice", "GPU-1234", "secret-tool", "/home/", "/data/", "private/engine"):
+        for secret in ("secret-box", "alice", "GPU-1234", "secret-tool", "other-secret", "foreign_gpu_pct", "/home/", "/data/", "private/engine"):
             self.assertNotIn(secret, self.text, secret)
 
     def test_what_is_useful_stays(self):
+        self.assertIn("foreign CPU 0.61 cores above 0.20", self.report["notes"][1])
         self.assertIn("vendor/image:v1", self.report["command"])
         self.assertIn("<path>/model.gguf", self.report["command"])
         with open(self.path) as f:

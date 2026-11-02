@@ -114,11 +114,17 @@ def used_devices(series, baseline_mem, min_above_baseline=64):
     """GPUs this run touched: any process of its tree holds memory there. When that is not visible (other PID namespace,
     NVML without process info) fall back to memory growth over the baseline."""
     used = set()
+    exact = False
     for tick in series.slow:
         for dev, mib in enumerate(tick["s"].get("self_mib", [])):
             if mib:
                 used.add(dev)
-    if used:
+        for dev, ns in enumerate(tick["s"].get("gpu_ns", [])):
+            exact = True
+            if ns:
+                used.add(dev)
+    # With GPU time per process there is no need to guess, and on a Mac memory growth could just as well be the display's.
+    if used or exact:
         return sorted(used)
     for dev in range(series.n_gpus):
         peak = max((tick["g"][dev][G_MEM] or 0) for tick in series.ticks)
@@ -158,6 +164,10 @@ def _flows(series, t0, t1, devices, wall):
     if swap_in is not None:
         flows["swap_in_mib"] = round(swap_in * PAGE_KB / 1024, 1)
         flows["swap_out_mib"] = round((swap_out or 0) * PAGE_KB / 1024, 1)
+    compressions = vm("compressions")
+    if compressions is not None:
+        flows["compressed_mib"] = round(compressions * PAGE_KB / 1024, 1)
+        flows["decompressed_mib"] = round((vm("decompressions") or 0) * PAGE_KB / 1024, 1)
     refault = vm("workingset_refault_file")
     if refault is not None:
         flows["page_cache_refault_mib"] = round(refault * PAGE_KB / 1024, 1)
@@ -258,10 +268,10 @@ def phase_metrics(series, t0, t1, devices, baseline_mem):
             "power_gauge_w": round(sum(power) / len(power), 2) if power else None,
             "sm_mhz_avg": round(sum(sm) / len(sm)) if sm else None,
             "sm_mhz_min": min(sm) if sm else None,
-            "mem_mhz_avg": round(sum(v[G_MEMCLK] or 0 for v in values) / len(values)),
+            "mem_mhz_avg": round(sum(v[G_MEMCLK] or 0 for v in values) / len(values)) if any(v[G_MEMCLK] is not None for v in values) else None,
             "util_avg": round(sum(util) / len(util), 1) if util else None,
             "util_mem_avg": round(sum(util_mem) / len(util_mem), 1) if util_mem else None,
-            "temp_c_max": max((v[G_TEMP] or 0) for v in values),
+            "temp_c_max": max((v[G_TEMP] for v in values if v[G_TEMP] is not None), default=None),
             "throttle": throttle_names(throttle),
             # A stray tick is not a limit: a phase counts as throttled when it spent a real part of its time that way.
             "throttled": throttled_ticks >= max(2, 0.1 * len(values)),
@@ -278,14 +288,14 @@ def phase_metrics(series, t0, t1, devices, baseline_mem):
             "mem_peak_max_device_mib": max((r["mem_peak_mib"] or 0) - baseline_mem[r["index"]] for r in rows),
             "energy_j": round(total_j, 3) if have_energy else None,
             "power_avg_w": round(total_j / wall, 2) if have_energy and wall > 0 else None,
-            "power_gauge_w": round(sum(r["power_gauge_w"] or 0 for r in rows), 2),
+            "power_gauge_w": round(sum(r["power_gauge_w"] or 0 for r in rows), 2) if any(r["power_gauge_w"] is not None for r in rows) else None,
             "sm_mhz_avg": _avg(rows, "sm_mhz_avg"),
             "sm_mhz_min": min((r["sm_mhz_min"] for r in rows if r["sm_mhz_min"] is not None), default=None),
             "util_avg": _avg(rows, "util_avg"),
             "util_min_device": min(utils) if utils else None,
             "util_max_device": max(utils) if utils else None,
             "util_mem_avg": _avg(rows, "util_mem_avg"),
-            "temp_c_max": max(r["temp_c_max"] for r in rows),
+            "temp_c_max": max((r["temp_c_max"] for r in rows if r["temp_c_max"] is not None), default=None),
             "throttled": any(r["throttled"] for r in rows),
             "throttle": sorted({name for r in rows for name in r["throttle"]}),
             "devices": rows,
@@ -386,7 +396,7 @@ def _sum_flows(items):
             entry["busy_pct"] += (disk["busy_pct"] or 0.0) * wall / wall_total
     if disks:
         out["disks"] = {name: {k: round(v, 1) for k, v in entry.items()} for name, entry in disks.items()}
-    for key in ("swap_in_mib", "swap_out_mib", "page_cache_refault_mib", "direct_reclaim_mib", "page_cache_change_mib",
+    for key in ("swap_in_mib", "swap_out_mib", "compressed_mib", "decompressed_mib", "page_cache_refault_mib", "direct_reclaim_mib", "page_cache_change_mib",
                 "network_rx_mib", "network_tx_mib", "pcie_to_gpu_mib_est", "pcie_from_gpu_mib_est", "nvlink_mib"):
         values = [flows[key] for _, flows in items if key in flows]
         if values:
@@ -425,7 +435,7 @@ def aggregate_group(metrics_list):
             "util_min_device": _weighted(metrics_list, "util_min_device"),
             "util_max_device": _weighted(metrics_list, "util_max_device"),
             "util_mem_avg": _weighted(metrics_list, "util_mem_avg"),
-            "temp_c_max": max(g["temp_c_max"] for g in gpu),
+            "temp_c_max": max((g["temp_c_max"] for g in gpu if g["temp_c_max"] is not None), default=None),
             "throttled": any(g["throttled"] for g in gpu),
             "throttle": sorted({name for g in gpu for name in g["throttle"]}),
         }

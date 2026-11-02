@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Measuring works on macOS, with no root and nothing extra to install: process memory by kind, GPU time per process, GPU memory, energy and clock, thermal pressure, the memory compressor, disks by physical device, and `--cold-start`. `--nsys`, `--cpu-profile` and containers stay Linux only. See [Apple Silicon](docs/engines.md#apple-silicon).
+- MLX: a server preset for `mlx_lm.server`, and an adapter that reads the speed and peak memory `mlx_lm.generate` reports. `Profile` and `phase` report PyTorch's memory on MPS.
+- `serve` reads the prompts before starting the server. Their first download used to count as loading the model.
+- `serve` says in the report when a server lists several models and the requests named the first.
+- The report leaves out data movement columns the machine has nothing to report for, and `temp_c_max`, `mem_mhz_avg` and `power_gauge_w` are null when unknown, not 0.
 - `matrix` runs 4 arms per side by default, and runs a case that looks worse again (`--recheck`) before calling it. With 2 per side, arms miss each other by chance 1 time in 3.
 - `--cpu-profile` counts the time inside long system calls, which used to show as one sample, and every profile is checked against the CPU time measured from outside.
 - On a system other than Linux, `run`, `serve`, `attach` and `matrix` say what works there, instead of failing on a missing `/proc`.

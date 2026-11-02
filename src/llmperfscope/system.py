@@ -8,6 +8,7 @@ them are cheap, unprivileged and cumulative, so a phase's value is the differenc
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 SECTOR = 512
@@ -221,3 +222,7 @@ def storage_kind(location):
         if kind in kinds:
             return kind
     return None
+
+
+if sys.platform == "darwin":
+    from .darwin import cpu_times, disk_counters, file_location, list_disks, meminfo, network_bytes, pressure, vmstat  # noqa: F401,F811

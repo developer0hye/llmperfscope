@@ -73,7 +73,7 @@ Test an adapter with a fake engine that prints known lines, and check the report
 
 ## A GPU vendor
 
-`gpu.py` has a small interface. NVML is the only implementation so far:
+`gpu.py` has a small interface. NVML and Apple Silicon implement it so far:
 
 ```python
 class GpuBackend:
@@ -82,6 +82,7 @@ class GpuBackend:
 
     def fast(self):        # per device: the G_* columns. Called about 50 times a second, so it must be cheap
     def energy_mj(self, index):   # cumulative energy, or None. May block; read on its own thread
+    def set_target(self, pids):   # the processes being measured, for numbers kept per process
     def slow(self):        # per-process GPU memory and NVLink counters, about twice a second
     def util_samples(self):       # the driver's utilization history, if it keeps one
     def pcie_kbps(self, index, direction):   # may block; read on its own thread

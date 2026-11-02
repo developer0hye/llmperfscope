@@ -35,6 +35,10 @@ Here is a model running with less RAM than it needs. Decode falls from 73.9 to 2
 
 ![Host memory, CPU, disk traffic and stalls for a CPU run limited to 450 MiB of RAM: the disk stays busy through decode.](gallery/ram_limited_lifecycle.png)
 
+And here is heat on a fanless Mac. After about 85 s the GPU clock and power fall, while utilization stays at 90%, so it alone would not show that anything happened. A run held back by heat gets the clock panel without asking:
+
+![GPU power, utilization and clock over 10 minutes of decoding on an M2 MacBook Air: power and clock fall by half or more after about 85 s, and utilization does not change.](gallery/apple_heat.png)
+
 ### `phases`: where the time and the energy go
 
 ![Wall time, GPU utilization, host CPU and GPU energy for each phase.](gallery/phases.png)
