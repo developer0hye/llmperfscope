@@ -193,9 +193,25 @@ class Run:
             pids |= procfs.tree(darwin.with_environment(self.marker_entry) - {os.getpid()})
         return pids
 
+    def _engines_under_nsys(self):
+        """The engine's own processes, of what nsys started: those whose name is the engine's."""
+        name = os.path.basename(self.cmd[self.adapter.target_index()])[:15]
+        return [pid for pid in procfs.tree({self.pid}) if (procfs.stat(pid) or {}).get("comm") == name]
+
     def _signal_tree(self, sig):
         if self.attach_pid:
             return
+        if self.opts.nsys and sig != signal.SIGKILL:
+            # The group would give nsys this signal directly and again through its launcher, and on a second one it stops without writing a report. With the engine gone it
+            # finishes by itself.
+            engines = self._engines_under_nsys()
+            for pid in engines:
+                try:
+                    os.kill(pid, sig)
+                except (ProcessLookupError, PermissionError):
+                    pass
+            if engines:
+                return
         try:
             os.killpg(self.pid, sig)
         except (ProcessLookupError, PermissionError):

@@ -3,6 +3,7 @@
 import json
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -12,7 +13,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import cli, compare, cpuprof, machine, procfs, runner, serving
+from llmperfscope import adapters, cli, compare, cpuprof, machine, procfs, runner, serving
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -100,6 +101,25 @@ class KnownEngine(unittest.TestCase):
 
 @unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Failures(unittest.TestCase):
+    def test_under_nsys_only_the_engine_gets_the_stop_signal(self):
+        # Measured: nsys took the group's signal as two interrupts and stopped without a report, so `serve --nsys` traced nothing.
+        run_ = runner.Run(["taskset", "-c", "1", "llama-server", "-m", "x"], runner.Options(out=helpers.temp_dir(), quiet=True, nsys=True))
+        run_.adapter = adapters.select("auto", run_.cmd)
+        run_.pid = 100
+        names = {100: "nsys", 101: "nsys", 102: "llama-server"}
+        with mock.patch("llmperfscope.procfs.tree", lambda roots: set(names)), mock.patch("llmperfscope.procfs.stat", lambda pid: {"comm": names[pid]}), \
+                mock.patch("os.kill") as kill, mock.patch("os.killpg") as killpg:
+            run_._signal_tree(signal.SIGTERM)
+        kill.assert_called_once_with(102, signal.SIGTERM)
+        killpg.assert_not_called()
+        # Killing still reaches everything, and without an engine left to stop so does a plain stop.
+        with mock.patch("llmperfscope.procfs.tree", lambda roots: set()), mock.patch("os.kill"), mock.patch("os.killpg") as killpg:
+            run_._signal_tree(signal.SIGKILL)
+            killpg.assert_called_once_with(100, signal.SIGKILL)
+            killpg.reset_mock()
+            run_._signal_tree(signal.SIGTERM)
+            killpg.assert_called_once_with(100, signal.SIGTERM)
+
     def test_tracers_refuse_what_they_cannot_reach(self):
         """They would profile the docker client, and the report would look fine."""
         for options in ({"nsys": True}, {"cpu_profile": True}):
