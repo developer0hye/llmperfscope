@@ -296,9 +296,11 @@ def by_turn(results):
     for turn, items in sorted(turns.items()):
         prompt = sum((r.get("usage") or {}).get("prompt_tokens") or 0 for r in items)
         cached = sum(r.get("cached_tokens") or 0 for r in items)
+        # A server that does not report it says nothing about its cache: that is not the same as nothing cached.
+        known = prompt and any(r.get("cached_tokens") is not None for r in items)
         rows.append({"turn": turn + 1, "requests": len(items), "prompt_tokens_mean": round(prompt / len(items)),
                      "ttft_p50_ms": round(percentile([r["ttft_s"] for r in items], 50) * 1000.0, 2),
-                     "cached_share": round(cached / prompt, 3) if prompt else 0.0})
+                     "cached_share": round(cached / prompt, 3) if known else None})
     return rows
 
 

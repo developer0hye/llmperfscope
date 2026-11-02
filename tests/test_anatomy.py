@@ -280,6 +280,31 @@ class Context(unittest.TestCase):
         replies = [dict(self.reply(100, 10.0), server_timings={"draft_n": 40, "draft_n_accepted": 30}), dict(self.reply(100, 10.0), server_timings={"draft_n": 10, "draft_n_accepted": 5})]
         self.assertEqual(driver.summarize_load(replies, 1.0)["speculative"], {"drafted": 50, "accepted": 35, "accepted_share": 0.7})
 
+    def test_a_server_that_does_not_report_its_cache(self):
+        replies = []
+        for turn in range(2):
+            item = self.reply(100 * (turn + 1), 10.0)
+            item.update(turn=turn, ttft_s=0.02)
+            replies.append(item)
+        summary = driver.summarize_load(replies, 1.0)
+        summary["concurrency"] = 1
+        self.assertEqual([t["cached_share"] for t in summary["by_turn"]], [None, None])
+        found = {f["what"]: f["text"] for f in diagnose.structure_findings({"throughput": {"serve_c1": summary}})}
+        self.assertIn("does not report", found["first_token_by_turn"])
+        self.assertNotIn("% cached", found["first_token_by_turn"])
+
+    def test_a_conversation_asks_the_server_to_report_its_cache(self):
+        self.assertEqual(adapters.SERVER_PRESETS["vllm"]["cache_report_args"], ["--enable-prompt-tokens-details"])
+        self.assertEqual(adapters.SERVER_PRESETS["sglang"]["cache_report_args"], ["--enable-cache-report"])
+
+    def test_the_floor_without_server_timers_uses_what_the_client_saw(self):
+        model = {"weights_read_per_token_mib": 100.0, "parts": []}
+        run = {"model": model, "devices": [{"index": 0, "memory_gb_per_s": 100.0}], "devices_used": [0],
+               "throughput": {"serve_c1": {"concurrency": 1, "itl_ms": {"p50": 4.0}}}}
+        self.assertEqual(anatomy.expectations(run)["decode_ms"], 4.0)
+        run["throughput"]["serve_c1"]["speculative"] = {"drafted": 10, "accepted": 5, "accepted_share": 0.5}
+        self.assertNotIn("decode_ms", anatomy.expectations(run))
+
     def test_cached_share_and_turns(self):
         replies = []
         for turn, (prompt, cached, ms) in enumerate(((100, 0, 200.0), (300, 96, 120.0), (500, 296, 130.0))):
