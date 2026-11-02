@@ -311,6 +311,22 @@ class WaitsForTheGpu(unittest.TestCase):
         tree = self.tree([(["cudaEventSynchronize", "a", "main"], 980), (["cudaEventSynchronize", "b", "main"], 10)])
         self.assertEqual(cpuprof.wait_sites(tree), [("a", 980)])
 
+    def test_a_function_that_waits_itself_counts_next_to_what_it_calls(self):
+        # The way a real run looked: an AllReduce that waits on its events, and calls a copy that waits too.
+        tree = self.tree([
+            (["cudaEventSynchronize", "ggml_cuda_ar_allreduce", "meta_compute", "decode", "main"], 500),
+            (["cudaEventSynchronize", "copy_impl", "ggml_cuda_ar_allreduce", "meta_compute", "decode", "main"], 370),
+            (["cudaStreamSynchronize", "synchronize", "sample", "main"], 130),
+        ])
+        self.assertEqual(sum(count for _, count in cpuprof.wait_sites(tree)), 1000)
+        self.assertEqual(cpuprof.wait_sites(tree), [("ggml_cuda_ar_allreduce", 500), ("copy_impl", 370), ("sample", 130)])
+
+    def test_names_without_their_clutter(self):
+        self.assertEqual(cpuprof.function_label("bool ggml_cuda_ar_copy_impl<__nv_bfloat16, float>(ggml_cuda_ar_pipeline*, int)"), "ggml_cuda_ar_copy_impl")
+        self.assertEqual(cpuprof.function_label("server_context_impl::pre_decode()"), "server_context_impl::pre_decode")
+        self.assertEqual(cpuprof.function_label("ggml_backend_sched_alloc_graph"), "ggml_backend_sched_alloc_graph")
+        self.assertEqual(cpuprof.function_label("cudaStreamSynchronize@@libcudart.so.13"), "cudaStreamSynchronize")
+
     def test_nothing_waited(self):
         self.assertEqual(cpuprof.wait_sites({}), [])
 

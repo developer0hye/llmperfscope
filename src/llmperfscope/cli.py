@@ -60,6 +60,7 @@ def _common(parser):
     parser.add_argument("--cpu-hz", type=int, default=200)
     parser.add_argument("--cold-start", action="store_true", help="drop the model from the page cache first, to measure a real disk load")
     parser.add_argument("--model-file", help="the model's path, when llmperfscope cannot tell from the command")
+    parser.add_argument("--memory-gb-per-s", type=float, help="what one GPU's memory can read per second, when the driver does not say")
 
 
 def _options(args):
@@ -67,6 +68,7 @@ def _options(args):
     return runner.Options(
         cold_start=args.cold_start,
         model=args.model_file,
+        memory_gb_per_s=args.memory_gb_per_s,
         pcie=not args.no_pcie,
         out=args.out or _default_out(label),
         label=label,
@@ -107,6 +109,8 @@ def cmd_run(args, target):
     options = _options(args)
     try:
         return _finish(runner.Run(target, options).execute(), options)
+    except FileNotFoundError as e:
+        raise SystemExit(f"llmperfscope: cannot start {e.filename or target[0]}: no such file") from None
     except runner.Refused as e:
         print(f"[llmperfscope] refused: {e}", file=sys.stderr)
         return 3

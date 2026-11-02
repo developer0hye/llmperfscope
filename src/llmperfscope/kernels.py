@@ -9,7 +9,54 @@ time in collectives shows what they really cost, and the rest of what the others
 
 from __future__ import annotations
 
+import re
+
 from . import nsys
+
+# What a kernel does for the model, from its name. The names are ggml's for CUDA; another engine's kernels land in `other`.
+# A matrix multiply cannot be told apart by name: an expert's and a dense layer's run the same kernel, and so does the output head.
+COMPONENTS = [
+    ("attention", r"flash_attn|fattn|soft_max|softmax|gated_linear_attn|diag_mask|rope|lightning_indexer|top_k_mask|wkv"),
+    ("matrix multiply, dense or expert", r"mul_mat|mmvq|mmvf|\bmmq\b|mmf|quantize|gemm|cublas"),
+    ("expert routing and sums", r"top_k|topk|argsort|moe|add_id"),
+    ("mixing between streams", r"dsv4_hc|\bhc_"),
+    ("normalization", r"norm"),
+    ("table lookups", r"get_rows"),
+    ("KV cache writes", r"set_rows|\bset\b|set_f"),
+    ("element-wise", r"\badd|\bsub|\bmul\b|\bdiv|scale|unary|clamp|sqr|bin_bcast|softcap|\bsum|cumsum|mean"),
+    ("copies and reshapes", r"cpy|concat|convert|\bpad|dequantize|memset|repeat|fill"),
+]
+
+
+def component_of(name):
+    if nsys.is_collective(name):
+        return "collectives"
+    for component, pattern in COMPONENTS:
+        if re.search(pattern, name, re.I):
+            return component
+    return "other"
+
+
+def _against_memory(run, phase, components):
+    """Matrix multiplies are mostly reading weights, so they have a limit that does not depend on the kernels."""
+    floor = (run.get("expected") or {}).get("decode_floor_ms")
+    multiply = components.get("matrix multiply, dense or expert")
+    if phase != "decode" or not floor or not multiply:
+        return None
+    if multiply < floor:
+        return (f"Matrix multiplies take {multiply:.2f} ms per token, less than the {floor:.2f} ms it takes to read all the weights a token should read at the memory's peak speed: "
+                "not all of them run on every token, or the header's counts do not fit this model.")
+    return (f"Matrix multiplies take {multiply:.2f} ms per token. Reading the weights a token reads takes at least {floor:.2f} ms at the memory's peak speed, "
+            f"so they run at {100 * floor / multiply:.0f}% of what the memory allows. Close to 100%, only fewer bytes can help, not a faster kernel.")
+
+
+def by_component(rows):
+    """Time per token by what the kernels do for the model, waiting for other GPUs left out."""
+    totals = {}
+    for row in rows:
+        component = component_of(row["name"])
+        totals[component] = totals.get(component, 0.0) + row["cost_ms_per_token"]
+    return sorted(totals.items(), key=lambda item: -item[1])
 
 
 def _phase_tables(run, phases):
@@ -83,6 +130,15 @@ def render(run, speed=None, phases=("decode", "prefill"), top=12):
                                  ("gaps, host work and waiting between kernels", max(rest, 0.0))):
                 out.append(f"| {label} | {value:.2f} | {100 * value / token_ms:.0f}% |")
             out.append("")
+        components = by_component(data["kernels"])
+        if components:
+            spent = sum(value for _, value in components) or 1.0
+            out += ["| what the kernels do for the model | ms/token | share of kernel time |", "|---|---:|---:|"]
+            out += [f"| {component} | {value:.2f} | {100 * value / spent:.0f}% |" for component, value in components]
+            out.append("")
+            line = _against_memory(run, name, dict(components))
+            if line:
+                out += [line, ""]
         headers = ["kernel", "ms/token", "calls/token", "us/call"]
         if token_ms:
             headers += ["share of token", "speed-up if free, at most"]
@@ -109,7 +165,8 @@ def render(run, speed=None, phases=("decode", "prefill"), top=12):
         out.append("Note: the --speed run was itself traced or sampled, so its time per token is a little long.")
     if speed and any((((speed.get("throughput") or {}).get(name) or {}).get("tokens_per_s")) is None for name, _ in tables):
         out.append("Note: the --speed run has no speed for some of these phases, so they show no shares.")
-    out.append("This says where the time goes and what it could win. It does not say how far a kernel is from what the hardware can do: that takes GPU hardware counters, which need admin rights.")
+    out.append("This says where the time goes and what it could win. With the model's header it says how far matrix multiplies are from the limit of the memory. "
+               "For other kernels that takes GPU hardware counters, which need admin rights.")
     return "\n".join(out) + "\n"
 
 

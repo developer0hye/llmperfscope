@@ -149,12 +149,16 @@ class Client:
             body["prompt"] = nonce + row["prompt"]
             path = f"{self.path}/completions"
         body.update(self.extra_body)
+        body.update(row.get("extra_body") or {})
         payload = json.dumps(body).encode()
         headers = {"Content-Type": "application/json", "Accept": "text/event-stream"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         result = {"id": row.get("id"), "ok": False, "chunks": 0, "itl_s": []}
+        for column in CONTENT_COLUMNS:
+            if row.get(column):
+                result[column] = row[column]
         connection = self._connection()
         t_send = time.monotonic()
         result["t_send"] = t_send
@@ -191,7 +195,10 @@ class Client:
                 finish = choices[0].get("finish_reason") or finish
                 if t_first_event is None:
                     t_first_event = t_now
-                if _text_of(choices[0]):
+                text = _text_of(choices[0])
+                if text:
+                    if row.get("keep_text"):
+                        result["text"] = result.get("text", "") + text
                     result["chunks"] += 1
                     if t_previous is None:
                         result["ttft_s"] = t_now - t_send
@@ -257,16 +264,106 @@ def run_load(client, rows, concurrency=1, repeat=1, seed=0, emit_each=None, leve
     return results, time.monotonic() - t0
 
 
+def run_conversations(client, rows, turns, emit_each=None):
+    """One client talks to the server: each row's question opens a turn, on top of the questions and replies before it, `turns` to a conversation.
+    Every request repeats all of the conversation, which is what a server's prompt cache or context checkpoints are there for."""
+    results = []
+    t0 = time.monotonic()
+    usable = [row for row in rows if "messages" in row]
+    for start in range(0, len(usable) - turns + 1, turns):
+        messages = []
+        for turn, row in enumerate(usable[start:start + turns]):
+            messages = messages + [m for m in row["messages"] if m.get("role") != "assistant"]
+            result = client.request({"id": row.get("id"), "messages": messages, "keep_text": True, "extra_body": {"cache_prompt": True}})
+            result["turn"] = turn
+            text = result.pop("text", "")
+            results.append(result)
+            if emit_each:
+                emit_each(result)
+            if not result.get("ok"):
+                break
+            messages = messages + [{"role": "assistant", "content": text}]
+    return results, time.monotonic() - t0
+
+
+def by_turn(results):
+    """First token and what the cache held, per turn of a conversation."""
+    turns = {}
+    for r in results:
+        if r.get("ok") and r.get("turn") is not None:
+            turns.setdefault(r["turn"], []).append(r)
+    rows = []
+    for turn, items in sorted(turns.items()):
+        prompt = sum((r.get("usage") or {}).get("prompt_tokens") or 0 for r in items)
+        cached = sum(r.get("cached_tokens") or 0 for r in items)
+        rows.append({"turn": turn + 1, "requests": len(items), "prompt_tokens_mean": round(prompt / len(items)),
+                     "ttft_p50_ms": round(percentile([r["ttft_s"] for r in items], 50) * 1000.0, 2),
+                     "cached_share": round(cached / prompt, 3) if prompt else 0.0})
+    return rows
+
+
+# Columns of a prompt set that say what a prompt is about. What a model does can depend on it: experts get routed by content, table lookups miss
+# by language.
+CONTENT_COLUMNS = ("language", "domain")
+CONTENT_MIN_REQUESTS = 5
+
+
+def by_content(results):
+    """Per language and domain: the time between tokens and per prompt token, for groups with enough requests to say something."""
+    out = {}
+    for column in CONTENT_COLUMNS:
+        groups = {}
+        for r in results:
+            if r.get("ok") and r.get(column):
+                groups.setdefault(r[column], []).append(r)
+        rows = []
+        for name, items in groups.items():
+            gaps = [gap for r in items for gap in (r.get("itl_s") or [])[3:]]
+            per_token = [r["ttft_s"] / tokens for r in items if (tokens := (r.get("usage") or {}).get("prompt_tokens")) and r.get("ttft_s") is not None]
+            if len(items) >= CONTENT_MIN_REQUESTS and gaps and per_token:
+                rows.append({"group": name, "requests": len(items), "itl_p50_ms": round(percentile(gaps, 50) * 1000.0, 3),
+                             "first_token_ms_per_prompt_token": round(percentile(per_token, 50) * 1000.0, 3)})
+        if len(rows) > 1:
+            out[column] = sorted(rows, key=lambda row: row["itl_p50_ms"])
+    return {"by_content": out} if out else {}
+
+
 # Upper ends of the prompt length groups of `first_token_by_length`, in tokens.
 LENGTH_GROUPS = (100, 300, 1000, 4000)
 FIT_MIN_REQUESTS = 8
 FIT_MAX_POINTS = 400
 
 
+def _line_through(points):
+    """(slope, intercept) by Theil-Sen: a median of slopes, so neither a few long prompts nor a few slow requests decide it."""
+    sample = sorted(points)[::max(1, len(points) // FIT_MAX_POINTS)]
+    slopes = [(b[1] - a[1]) / (b[0] - a[0]) for i, a in enumerate(sample) for b in sample[i + 1:] if b[0] != a[0]]
+    slope = percentile(slopes, 50)
+    return slope, percentile([y - slope * x for x, y in points], 50)
+
+
+def _can_fit(points):
+    lengths = [x for x, _ in points]
+    return len(points) >= FIT_MIN_REQUESTS and max(lengths) >= 2 * min(lengths)
+
+
+def _by_length(points):
+    """Mean and median per group of lengths."""
+    groups = []
+    low = 0
+    for high in LENGTH_GROUPS + (None,):
+        values = [y for x, y in points if x >= low and (high is None or x < high)]
+        if values:
+            groups.append({"tokens": f"{low}+" if high is None else f"{low}-{high - 1}", "requests": len(values),
+                           "mean_ms": round(sum(values) / len(values), 2), "p50_ms": round(percentile(values, 50), 2)})
+        low = high
+    return groups
+
+
 def first_token_by_length(results):
     """First token against the tokens the server had to process for it, as a table and as a line. The line says what a prompt costs
     before its tokens count: work per request that a benchmark with long prompts hides, and most of what someone with a short question
-    waits for. It is a Theil-Sen fit: a median of slopes, so neither the few long prompts nor a few slow requests decide it."""
+    waits for."""
     points = []
     for r in results:
         if not r.get("ok") or r.get("ttft_s") is None:
@@ -276,27 +373,46 @@ def first_token_by_length(results):
             points.append((tokens, r["ttft_s"] * 1000.0))
     if not points:
         return {}
-    groups = []
-    low = 0
-    for high in LENGTH_GROUPS + (None,):
-        times = [ms for tokens, ms in points if tokens >= low and (high is None or tokens < high)]
-        if times:
-            groups.append({"tokens": f"{low}+" if high is None else f"{low}-{high - 1}", "requests": len(times),
-                           "mean_ms": round(sum(times) / len(times), 2), "p50_ms": round(percentile(times, 50), 2)})
-        low = high
-    out = {"first_token_by_length": groups}
-    lengths = [tokens for tokens, _ in points]
-    if len(points) >= FIT_MIN_REQUESTS and max(lengths) >= 2 * min(lengths):
-        sample = sorted(points)[::max(1, len(points) // FIT_MAX_POINTS)]
-        slopes = [(b[1] - a[1]) / (b[0] - a[0]) for i, a in enumerate(sample) for b in sample[i + 1:] if b[0] != a[0]]
-        per_token = percentile(slopes, 50)
-        fixed = percentile([ms - per_token * tokens for tokens, ms in points], 50)
-        typical = percentile(lengths, 50)
+    out = {"first_token_by_length": _by_length(points)}
+    if _can_fit(points):
+        per_token, fixed = _line_through(points)
+        typical = percentile([x for x, _ in points], 50)
         total = fixed + per_token * typical
         out["first_token_fit"] = {"fixed_ms": round(fixed, 2), "per_token_ms": round(per_token, 4), "requests": len(points),
                                   "median_prompt_tokens": round(typical),
                                   "fixed_share_at_median": round(max(fixed, 0.0) / total, 3) if total > 0 else None}
     return out
+
+
+def between_tokens_by_context(results, skip=3):
+    """The time between tokens against how much context a token has behind it, one point per reply. A token's attention reads the KV cache up
+    to its position, so this line is what the cache costs, and it stays flat for attention with a window or a compressed cache. The first gaps
+    of a reply are left out: they hold graph rebuilds and cache setup, not the token."""
+    points = []
+    for r in results:
+        gaps = r.get("itl_s") or []
+        tokens = (r.get("usage") or {}).get("prompt_tokens")
+        if r.get("ok") and tokens and len(gaps) > skip:
+            kept = gaps[skip:]
+            points.append((tokens + skip + len(kept) / 2.0, percentile(kept, 50) * 1000.0))
+    if not points:
+        return {}
+    out = {"between_tokens_by_context": _by_length(points)}
+    if _can_fit(points):
+        slope, base = _line_through(points)
+        out["between_tokens_fit"] = {"base_ms": round(base, 3), "per_1000_context_tokens_ms": round(slope * 1000.0, 3), "requests": len(points),
+                                     "median_context_tokens": round(percentile([x for x, _ in points], 50))}
+    return out
+
+
+def speculative_summary(results):
+    """Tokens drafted and accepted, when the server reports them."""
+    timings = [r["server_timings"] for r in results if r.get("server_timings")]
+    drafted = sum(t.get("draft_n") or 0 for t in timings)
+    if not drafted:
+        return {}
+    accepted = sum(t.get("draft_n_accepted") or 0 for t in timings)
+    return {"speculative": {"drafted": drafted, "accepted": accepted, "accepted_share": round(accepted / drafted, 3)}}
 
 
 def summarize_load(results, wall_s):
@@ -348,6 +464,14 @@ def summarize_load(results, wall_s):
         "prefill_tokens_per_s_mean": round(sum(per_request_prefill) / len(per_request_prefill), 3) if per_request_prefill else None,
     })
     out.update(first_token_by_length(ok))
+    out.update(between_tokens_by_context(ok))
+    out.update(speculative_summary(ok))
+    if prompt:
+        out["prompt_cached_share"] = round(cached / prompt, 3)
+    turns = by_turn(ok)
+    if turns:
+        out["by_turn"] = turns
+    out.update(by_content(ok))
     return out
 
 

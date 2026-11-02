@@ -539,6 +539,74 @@ def _describe_function(row):
     return text
 
 
+def structure_findings(run):
+    """What the model's structure predicts, against what was measured. These need the model's header, so a run without one has none of them."""
+    findings = []
+
+    def add(what, text, **evidence):
+        findings.append({"severity": "info", "what": what, "text": text, "evidence": evidence})
+
+    model = run.get("model") or {}
+    expected = run.get("expected") or {}
+    if expected.get("decode_ms") and expected.get("decode_floor_ms"):
+        share = expected["decode_share_of_time_reading"]
+        gpus = expected["gpus_sharing"]
+        speed = expected["memory_bandwidth"]["gb_per_s"]
+        add("decode_against_memory_bound",
+            f"A token reads {expected['weights_read_per_token_mib']:,.0f} MiB of weights. At the memory's {speed:,.0f} GB/s"
+            f"{' on each of ' + str(gpus) + ' GPUs' if gpus > 1 else ''} that takes at least {expected['decode_floor_ms']:.2f} ms, of {expected['decode_ms']:.2f} ms per token: "
+            f"reading weights can explain {share * 100:.0f}% of decode at most. The rest is what kernels do besides reading, the KV cache, collectives and the host.",
+            floor_ms=expected["decode_floor_ms"], decode_ms=expected["decode_ms"], share=share, gb_per_s=speed)
+    parts = {row["part"]: row for row in model.get("parts") or []}
+    experts = parts.get("moe_experts")
+    read_total = model.get("weights_read_per_token_mib")
+    if experts and read_total and model.get("experts_used") and model.get("experts"):
+        add("moe_share_of_a_token",
+            f"The experts are {experts['share'] * 100:.0f}% of the model but {experts['read_mib'] / read_total * 100:.0f}% of what a token reads, "
+            f"with {model['experts_used']} of {model['experts']} used per layer. What is dense decides more of a token than the file size suggests.",
+            experts_share=experts["share"], read_share=round(experts["read_mib"] / read_total, 3))
+    levels = sorted((t for t in (run.get("throughput") or {}).values() if isinstance(t, dict) and "concurrency" in t), key=lambda t: t["concurrency"])
+    first = levels[0] if levels else {}
+    line = first.get("between_tokens_fit")
+    if line and line["base_ms"] > 0:
+        growth = line["per_1000_context_tokens_ms"] * line["median_context_tokens"] / 1000.0
+        if growth >= 0.1 * line["base_ms"]:
+            add("kv_cache_cost_grows_with_context",
+                f"Each 1000 tokens of context add {line['per_1000_context_tokens_ms']:.2f} ms between tokens, on {line['base_ms']:.2f} ms: "
+                f"at the median context of {line['median_context_tokens']} tokens the KV cache and what grows with it take {growth / (line['base_ms'] + growth) * 100:.0f}% of a token.",
+                **line)
+    for column, rows in (first.get("by_content") or {}).items():
+        fastest, slowest = rows[0], rows[-1]
+        if slowest["itl_p50_ms"] > 1.1 * fastest["itl_p50_ms"]:
+            add("speed_depends_on_content",
+                f"The time between tokens depends on the {column}: {fastest['itl_p50_ms']:.1f} ms for {fastest['group']}, {slowest['itl_p50_ms']:.1f} ms for {slowest['group']}. "
+                "Context length differs between them too, so check that first. What is left comes from what the model does with the content: experts it routes to, tables it reads.",
+                column=column, fastest=fastest, slowest=slowest)
+    speculative = first.get("speculative")
+    if speculative:
+        add("speculative_decoding",
+            f"Speculative decoding drafted {speculative['drafted']:,} tokens and {speculative['accepted_share'] * 100:.0f}% were accepted. A batch of accepted tokens "
+            "arrives at once, so the time between tokens here is not the time per token: compare output tokens per second.", **speculative)
+    counters = run.get("engine_counters") or {}
+    requests = sum(t.get("requests") or 0 for t in levels)
+    changed = counters.get("graph_reallocs_changed") or 0
+    same = counters.get("graph_reallocs_same_size") or 0
+    if requests and changed + same >= requests:
+        add("graphs_reserved_per_request",
+            f"The server reserved its graph memory again {changed + same:,} times in {requests:,} requests ({changed:,} for a changed graph, {same:,} at the same size). "
+            "Each takes host time, and on some paths waits for the GPU first. Shapes that change from step to step cause this: prompts split for checkpoints, batches of different sizes.",
+            changed=changed, same_size=same, requests=requests)
+    cached = first.get("prompt_cached_share")
+    if cached:
+        add("prompt_cache_used", f"{cached * 100:.0f}% of the prompt tokens came from the server's cache, so prefill speed here is not the speed of the engine: "
+                                 "it does not count those tokens.", share=cached)
+    by_turn = first.get("by_turn") or []
+    if len(by_turn) > 1:
+        turns = ", ".join(f"turn {t['turn']} {t['ttft_p50_ms']:.0f} ms ({t['cached_share'] * 100:.0f}% cached)" for t in by_turn[:6])
+        add("first_token_by_turn", f"First token as a conversation grows: {turns}. A cache that works keeps this flat as the prompt grows.", turns=by_turn)
+    return findings
+
+
 def serving_findings(run):
     """How a server behaves as load rises: does more concurrency buy more throughput, and what does waiting cost?"""
     findings = []
@@ -604,6 +672,7 @@ def diagnose(run):
             bottlenecks[level["name"]] = classify_phase("serve", level["metrics"], run)
     return {
         "bottlenecks": bottlenecks,
+        "structure": structure_findings(run),
         "memory": memory_findings(run),
         "movement": movement_findings(run),
         "serving": serving_findings(run),

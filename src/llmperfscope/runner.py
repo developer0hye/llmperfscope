@@ -15,7 +15,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import __version__, adapters, analyze, container, cpuprof, diagnose, machine, markers, procfs
+from . import __version__, adapters, analyze, anatomy, container, cpuprof, diagnose, machine, markers, procfs
 from . import nsys as nsys_tool
 from .gpu import open_backend
 from .sampler import Sampler, load_ticks
@@ -50,6 +50,7 @@ class Options:
     cold_start: bool = False
     model: str = None
     pcie: bool = True
+    memory_gb_per_s: float = None
 
 
 class Refused(Exception):
@@ -614,6 +615,18 @@ class Run:
                 torch_stats[key] = max(torch_stats.get(key, 0.0), value)
         if torch_stats:
             report["torch_memory"] = torch_stats
+        report["engine_config"] = self.adapter.engine_config()
+        served = (report.get("workload") or {}).get("model") if isinstance(report.get("workload"), dict) else None
+        for name in (self.opts.model, self.adapter.model_path(), served):
+            described = anatomy.describe(name)
+            if described:
+                report["model"] = described
+                break
+        if self.opts.memory_gb_per_s:
+            report["memory_gb_per_s_given"] = self.opts.memory_gb_per_s
+        expected = anatomy.expectations(report)
+        if expected:
+            report["expected"] = expected
         report["diagnosis"] = diagnose.diagnose(report)
         with open(self.dir / "run.json", "w") as f:
             json.dump(report, f, indent=1)

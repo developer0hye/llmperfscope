@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Reports know the model's structure: from a GGUF header or a Hugging Face directory they show its parts (attention, experts, shared experts, router, head, tables), what a token reads of each, and the engine settings that change how they play out. See `docs/llm-structure.md`.
+- `decode_against_memory_bound` gives the least time a token needs to read its weights at the memory's peak speed, from what the driver says or `--memory-gb-per-s`.
+- Serving reports fit the time between tokens against the context behind them, which is what the KV cache costs, and summarize speculative decoding and the prompt cache. llama-server's graph reuse and reservations count too.
+- `--turns N` runs conversations, so a prompt cache or context checkpoints get measured: first token and cached share per turn. `--reuse-prompts` now really reaches llama-server's cache, which the preset used to turn off.
 - `--cpu-profile` tells waiting from work: time under a call that waits for the GPU is counted apart, `inclusive` rows have a `waiting_share`, and the report and the `host_waits_for_gpu` finding name the places that wait.
 - Serving reports split the first token into a fixed part and a part per prompt token, with a table by prompt length. `matrix` judges both parts (`ttft_fixed_ms`, `ttft_per_token_ms`) and lists the table per case, and `first_token_fixed_part` says when the fixed part is most of it.
 - Measuring works on macOS, with no root and nothing extra to install: process memory by kind, GPU time per process, GPU memory, energy and clock, thermal pressure, the memory compressor, disks by physical device, and `--cold-start`. `--nsys`, `--cpu-profile` and containers stay Linux only. See [Apple Silicon](docs/engines.md#apple-silicon).
