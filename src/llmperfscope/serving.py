@@ -7,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
-from . import adapters, driver, runner
+from . import adapters, driver, procfs, runner
 
 
 def add_arguments(parser):
@@ -84,13 +84,15 @@ def _overall_speed(throughput):
 
 
 def workload(args, preset, marks_load):
-    """Waits until the server is ready, warms it up, drives each concurrency level, collects the server's own metrics."""
+    """Waits until the server is ready, warms it up, drives each concurrency level, collects the server's own metrics. The prompts are read first: downloading them inside
+    the run would count as loading the model, and a mistake in them should not have to wait for a model to load."""
+    rows = rows_from(args)
 
     def run_workload(run):
         if marks_load:
             run.emit("load", t=run.t_spawn)
         base = args.url.rstrip("/")
-        is_alive = (lambda: Path(f"/proc/{run.pid}").exists())
+        is_alive = (lambda: procfs.alive(run.pid))
         ready_s = driver.wait_ready(base + args.ready_path if args.ready_path else base + preset["ready_path"], is_alive,
                                     timeout_s=args.ready_timeout)
         run.log(f"server ready after {ready_s:.2f} s")
@@ -102,13 +104,17 @@ def workload(args, preset, marks_load):
         if args.pull:
             run.emit("download")
             driver.pull_ollama_model(base, args.model)
-        if not client.model:
+        model_name = client.model
+        if preset.get("uses_default_model") and not client.model:
+            model_name = adapters.model_flag_value(run.cmd)
+        elif not client.model:
             try:
-                client.discover_model()
+                model_name = client.discover_model()
+                if getattr(client, "models_listed", 1) > 1:
+                    run.notes.append(f"the server lists {client.models_listed} models and these requests named the first, {model_name}. --model names another")
             except (OSError, ValueError, KeyError) as e:
                 run.log(f"could not read the model name from /models: {e!r}")
-        rows = rows_from(args)
-        result = {"ready_s": round(ready_s, 3), "model": client.model, "prompts": len(rows)}
+        result = {"ready_s": round(ready_s, 3), "model": model_name, "prompts": len(rows)}
 
         run.emit("warmup")
         # A longer reply than strictly needed: a model that thinks first shows no text for its first tokens.

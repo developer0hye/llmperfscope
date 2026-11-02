@@ -130,6 +130,7 @@ class Client:
                                     timeout=30) as response:
             data = json.load(response)
         self.model = data["data"][0]["id"]
+        self.models_listed = len(data["data"])
         return self.model
 
     def request(self, row, nonce=""):

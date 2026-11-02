@@ -251,7 +251,8 @@ def _panels(np, run, wanted, per_gpu):
         if per_gpu and count > 1:
             panels["gpu_memory"] = ("gpu_memory", "GPU memory (GiB)", [(f"GPU {d}", t, memory[:, i]) for i, d in enumerate(devices)], None)
         else:
-            panels["gpu_memory"] = ("gpu_memory", f"GPU memory{suffix} (GiB)", [("", t, memory.sum(axis=1))], None)
+            whole_machine = ", whole machine" if any(d.get("unified_memory") for d in run.report.get("devices") or []) else ""
+            panels["gpu_memory"] = ("gpu_memory", f"GPU memory{suffix}{whole_machine} (GiB)", [("", t, memory.sum(axis=1))], None)
 
         grid_end = t[-1]
         power_series = []
@@ -334,7 +335,9 @@ def _panels(np, run, wanted, per_gpu):
             if len(y) and y.max() > 5.0:
                 stall.append((label, x, np.minimum(y, 100.0)))
         if stall:
-            panels["stall"] = ("stall", "Tasks stalled, system (%)", stall, 100.0)
+            # macOS has no stall counters, only the time spent at its memory pressure levels.
+            one_pool = any(d.get("unified_memory") for d in run.report.get("devices") or [])
+            panels["stall"] = ("stall", "Memory pressure at warning or above (% of time)" if one_pool else "Tasks stalled, system (%)", stall, 100.0)
 
         pcie = []
         for label, direction in (("RAM to GPU", 1), ("GPU to RAM", 0)):
@@ -397,6 +400,10 @@ def _compact(value, _position=None):
 
 def lifecycle(plt, np, run, out, wanted=DEFAULT_PANELS, per_gpu=False, xlim=None):
     style = out.style
+    if wanted == DEFAULT_PANELS and any((group.get("gpu") or {}).get("throttled") for group in run.groups.values()):
+        # Utilization does not change when heat holds a GPU back. The clock does.
+        at = wanted.index("util") + 1
+        wanted = wanted[:at] + ("clock",) + wanted[at:]
     panels = _panels(np, run, wanted, per_gpu)
     if not panels:
         return False
@@ -556,7 +563,8 @@ def memory_figure(plt, run, out):
     wide = style.width >= 5
     top_rows = 1 if wide else len(columns)
     top_height = (0.28 + 0.17 * len(groups)) * top_rows
-    device_rows = max(len(breakdown), len(devices))
+    # At least three rows' worth of height: the legend of the engine's table takes some of it, and two rows would run into each other.
+    device_rows = max(len(breakdown), len(devices), 3)
     # Narrow: the per-GPU panel and the engine's table go one under the other too.
     both = bool(breakdown) and len(devices) > 1
     bottom_height = ((0.34 + 0.17 * device_rows) * (2 if both and not wide else 1)) if extra_rows else 0.0
@@ -600,12 +608,17 @@ def memory_figure(plt, run, out):
             ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=4))
             ax.grid(axis="x")
             ax.spines["bottom"].set_visible(False)
-            ax.legend(loc="upper right", bbox_to_anchor=(1.0, -0.16), ncol=3)
+            # A fixed distance under the tick labels. As a fraction of the axes it would land on them in a short panel.
+            from matplotlib.transforms import ScaledTranslation
+            below = ax.transAxes + ScaledTranslation(0, -2.0 * style.font_size / 72, fig.dpi_scale_trans)
+            ax.legend(loc="upper right", bbox_to_anchor=(1.0, 0.0), bbox_transform=below, ncol=3, borderaxespad=0.0)
             _letter(ax, letter, style)
     peak = (memory.get("gpu") or {}).get("peak_above_baseline_total_mib")
     caption = f"Memory of {run.label}{_on(run)} by phase"
     if peak:
         caption += f". GPU memory peaks at {peak / 1024:.1f} GiB above idle over the GPUs in use"
+    if any(d.get("unified_memory") for d in run.report.get("devices") or []):
+        caption += ". GPU memory is part of RAM on this machine and is counted over all its programs, so it overlaps the host memory shown"
     out.save(fig, "memory", ["panel", "row", "part", "gib"], rows, caption + ".")
     plt.close(fig)
     return True
@@ -627,6 +640,8 @@ def _movement_rows(run, groups):
         ("RAM to disk, all processes", disk("write_mib")),
         ("Swap in", flow("swap_in_mib")),
         ("Swap out", flow("swap_out_mib")),
+        ("Into the memory compressor", flow("compressed_mib")),
+        ("Out of the memory compressor", flow("decompressed_mib")),
         ("Page cache read again", flow("page_cache_refault_mib")),
         ("RAM to GPU, sampled", flow("pcie_to_gpu_mib_est")),
         ("GPU to RAM, sampled", flow("pcie_from_gpu_mib_est")),
@@ -681,8 +696,8 @@ def movement_figure(plt, np, run, out):
             fraction = (math.log10(max(value, 1.0)) / top) if value and value >= 1.0 else 0.0
             ax.text(j, i, _size(value), ha="center", va="center", fontsize=style.font_size - 0.8, color="#ffffff" if fraction > 0.55 else (INK if value and value >= 1.0 else MUTED))
     out.save(fig, "movement", ["flow", "phase", "mib"], csv_rows,
-             f"Data moved between tiers per phase for {run.label}{_on(run)}. Color is on a log scale. Disk and swap counters include other processes on the machine; "
-             "PCIe traffic is sampled about once a second and so is an estimate.")
+             f"Data moved between tiers per phase for {run.label}{_on(run)}. Color is on a log scale. Disk and swap counters include other processes on the machine" +
+             ("; PCIe traffic is sampled about once a second and so is an estimate." if any(label.endswith("sampled") for label, _ in rows) else "."))
     plt.close(fig)
     return True
 
@@ -871,6 +886,9 @@ def _method(run):
         text += " This run was traced or sampled for detail; its speed is not representative."
     if report.get("adapter") == "llama.cpp:llama-bench":
         text += " llama-bench feeds random tokens, not real text."
+    if any(d.get("unified_memory") for d in report.get("devices") or []):
+        text += (" GPU utilization is this process's share of GPU time. GPU memory is what the GPU driver holds of the one pool of RAM, over the whole machine. "
+                 "Energy is the GPU's alone, from macOS's undocumented IOReport counters.")
     before = report.get("machine_before") or {}
     if before.get("model_page_cache_fraction") is not None:
         text += f" {before['model_page_cache_fraction'] * 100:.0f}% of the model was in the page cache at the start."

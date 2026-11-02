@@ -41,7 +41,7 @@ pip install "llmperfscope[figures]"    # adds matplotlib, for paper figures
 llmperfscope check                     # what can be measured on this machine
 ```
 
-Measuring needs Linux and Python 3.9 or newer. GPU telemetry needs an NVIDIA driver; without one you still get phases, host memory, CPU and disk. A C compiler is needed only for `--cpu-profile`.
+Measuring needs Linux or macOS and Python 3.9 or newer. GPU telemetry needs an NVIDIA driver on Linux, and nothing extra on [Apple Silicon](https://github.com/developer0hye/llmperfscope/blob/main/docs/engines.md#apple-silicon); without a GPU you still get phases, host memory, CPU and disk. A C compiler is needed only for `--cpu-profile`.
 
 ## Use it with your engine
 
@@ -145,7 +145,8 @@ The test suite runs real processes with known behaviour and checks that the repo
 
 ## Limits
 
-- Linux only for measuring. GPU telemetry is NVIDIA only for now ([other vendors can plug in](https://github.com/developer0hye/llmperfscope/blob/main/docs/adapters.md)); without it you still get host metrics and phases.
+- Measuring works on Linux and macOS. GPU telemetry covers NVIDIA and Apple Silicon for now ([other vendors can plug in](https://github.com/developer0hye/llmperfscope/blob/main/docs/adapters.md)); without it you still get host metrics and phases.
+- On a Mac, `--nsys` and `--cpu-profile` are not available, GPU memory is machine-wide, and GPU energy and clock come from undocumented counters. [Apple Silicon](https://github.com/developer0hye/llmperfscope/blob/main/docs/engines.md#apple-silicon) has the details.
 - GPU hardware counters such as cache hit rates need admin rights (`RmProfilingAdminOnly=0`). llmperfscope does not read them yet.
 - Memory bandwidth on the host is not visible without privileges.
 - PCIe traffic is a sample, not a count. Use `--nsys` for exact copy bytes.

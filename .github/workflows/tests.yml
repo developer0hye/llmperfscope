@@ -37,8 +37,7 @@ jobs:
         working-directory: tests
         run: python -m unittest test_figures test_samples
 
-  figures-on-macos:
-    # Measuring needs Linux, but reading runs and drawing figures is meant to work anywhere.
+  tests-on-macos:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -47,6 +46,6 @@ jobs:
           python-version: "3.12"
       - name: Install matplotlib
         run: python -m pip install "matplotlib==3.11.2"
-      - name: Sample runs and docs
+      - name: Tests
         working-directory: tests
-        run: python -m unittest test_samples test_docs
+        run: python -m unittest

@@ -27,13 +27,13 @@ def runs():
 
 
 class OtherSystems(unittest.TestCase):
-    """Measuring needs Linux. Elsewhere it has to say so, and not fall over on a missing /proc."""
+    """Measuring needs Linux or macOS. Elsewhere it has to say so, and not fall over on what is missing."""
 
     def _refused(self, argv):
         stderr = io.StringIO()
-        with mock.patch("sys.platform", "darwin"), contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+        with mock.patch("sys.platform", "win32"), contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(cli.main(argv), 3)
-        self.assertIn("needs Linux", stderr.getvalue())
+        self.assertIn("needs Linux or macOS", stderr.getvalue())
         self.assertIn("figure", stderr.getvalue())
 
     def test_run(self):
@@ -49,9 +49,9 @@ class OtherSystems(unittest.TestCase):
         self._refused(["matrix", "--cases", "/nonexistent", "--a", "x=/x", "--b", "y=/y", "--out", helpers.temp_dir()])
 
     def test_check_tells_what_works(self):
-        with mock.patch("sys.platform", "darwin"):
+        with mock.patch("sys.platform", "win32"):
             text = capabilities.render(capabilities.collect())
-        self.assertIn("needs Linux", text)
+        self.assertIn("needs Linux or macOS", text)
         self.assertIn("reading runs", text)
         self.assertNotIn("nsys", text)
 

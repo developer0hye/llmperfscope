@@ -122,6 +122,7 @@ class Sampler(threading.Thread):
 
     def _slow(self):
         self.pids = procfs.tree(self.roots) if self.roots else set()
+        self.backend.set_target(self.pids)
         rows = self.backend.slow()
         out = {
             "self_mib": [sum(mib for pid, mib in row["procs"].items() if pid in self.pids) for row in rows],
@@ -130,6 +131,8 @@ class Sampler(threading.Thread):
         }
         if any(row["nvlink"] is not None for row in rows):
             out["nvlink"] = [row["nvlink"] for row in rows]
+        if rows and "gpu_ns" in rows[0]:
+            out["gpu_ns"] = [sum(row["gpu_ns"].values()) for row in rows]
         util = self.backend.util_samples()
         if any(util):
             offset = time.time_ns() - time.monotonic_ns()

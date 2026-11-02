@@ -4,6 +4,7 @@ would stall an engine that has a several-hundred-GiB model mapped."""
 from __future__ import annotations
 
 import os
+import sys
 
 CLK_TCK = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
 
@@ -163,3 +164,26 @@ def affinity(pid):
 def wchan(pid, tid=None):
     data = _read(f"/proc/{pid}/task/{tid}/wchan" if tid else f"/proc/{pid}/wchan")
     return data.decode("utf-8", "replace").strip() if data else None
+
+
+def alive(pid):
+    return os.path.exists(f"/proc/{pid}")
+
+
+def all_pids():
+    return [int(name) for name in os.listdir("/proc") if name.isdigit()]
+
+
+def owner(pid):
+    try:
+        return os.stat(f"/proc/{pid}").st_uid
+    except OSError:
+        return -1
+
+
+def exe_path(pid):
+    return f"/proc/{pid}/exe"
+
+
+if sys.platform == "darwin":
+    from .darwin import CLK_TCK, affinity, all_pids, alive, children_of, exe_path, io, owner, stat, status, threads, tree, wchan  # noqa: F401,F811

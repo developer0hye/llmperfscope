@@ -12,6 +12,7 @@ import os
 import platform
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -23,6 +24,9 @@ BUILD_TOOLS = {"cmake", "make", "gmake", "ninja", "cc1", "cc1plus", "cicc", "ptx
 
 
 def meminfo():
+    """kB, by the names of /proc/meminfo."""
+    if sys.platform == "darwin":
+        return {key: value * 1024 for key, value in system.meminfo().items()}
     out = {}
     try:
         with open("/proc/meminfo") as f:
@@ -38,18 +42,14 @@ def meminfo():
 
 def _cpu_scan():
     """pid -> (ticks, comm, user id)."""
+    if sys.platform == "darwin":
+        from . import darwin
+        return darwin.foreign_cpu_scan()
     out = {}
-    for name in os.listdir("/proc"):
-        if not name.isdigit():
-            continue
-        pid = int(name)
+    for pid in procfs.all_pids():
         st = procfs.stat(pid)
         if st:
-            try:
-                uid = os.stat(f"/proc/{pid}").st_uid
-            except OSError:
-                uid = -1
-            out[pid] = (st["utime"] + st["stime"], st["comm"], uid)
+            out[pid] = (st["utime"] + st["stime"], st["comm"], procfs.owner(pid))
     return out
 
 
@@ -131,6 +131,10 @@ def model_cached_fraction(path, samples=64, window=16 * 1024 * 1024):
 def evict_from_page_cache(path):
     """Asks the kernel to drop a file's clean pages, so the next load is a cold one. Needs no root, unlike drop_caches, and
     touches nothing but this file. Pages another process has mapped stay. Returns the cached fraction afterwards."""
+    if sys.platform == "darwin":
+        from . import darwin
+        darwin.evict_from_page_cache(path)
+        return model_cached_fraction(path)
     fd = os.open(path, os.O_RDONLY)
     try:
         os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)
@@ -141,6 +145,13 @@ def evict_from_page_cache(path):
 
 def host_info():
     info = {"hostname": platform.node(), "kernel": platform.release(), "cpus": os.cpu_count(), "user": getpass.getuser()}
+    if sys.platform == "darwin":
+        from . import darwin
+        info["os"] = f"macOS {platform.mac_ver()[0]}"
+        info["cpu"] = darwin.sysctl_text("machdep.cpu.brand_string")
+        info["performance_cores"] = darwin.sysctl_int("hw.perflevel0.logicalcpu")
+        info["efficiency_cores"] = darwin.sysctl_int("hw.perflevel1.logicalcpu")
+        return info
     try:
         with open("/proc/cpuinfo") as f:
             for line in f:
@@ -166,8 +177,10 @@ def host_info():
 def snapshot(backend, cpu_seconds=2.0, model=None, ignore=(), gpus=None):
     """The state before a run, with a verdict: `clean` plus the reasons when it is not."""
     cpus = os.cpu_count() or 1
-    single_limit = max(0.10, 0.01 * cpus)
-    total_limit = max(0.20, 0.02 * cpus)
+    # A Mac in a desktop session never gets below these: the window server, the terminal, an animated wallpaper.
+    desktop = sys.platform == "darwin"
+    single_limit = max(0.25 if desktop else 0.10, 0.01 * cpus)
+    total_limit = max(1.0 if desktop else 0.20, 0.02 * cpus)
     load = cpu_load(cpu_seconds, ignore) if cpu_seconds > 0 else []
     total = sum(r["cores"] for r in load)
     me = os.getuid()
@@ -211,10 +224,18 @@ def snapshot(backend, cpu_seconds=2.0, model=None, ignore=(), gpus=None):
         state["gpus"].append(entry)
         if gpus is not None and backend.devices[i]["index"] not in gpus:
             continue
-        if foreign:
-            reasons.append(f"GPU {entry['index']} has compute processes: {sorted(foreign)}")
-        if row[G_UTIL] and row[G_UTIL] > 5:
-            reasons.append(f"GPU {entry['index']} busy at {row[G_UTIL]}%")
+        if backend.name == "apple":
+            # Everything that draws on the screen holds the GPU open, so what counts here is who is using it.
+            busy = {pid: share for pid, share in backend.foreign_busy().items() if pid not in ignore} if cpu_seconds > 0 else {}
+            entry["foreign_gpu_pct"] = busy
+            # An animated wallpaper alone takes 13%.
+            if sum(busy.values()) > 25:
+                reasons.append(f"GPU {entry['index']} {sum(busy.values()):.0f}% busy with processes {sorted(busy, key=busy.get, reverse=True)[:4]}")
+        else:
+            if foreign:
+                reasons.append(f"GPU {entry['index']} has compute processes: {sorted(foreign)}")
+            if row[G_UTIL] and row[G_UTIL] > 5:
+                reasons.append(f"GPU {entry['index']} busy at {row[G_UTIL]}%")
         if row[G_THROTTLE] and row[G_THROTTLE] & THROTTLE_HOT:
             reasons.append(f"GPU {entry['index']} throttled: {throttle_names(row[G_THROTTLE])}")
     if model:

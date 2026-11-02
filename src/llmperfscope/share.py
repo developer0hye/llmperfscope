@@ -10,10 +10,13 @@ from pathlib import Path
 
 # An absolute path as a whole word, so `vllm/vllm-openai:v1` and `1/2` are left alone.
 _PATH = re.compile(r"(?<![\w.:-])/(?:[\w.+@-]+/)+([\w.+@-]*)")
-_DROPPED_KEYS = {"uuid", "top_processes", "compute_processes", "libs", "stderr_tail"}
+_DROPPED_KEYS = {"uuid", "top_processes", "compute_processes", "foreign_gpu_pct", "libs", "stderr_tail"}
+# The check before a run names what else was running, in its reasons and in the note made of them.
+_FOREIGN_NAMES = re.compile(r"(foreign process above [\d.]+ cores): [^;]*")
 
 
 def _clean_text(text, names):
+    text = _FOREIGN_NAMES.sub(r"\1", text)
     text = _PATH.sub(lambda m: f"<path>/{m.group(1)}", text)
     for name, replacement in names:
         text = re.sub(rf"\b{re.escape(name)}\b", replacement, text)

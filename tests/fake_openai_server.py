@@ -1,6 +1,7 @@
 """An OpenAI-compatible server with exactly known timing. usage: fake_openai_server.py PORT READY_DELAY TTFT INTER_TOKEN"""
 
 import json
+import os
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -10,6 +11,8 @@ READY_DELAY = float(sys.argv[2])
 TTFT = float(sys.argv[3])
 INTER_TOKEN = float(sys.argv[4])
 STARTED = time.monotonic()
+MODELS = os.environ.get("FAKE_SERVER_MODELS", "fake-model").split(",")
+BODIES = os.environ.get("FAKE_SERVER_BODIES")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -33,7 +36,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json(200, {"status": "ok"})
         elif self.path == "/v1/models":
-            self._json(200, {"data": [{"id": "fake-model"}]})
+            self._json(200, {"data": [{"id": model} for model in MODELS]})
         elif self.path == "/metrics":
             data = b"# HELP fake gauge\nfake_kv_cache_usage_perc 0.1\nfake_requests_total 3\n"
             self.send_response(200)
@@ -45,6 +48,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if BODIES:
+            with open(BODIES, "a") as f:
+                f.write(json.dumps(body) + "\n")
         count = body.get("max_tokens", 16)
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")

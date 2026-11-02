@@ -13,6 +13,8 @@ Tested versions and what each engine adds:
 | SGLang | 0.5.22 | `serve` | cache pool usage, weight and cache memory |
 | Text Generation Inference | 3.3.7 | `serve` | queue size |
 | Ollama | 0.40.9 | `serve` | model download as its own phase |
+| MLX `mlx_lm.generate` | mlx-lm 0.32.2 on an M2 | none | its own speed and peak memory |
+| MLX `mlx_lm.server` | mlx-lm 0.32.2 on an M2 | `serve` | |
 | transformers, PyTorch | as in the vLLM 0.32.0 image | markers in your script | allocated against reserved GPU memory |
 | any OpenAI-compatible server | | `serve` | whatever its `/metrics` exposes |
 | any other program | | your markers, or none | |
@@ -105,6 +107,48 @@ with llmperfscope.Profile("runs/inline", label="inline") as profile:
     profile.mark("load")
     ...
 ```
+
+## Apple Silicon
+
+Macs are measured with no root and nothing extra to install, and they get the same phases, verdicts and figures. These are the sources:
+
+| What | From |
+|---|---|
+| Process memory by kind, CPU, disk reads, threads | libproc and Mach |
+| Machine-wide disks, memory, compressor, network | IOKit, Mach and sysctl |
+| GPU memory | IOKit's performance statistics |
+| GPU time per process | IOKit's `AppUsage` property, undocumented |
+| GPU energy and clock | IOReport, undocumented |
+| Thermal pressure | the system's `thermalpressurelevel` notification |
+
+If an undocumented source stops working in a later macOS, those numbers go missing and everything else carries on. `llmperfscope check` says what works on your machine.
+
+What reads differently on a Mac:
+
+- **There is one pool of memory.** GPU memory is what the GPU driver holds of RAM, over the whole machine. What the engine's GPU buffers hold also counts in its host memory, so the two do not add up, and a mapped model can be in both.
+- **GPU utilization is the engine's own.** It is the engine's share of GPU time, so the display does not count. Other programs using the GPU show up in the check before the run.
+- **`gpu_memory_nearly_full` compares with what macOS recommends**, not with all of RAM. On a 16 GB M2 that is 12,124 MiB. Past it, Metal starts paging and inference slows down sharply.
+- **The compressor has its own columns.** macOS compresses memory long before it swaps, and also does it to other programs' idle memory, so this traffic alone does not make RAM the limit. `ram` takes critical memory pressure, or memory pressure while neither the GPU nor the CPU is busy.
+- **Memory stalls are an approximation.** macOS has no pressure stall counters, so `memory_some_pct` is the time spent at its warning level and `memory_full_pct` at critical. There is nothing for CPU and I/O.
+- **Heat changes the speed.** On a fanless M2, full GPU load held for about 85 s before the clock started to fall, and it settled at half: 1,398 to about 700 MHz, and 56.8 to 37.4 tokens/s. GPU utilization stayed at 90% throughout, so look at the clock. The phase is called `gpu (throttled)`, and `--panels power,util,clock` draws it. For a comparison, keep runs short and let the machine cool between arms.
+- **Energy is the GPU's alone.** The CPU and memory are not in it.
+- **The first run after a build compiles shaders.** On an M2, llama.cpp spent 8.7 s of `startup` on this in a system process, at 0.01 cores of its own, and milliseconds on the next run because macOS keeps the result. Run once before you measure.
+- **After `attach`, memory above idle starts from that moment.** macOS does not say which process holds GPU memory, so the engine's own share cannot be taken out as it is on Linux.
+
+llama.cpp takes the same commands as anywhere, and Metal needs nothing more. For MLX:
+
+```sh
+llmperfscope run -- python -m mlx_lm.generate --model mlx-community/Qwen3-0.6B-8bit --prompt "Hello" --max-tokens 256
+llmperfscope serve --concurrency 1,2 -- python -m mlx_lm.server --model mlx-community/Qwen3-0.6B-8bit
+```
+
+`mlx_lm.server` lists every model in your Hugging Face cache and loads whichever a request names. So llmperfscope names none unless you pass `--model`, and it answers with the one on its command line. `mlx_lm.generate` loads and generates in one go, so its run is a single phase; for separate phases, mark them from Python as under [transformers and PyTorch](#transformers-and-pytorch). `Profile` and `phase` also report PyTorch's own memory figures on MPS.
+
+Not available on a Mac:
+
+- `--nsys`. Instruments' Metal System Trace, which comes with Xcode, shows the GPU's timeline.
+- `--cpu-profile`. `sample PID 10` shows what the host threads do, and needs no root.
+- Containers. They run in a virtual machine there, out of sight of the host. Run the engine directly.
 
 ## Any OpenAI-compatible server
 

@@ -28,14 +28,40 @@ def _driver_param(name):
     return None
 
 
+def _collect_macos(add):
+    add("process memory by kind, CPU, disk reads (libproc, Mach)", "yes")
+    add("disk traffic, memory compressor and pressure, network", "yes")
+    backend = open_backend()
+    if backend.name == "none":
+        add("GPU memory, utilization, energy", "no", backend.reason)
+    else:
+        memory_mib = backend.devices[0]["memory_total_mib"]
+        add("GPU memory and utilization (IOKit)", "yes", f"{backend.devices[0]['name']}, one pool of memory, macOS recommends the GPU hold at most {memory_mib:,} MiB")
+        add("GPU time per process (IOKit)", "yes" if backend.accelerator.clients() else "no", "" if backend.accelerator.clients() else "the registry lists no GPU clients")
+        add("GPU energy counter (IOReport, undocumented)", "yes" if backend.energy_mj(0) is not None else "no", "the GPU only: IOReport's CPU channels do not count up here")
+        add("GPU clock (IOReport, undocumented)", "yes" if backend.clock.frequencies else "no")
+        add("thermal pressure", "yes")
+        backend.close()
+    add("per-thread CPU time", "yes")
+    add("model page cache state, --cold-start", "yes")
+    add("GPU timeline (--nsys)", "no", "NVIDIA only. On a Mac: Instruments' Metal System Trace, which comes with Xcode")
+    add("host CPU hot spots (--cpu-profile)", "no", "needs Linux for now. On a Mac: `sample PID 10`, which needs no root")
+    add("containers", "no", "they run in a virtual machine on a Mac, out of sight of the host")
+
+
 def collect():
     items = []
 
     def add(what, status, detail=""):
         items.append({"what": what, "status": status, "detail": detail})
 
+    if sys.platform == "darwin":
+        _collect_macos(add)
+        add("figures", "yes" if importlib.util.find_spec("matplotlib") else "no", "" if importlib.util.find_spec("matplotlib") else 'pip install "llmperfscope[figures]"')
+        return {"host": machine.host_info(), "items": items}
+
     if not sys.platform.startswith("linux"):
-        add("measuring: run, serve, attach, matrix", "no", f"needs Linux for now, this is {sys.platform}")
+        add("measuring: run, serve, attach, matrix", "no", f"needs Linux or macOS, this is {sys.platform}")
         add("reading runs: show, html, anonymize, diff", "yes")
         add("figures", "yes" if importlib.util.find_spec("matplotlib") else "no", "" if importlib.util.find_spec("matplotlib") else 'pip install "llmperfscope[figures]"')
         return {"host": machine.host_info(), "items": items}

@@ -97,6 +97,15 @@ llmperfscope run --cold-start -- llama-bench -m model.gguf -ngl 99
 
 Drops the model from the page cache first, without root, using `posix_fadvise`. The load then reads from disk as a user's first run would. This one does not slow anything down, and the run stays usable for speed. Pass `--model-file` if llmperfscope cannot find the model in the command. Pages that another process has mapped cannot be dropped, and the report states how much of the model was still cached at the start.
 
+## On a Mac
+
+`--nsys` and `--cpu-profile` are not available there. `--cold-start` works, through `msync` where Linux uses `posix_fadvise`, and also needs no root. For the rest, macOS has its own tools, which run alongside `llmperfscope run` or `serve`:
+
+- Instruments' Metal System Trace, which comes with Xcode, shows the GPU's timeline: `xctrace record --template 'Metal System Trace' --attach PID --time-limit 10s`.
+- `sample PID 10` shows what the host threads do, and needs no root.
+
+Both perturb the engine, so take their findings and not their speed.
+
 ## What it cannot see
 
 - **GPU hardware counters**, such as cache hit rates or memory bandwidth per kernel, need `RmProfilingAdminOnly=0` or root. llmperfscope does not read them yet.

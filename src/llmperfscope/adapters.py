@@ -85,6 +85,29 @@ def _find(cmd, *flags):
     return None
 
 
+class MlxGenerate(Adapter):
+    """`mlx_lm.generate` says how fast it was and how much memory it took, after the text."""
+
+    name = "mlx_lm.generate"
+
+    def finalize(self, phases, stdout_path, stderr_path):
+        try:
+            with open(stdout_path, errors="replace") as f:
+                text = f.read()
+        except OSError:
+            return {}
+        throughput = {}
+        for name, label in (("prefill", "Prompt"), ("decode", "Generation")):
+            found = re.search(rf"^{label}: (\d+) tokens, ([\d.]+) tokens-per-sec", text, re.M)
+            if found:
+                throughput[name] = {"tokens_per_s": float(found.group(2)), "tokens": int(found.group(1)), "source": "engine"}
+        out = {"throughput": throughput} if throughput else {}
+        peak = re.search(r"^Peak memory: ([\d.]+) GB", text, re.M)
+        if peak:
+            out["engine_peak_memory_gb"] = float(peak.group(1))
+        return out
+
+
 class LlamaBench(Adapter):
     """llama-bench: `--progress` gives every run's start on stderr, `-o json` gives exact per-rep times on stdout."""
 
@@ -325,12 +348,17 @@ SERVER_PRESETS = {
             "port": 3000},
     "ollama": {"ready_path": "/api/version", "metrics_path": None, "base_path": "/v1", "stop_signal": "TERM", "extra_body": {},
                "port": 11434},
+    # It lists every model in the Hugging Face cache and loads whichever a request names, so naming one could change what is measured.
+    "mlx": {"ready_path": "/health", "metrics_path": None, "base_path": "/v1", "stop_signal": "TERM", "extra_body": {},
+            "port": 8080, "uses_default_model": True},
 }
 
 
 def select(name, cmd, marks=()):
     """`name` is "auto" or an adapter name."""
     words = [os.path.basename(token) for token in cmd]
+    if name in ("auto", "mlx_lm.generate") and "mlx_lm.generate" in words:
+        return MlxGenerate(cmd, marks)
     if name in ("auto", "llama-bench") and "llama-bench" in words:
         return LlamaBench(cmd, marks)
     if name in ("auto", "llama-server") and "llama-server" in words:
@@ -356,7 +384,14 @@ def preset_for(cmd):
         return "tgi"
     if "ollama" in joined:
         return "ollama"
+    if "mlx_lm" in joined or "mlx-lm" in joined:
+        return "mlx"
     return "openai"
+
+
+def model_flag_value(cmd):
+    """What a command line names as its model."""
+    return _find(cmd, "--model")
 
 
 def docker_index(cmd):

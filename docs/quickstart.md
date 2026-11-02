@@ -8,7 +8,7 @@ pip install "llmperfscope[figures]"    # adds matplotlib, for paper figures
 llmperfscope check                     # what can be measured on this machine
 ```
 
-Measuring needs Linux and Python 3.9 or newer. GPU telemetry needs an NVIDIA driver; without one you still get phases, host memory, CPU and disk. Reading finished runs and drawing figures also works on macOS.
+Measuring needs Linux or macOS and Python 3.9 or newer. GPU telemetry needs an NVIDIA driver on Linux, and nothing extra on [Apple Silicon](engines.md#apple-silicon); without a GPU you still get phases, host memory, CPU and disk. Reading finished runs and drawing figures works anywhere.
 
 ## Try it without a GPU
 

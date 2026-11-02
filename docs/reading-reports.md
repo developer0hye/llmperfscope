@@ -10,12 +10,12 @@ Each phase gets one verdict, one confidence and the numbers behind it. The rules
 
 | Verdict | Fires when | Try next |
 |---|---|---|
-| `ram` | swap above 1 MiB/s, or tasks fully stalled on memory above 5% of the time, or file pages re-read above 50 MiB/s with memory stalls above 2% | Give it more RAM, use a smaller model, or stop using mmap for CPU-side tensors |
+| `ram` | swap above 1 MiB/s, or tasks fully stalled on memory above 5% of the time, or file pages re-read above 50 MiB/s with memory stalls above 2%. On macOS: critical memory pressure above 5% of the time, or memory pressure with swap or compressor traffic while neither the GPU nor the CPU is busy | Give it more RAM, use a smaller model, or stop using mmap for CPU-side tensors |
 | `disk (nvme)`, `(ssd)`, `(hdd)` | reading above 5 MiB/s, with I/O stalls above 25% or the disk above 60% busy | Faster storage, or keep the model in the page cache |
 | `too short to judge` | under 1 s, too short for the GPU's utilization counter | Use a longer run |
 | `gpu (throttled)` | above 50% busy and clocks held down by heat or a hardware limit, or by the power cap while really near the power limit | Cooling, power limit |
 | `gpu imbalance` | the busiest GPU above 80% and more than 25 points above the idlest | Split work more evenly. The busiest GPU sets the pace |
-| `gpu` | at least 85% busy | `--nsys` to see which kernels |
+| `gpu` | at least 85% busy | `--nsys` to see which kernels. On a Mac, Instruments' Metal System Trace |
 | `cpu contention` | runnable tasks waited for a CPU above 30% of the time | Find what else is running, pin the engine |
 | `cpu (many threads)` | GPU under 30% and at least 2 cores busy | `--cpu-profile`. Part of the model may be on the CPU |
 | `cpu (one thread)` | GPU under 30% and one thread above 70% | `--cpu-profile`. Everything waits for this thread |
@@ -62,13 +62,14 @@ Each finding says how much, where and when. `warning` means it probably costs yo
 
 ## Data movement
 
-The table has one row per phase, in MiB:
+The table has one row per phase, in MiB. A column this machine has nothing to report for is left out. The sources are named for Linux; [Apple Silicon](engines.md#apple-silicon) lists the macOS ones.
 
 | Column | Where it comes from | Scope |
 |---|---|---|
 | target disk read | `/proc/<pid>/io` | this process tree |
 | all disk read, all disk write | `/proc/diskstats`, physical disks only | the whole machine |
 | swap in, swap out | `/proc/vmstat` | the whole machine |
+| compressed, decompressed | macOS only: memory through the compressor | the whole machine |
 | page cache +/- | `/proc/meminfo` | the whole machine |
 | RAM to GPU, GPU to RAM | NVML, sampled | used GPUs. An estimate |
 | GPU to GPU | NVLink counters | used GPUs |
@@ -78,11 +79,13 @@ The findings that matter most:
 
 - `disk_reads_during_inference`: the weights or cache are not staying in RAM. In `cpu-ram-limited` this is 18.79 GiB read and 49,217 major faults for 32 tokens of a 0.6 GiB model.
 - `swapping_during_inference`, `disk_writes_during_inference`.
+- `memory_compressor_busy`, on macOS: over 50 MiB/s went through the memory compressor. macOS does this to other programs' idle memory too, so it costs the engine CPU time and steadiness rather than RAM. The numbers are in the `compressed` and `decompressed` columns.
 - `heavy_host_gpu_traffic`: over 8 MiB crosses PCIe per token during decode. That could be partial offload, a collective going through host memory, or a GPU polling host memory. `--nsys` gives the exact bytes of real copies, and what remains is the other two.
 - `cpu_gpu_split`: the GPU is under 50% busy while at least 3 cores work, so part of the model is probably on the CPU.
 - `gpu_to_gpu_traffic`: how much crosses NVLink per token.
 - `model_on_slow_storage`, `load_read_from_disk`, `load_from_page_cache`: how a load time should be read. A warm load says little about a user's first run. Use `--cold-start` for that.
 - `slow_first_use`: warmup over 5 s, from on-demand loading or kernels compiled on first use.
+- `work_in_another_process`: at least 2 s of startup, load or warmup with the process nearly idle while the machine is busy. On a Mac this is usually the Metal shader compiler on first use.
 
 Storage is told apart as NVMe, SSD, HDD, network or unknown. A RAID array of rotating disks reports as HDD and can still be fast, so the measured speed decides whether this counts as a warning.
 

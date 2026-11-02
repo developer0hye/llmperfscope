@@ -3,6 +3,7 @@
 import json
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -12,7 +13,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import cli, compare, cpuprof, machine, procfs, runner
+from llmperfscope import adapters, cli, compare, cpuprof, machine, procfs, runner, serving
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -38,7 +39,7 @@ def free_port():
         return s.getsockname()[1]
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class KnownEngine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -49,6 +50,7 @@ class KnownEngine(unittest.TestCase):
         self.assertEqual(self.report["status"], "ok")
         self.assertEqual(self.report["exit_code"], 0)
 
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_markers_become_phases_with_their_durations(self):
         groups = self.report["groups"]
         self.assertIn("load", groups)
@@ -97,8 +99,27 @@ class KnownEngine(unittest.TestCase):
         self.assertEqual(self.report["schema"], "llmperfscope.run/1")
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Failures(unittest.TestCase):
+    def test_under_nsys_only_the_engine_gets_the_stop_signal(self):
+        # Measured: nsys took the group's signal as two interrupts and stopped without a report, so `serve --nsys` traced nothing.
+        run_ = runner.Run(["taskset", "-c", "1", "llama-server", "-m", "x"], runner.Options(out=helpers.temp_dir(), quiet=True, nsys=True))
+        run_.adapter = adapters.select("auto", run_.cmd)
+        run_.pid = 100
+        names = {100: "nsys", 101: "nsys", 102: "llama-server"}
+        with mock.patch("llmperfscope.procfs.tree", lambda roots: set(names)), mock.patch("llmperfscope.procfs.stat", lambda pid: {"comm": names[pid]}), \
+                mock.patch("os.kill") as kill, mock.patch("os.killpg") as killpg:
+            run_._signal_tree(signal.SIGTERM)
+        kill.assert_called_once_with(102, signal.SIGTERM)
+        killpg.assert_not_called()
+        # Killing still reaches everything, and without an engine left to stop so does a plain stop.
+        with mock.patch("llmperfscope.procfs.tree", lambda roots: set()), mock.patch("os.kill"), mock.patch("os.killpg") as killpg:
+            run_._signal_tree(signal.SIGKILL)
+            killpg.assert_called_once_with(100, signal.SIGKILL)
+            killpg.reset_mock()
+            run_._signal_tree(signal.SIGTERM)
+            killpg.assert_called_once_with(100, signal.SIGTERM)
+
     def test_tracers_refuse_what_they_cannot_reach(self):
         """They would profile the docker client, and the report would look fine."""
         for options in ({"nsys": True}, {"cpu_profile": True}):
@@ -140,15 +161,16 @@ class Failures(unittest.TestCase):
         self.assertEqual([p for p in procfs.children_of(os.getpid()) if (procfs.stat(p) or {}).get("state") not in (None, "Z")], [])
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class ProcessTree(unittest.TestCase):
     def test_memory_of_children_counts(self):
         report = run(engine("child"))
         self.assertGreater(report["memory"]["host"]["anon_peak_mib"], 140)
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Markers(unittest.TestCase):
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_plain_text_markers_from_any_language(self):
         report = run(engine("plain_marker"))
         names = [p["name"] for p in report["phases"]]
@@ -157,6 +179,7 @@ class Markers(unittest.TestCase):
         first = [p for p in report["phases"] if p["name"] == "first_phase"][0]
         self.assertAlmostEqual(first["end_s"] - first["start_s"], 0.5, delta=0.3)
 
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_regex_on_output_needs_no_code_change(self):
         report = run(engine("lines"), marks=[("LOADING", "load", None), ("READY", "decode", None)])
         self.assertAlmostEqual(report["groups"]["load"]["wall_s"], 0.3, delta=0.15)
@@ -167,20 +190,60 @@ class Markers(unittest.TestCase):
         self.assertIn("run", report["groups"])
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Serving(unittest.TestCase):
-    def serve(self, ttft=0.2, inter=0.02, ready=0.6, extra=()):
+    def serve(self, ttft=0.2, inter=0.02, ready=0.6, extra=(), preset="vllm", target_extra=()):
         port = free_port()
         out = helpers.temp_dir()
-        argv = ["serve", "--out", out, "--precheck", "skip", "--quiet", "--preset", "vllm", "--url", f"http://127.0.0.1:{port}",
+        argv = ["serve", "--out", out, "--precheck", "skip", "--quiet", "--preset", preset, "--url", f"http://127.0.0.1:{port}",
                 "--synthetic-words", "16", "--limit", "4", "--max-tokens", "11", "--concurrency", "1,2", *extra,
-                "--", sys.executable, SERVER, str(port), str(ready), str(ttft), str(inter)]
+                "--", sys.executable, SERVER, str(port), str(ready), str(ttft), str(inter), *target_extra]
         gpu = helpers.ScriptedGpu(count=1, power_w=100.0, used_mib=1000)
         with mock.patch("llmperfscope.runner.open_backend", lambda: gpu), mock.patch("builtins.print"):
             cli.main(argv)
         with open(os.path.join(out, "run.json")) as f:
             return json.load(f)
 
+    def test_a_server_that_loads_what_it_is_asked_for_is_not_asked_for_anything(self):
+        # Measured: mlx_lm.server lists every model in the Hugging Face cache. Naming the first loaded a 9B model instead of the 0.6B one on its command line.
+        bodies = os.path.join(helpers.temp_dir(), "bodies.jsonl")
+        with mock.patch.dict(os.environ, {"FAKE_SERVER_MODELS": "other/huge,mine/small", "FAKE_SERVER_BODIES": bodies}):
+            report = self.serve(preset="mlx", extra=["--limit", "2"], target_extra=["--model", "mine/small"])
+        with open(bodies) as f:
+            asked = [json.loads(line) for line in f]
+        self.assertTrue(asked)
+        self.assertFalse([body for body in asked if "model" in body])
+        self.assertEqual(report["workload"]["model"], "mine/small")
+        self.assertFalse([note for note in report["notes"] if "lists" in note])
+
+    def test_a_server_with_several_models_gets_a_note(self):
+        with mock.patch.dict(os.environ, {"FAKE_SERVER_MODELS": "first,second"}):
+            report = self.serve(extra=["--limit", "2"])
+        self.assertEqual(report["workload"]["model"], "first")
+        self.assertTrue([note for note in report["notes"] if "lists 2 models" in note])
+
+    def test_prompts_are_read_before_the_server_starts(self):
+        calls = []
+        real = serving.rows_from
+
+        def rows_from(args):
+            calls.append(args.limit)
+            return real(args)
+
+        spawned = []
+        original = subprocess.Popen
+
+        def popen(*args, **kwargs):
+            spawned.append(list(calls))
+            return original(*args, **kwargs)
+
+        with mock.patch("llmperfscope.serving.rows_from", rows_from), mock.patch("subprocess.Popen", popen):
+            report = self.serve(extra=["--limit", "2"])
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(spawned[0])
+
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_client_timing_matches_the_server_script(self):
         report = self.serve()
         self.assertEqual(report["status"], "ok")
@@ -194,6 +257,7 @@ class Serving(unittest.TestCase):
         report = self.serve()
         self.assertGreater(report["throughput"]["serve_c2"]["output_tokens_per_s"], 1.5 * report["throughput"]["serve_c1"]["output_tokens_per_s"])
 
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_load_phase_ends_when_the_server_is_ready(self):
         report = self.serve(ready=1.0)
         self.assertAlmostEqual(report["workload"]["ready_s"], 1.0, delta=0.5)
@@ -224,6 +288,7 @@ class Serving(unittest.TestCase):
 
 @unittest.skipUnless(os.path.exists("/proc/self/status") and shutil.which("cc"), "needs Linux and a C compiler")
 class MatrixWithServer(unittest.TestCase):
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_a_server_case_is_judged_on_what_a_client_saw(self):
         port = free_port()
         case = {"label": "server", "binary": os.path.basename(sys.executable), "prefix": [], "args": [SERVER, str(port), "0.1", "0.02", "0.002"], "env": {}, "model": None, "gpus": None,
@@ -241,7 +306,7 @@ class MatrixWithServer(unittest.TestCase):
             self.assertIn("first token", f.read())
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(sys.platform.startswith("linux"), "Linux only")
 class CpuProfile(unittest.TestCase):
     def test_samples_name_the_function_that_burns_the_cpu(self):
         directory = helpers.temp_dir()
@@ -354,7 +419,7 @@ class CpuProfile(unittest.TestCase):
         self.assertIsNone(table.lookup(5000))
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class PageCache(unittest.TestCase):
     def test_cold_start_drops_the_file(self):
         path = os.path.join(helpers.temp_dir(), "weights")
@@ -374,8 +439,9 @@ class PageCache(unittest.TestCase):
         self.assertLess(after, 0.2)
 
 
-@unittest.skipUnless(os.path.exists("/proc/self/status"), "Linux only")
+@unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Library(unittest.TestCase):
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_profile_inside_a_process(self):
         import llmperfscope
         out = helpers.temp_dir()
