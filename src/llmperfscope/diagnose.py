@@ -602,8 +602,10 @@ def structure_findings(run):
                                  "it does not count those tokens.", share=cached)
     by_turn = first.get("by_turn") or []
     if len(by_turn) > 1:
-        turns = ", ".join(f"turn {t['turn']} {t['ttft_p50_ms']:.0f} ms ({t['cached_share'] * 100:.0f}% cached)" for t in by_turn[:6])
-        add("first_token_by_turn", f"First token as a conversation grows: {turns}. A cache that works keeps this flat as the prompt grows.", turns=by_turn)
+        turns = ", ".join(f"turn {t['turn']} {t['ttft_p50_ms']:.0f} ms" + (f" ({t['cached_share'] * 100:.0f}% cached)" if t["cached_share"] is not None else "") for t in by_turn[:6])
+        tokens = ", ".join(str(t["prompt_tokens_mean"]) for t in by_turn[:6])
+        note = "" if by_turn[0]["cached_share"] is not None else " The server does not report how much came from its cache."
+        add("first_token_by_turn", f"First token as a conversation grows: {turns}, on prompts of {tokens} tokens. A cache that works keeps this flat as the prompt grows.{note}", turns=by_turn)
     return findings
 
 

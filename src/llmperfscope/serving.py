@@ -195,7 +195,10 @@ def serve(target, options, args):
     options.stop_signal = preset.get("stop_signal", "TERM")
     if not args.url:
         args.url = adapters.guess_url(target, preset_name)
-    for extra in preset.get("extra_args", []):
+    extras = list(preset.get("extra_args", []))
+    if args.reuse_prompts or args.turns > 1:
+        extras += preset.get("cache_report_args", [])
+    for extra in extras:
         if extra not in target:
             target = target + [extra]
     if preset_name == "ollama" and not args.model:

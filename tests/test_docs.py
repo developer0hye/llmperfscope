@@ -13,7 +13,7 @@ ROOT = os.path.dirname(helpers.HERE)
 GITHUB = re.compile(r"https://github\.com/developer0hye/llmperfscope/(?:blob|tree)/main/([^)#\s]+)")
 RAW = re.compile(r"https://raw\.githubusercontent\.com/developer0hye/llmperfscope/main/([^)#\s]+)")
 # Options of the engines and tools that the docs talk about.
-NOT_OURS = {"--metrics", "--progress", "--enable-metrics", "--port", "--cidfile", "--verbose-timings", "--model-id", "--model-path", "--type", "--gpus", "--help", "--user", "--scope"}
+NOT_OURS = {"--enable-cache-report", "--enable-prompt-tokens-details", "--metrics", "--progress", "--enable-metrics", "--port", "--cidfile", "--verbose-timings", "--model-id", "--model-path", "--type", "--gpus", "--help", "--user", "--scope"}
 
 
 def documents():

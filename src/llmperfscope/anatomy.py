@@ -222,6 +222,11 @@ def expectations(run):
     throughput = run.get("throughput") or {}
     decode = (throughput.get("decode") or {}).get("tokens_per_s")
     prefill = (throughput.get("prefill") or {}).get("tokens_per_s")
+    if not decode:
+        # A server without timers of its own: the time between tokens as the client saw it, unless accepted drafts arrive together.
+        levels = sorted((t for t in throughput.values() if isinstance(t, dict) and "concurrency" in t), key=lambda t: t["concurrency"])
+        gap = ((levels[0].get("itl_ms") or {}).get("p50") if levels and not levels[0].get("speculative") else None)
+        decode = 1000.0 / gap if gap else None
     if prefill and model.get("active_params_per_token"):
         out["prefill_tera_params_per_s"] = round(model["active_params_per_token"] * prefill / 1e12, 3)
     bandwidth = memory_bandwidth(run)

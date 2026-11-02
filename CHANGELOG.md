@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `--turns` and `--reuse-prompts` make vLLM and SGLang report how much came from their cache. A server that does not report it now shows no share, instead of 0%.
+- The memory floor also works for servers without timers of their own, from the time between tokens as the client saw it.
 - A GPU's idle memory is the median of the samples before the run, so a sample that already sees the target no longer lowers what the run is said to use.
 - Reports know the model's structure: from a GGUF header or a Hugging Face directory they show its parts (attention, experts, shared experts, router, head, tables), what a token reads of each, and the engine settings that change how they play out. See `docs/llm-structure.md`.
 - `decode_against_memory_bound` gives the least time a token needs to read its weights at the memory's peak speed, from what the driver says or `--memory-gb-per-s`.
