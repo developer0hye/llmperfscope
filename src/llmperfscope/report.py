@@ -165,6 +165,16 @@ def render(run):
                 if t.get("ttft_ms"):
                     d = t["ttft_ms"]
                     out.append(f"- time to first token ms: mean {d['mean']}, p50 {d['p50']}, p90 {d['p90']}, p99 {d['p99']}")
+                fit = t.get("first_token_fit")
+                if fit:
+                    share = fit.get("fixed_share_at_median")
+                    text = f"- first token = {fit['fixed_ms']:.0f} ms + {fit['per_token_ms']:.2f} ms per prompt token"
+                    if share is not None:
+                        text += f": {share * 100:.0f}% of it is the fixed part for the median prompt of {fit['median_prompt_tokens']} tokens"
+                    out.append(text)
+                if t.get("first_token_by_length"):
+                    cells = ", ".join(f"{g['tokens']}: {g['mean_ms']:.0f} ({g['requests']})" for g in t["first_token_by_length"])
+                    out.append(f"- first token by prompt tokens, mean ms (requests): {cells}")
                 if t.get("itl_ms"):
                     d = t["itl_ms"]
                     out.append(f"- between tokens ms: mean {d['mean']}, p50 {d['p50']}, p90 {d['p90']}, p99 {d['p99']}")
@@ -248,6 +258,10 @@ def render(run):
             modules = ", ".join(f"{x['name']} {x['share'] * 100:.0f}%" for x in group["modules"][:4])
             busiest = ", ".join(f"{x['name']} {x['cpu_s']:.2f}s" for x in group.get("busiest_threads", [])[:4])
             out.append(f"- **{name}** ({group['samples']} samples): {modules}\n  - {top}\n  - busiest threads: {busiest}")
+            wait = group.get("gpu_wait") or {}
+            if wait.get("sites"):
+                sites = ", ".join(f"{x['name'][:48]} {x['share'] * 100:.0f}%" for x in wait["sites"][:6])
+                out.append(f"  - waiting for the GPU: {wait['share'] * 100:.0f}% of the samples, in {sites}")
     if cpu_profile.get("error"):
         out.append(f"\nCPU profile: {cpu_profile['error']}")
 

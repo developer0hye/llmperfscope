@@ -94,8 +94,11 @@ Storage is told apart as NVMe, SSD, HDD, network or unknown. A RAID array of rot
 - `parallel_scaling` reports how much throughput rose from one concurrency level to the next, and what happened to the first token.
 - `no_parallel_scaling` is a warning that throughput barely rose, so requests are queueing. Check the server's parallelism setting.
 - `failed_requests` quotes the first error.
+- `first_token_fixed_part` says that for the median prompt most of the first token does not depend on the prompt's length. That is work per request, such as building graphs or saving a cache checkpoint, and benchmarks with long prompts do not show it.
 
 The speed section has time to first token (TTFT) and time between tokens as a streaming client saw them, with mean and percentiles, and GPU energy per output token. With few requests the p99 is close to the maximum, so run more prompts before you quote it.
+
+The first token also comes as a line, `first token = 150 ms + 0.70 ms per prompt token`, and as a table by prompt length. The line is a Theil-Sen fit, a median of slopes, so a few long prompts or slow requests do not decide it. It leaves out tokens that came from the cache and needs at least 8 requests with lengths at least a factor of 2 apart. Read it at the lowest concurrency: with more clients it also holds the time spent in the queue.
 
 ## Findings from `--nsys` and `--cpu-profile`
 
@@ -103,6 +106,7 @@ These appear only in runs with those options. See [deep-dives.md](deep-dives.md)
 
 - `gpu_time_split`: how each GPU's time divides between kernels, collectives, copies and idle, with the top kernels.
 - `host_api_time`: which CUDA calls take the host's time.
+- `host_waits_for_gpu`: how many host samples wait for the GPU, and in which functions.
 - `exact_copies`: the bytes really copied, per direction and per token.
 - `host_cpu_split`: how much host CPU is inside the GPU driver, and the hottest functions outside it, with how much of the phase each can account for at most.
 

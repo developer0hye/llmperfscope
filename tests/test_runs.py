@@ -335,6 +335,43 @@ class CpuProfile(unittest.TestCase):
         self.assertEqual(group["self"][0]["name"], "llmperfscope_test_hot_function")
         self.assertGreater(group["self"][0]["share"], 0.8)
 
+    def test_time_under_a_gpu_wait_is_told_from_work(self):
+        directory = helpers.temp_dir()
+        source = os.path.join(directory, "wait.c")
+        with open(source, "w") as f:
+            f.write(textwrap.dedent("""
+                #include <time.h>
+                volatile unsigned long sink;
+                __attribute__((noinline)) void spin(long ns) {
+                    struct timespec a, b;
+                    clock_gettime(CLOCK_MONOTONIC, &a);
+                    do {
+                        for (int i = 0; i < 10000; i++) sink += i;
+                        clock_gettime(CLOCK_MONOTONIC, &b);
+                    } while ((b.tv_sec - a.tv_sec) * 1000000000L + (b.tv_nsec - a.tv_nsec) < ns);
+                }
+                __attribute__((noinline)) void cudaStreamSynchronize(long ns) { spin(ns); sink++; }
+                __attribute__((noinline)) void llmperfscope_test_rebuild(void) { cudaStreamSynchronize(600000000L); sink++; }
+                __attribute__((noinline)) void llmperfscope_test_checkpoint(void) { cudaStreamSynchronize(200000000L); sink++; }
+                __attribute__((noinline)) void llmperfscope_test_work(void) { spin(800000000L); sink++; }
+                int main(void) {
+                    llmperfscope_test_rebuild(); llmperfscope_test_checkpoint(); llmperfscope_test_work();
+                    return (int) (sink & 0);
+                }
+            """))
+        binary = os.path.join(directory, "wait")
+        subprocess.run(["cc", "-O1", "-g", "-fno-omit-frame-pointer", "-fno-inline", "-fno-optimize-sibling-calls", "-rdynamic", "-o", binary, source], check=True)
+        report = run([binary], cpu_profile=True, cpu_hz=1000)
+        group = report["cpu_profile"]["groups"]["run"]
+        self.assertAlmostEqual(group["gpu_wait"]["share"], 0.5, delta=0.1)
+        sites = {x["name"]: x["share"] for x in group["gpu_wait"]["sites"]}
+        self.assertAlmostEqual(sites["llmperfscope_test_rebuild"], 0.375, delta=0.1)
+        self.assertAlmostEqual(sites["llmperfscope_test_checkpoint"], 0.125, delta=0.08)
+        rows = {x["name"]: x for x in group["inclusive"]}
+        self.assertAlmostEqual(rows["llmperfscope_test_work"]["waiting_share"], 0.0)
+        self.assertEqual(rows["llmperfscope_test_rebuild"]["waiting_share"], rows["llmperfscope_test_rebuild"]["share"])
+        self.assertIn("host_waits_for_gpu", {f["what"] for f in report["diagnosis"]["timeline"]})
+
     def test_parallel_work_is_not_credited_to_the_main_thread(self):
         # A process-wide timer would deliver nearly all samples to the main thread and hide this.
         directory = helpers.temp_dir()

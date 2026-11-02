@@ -257,6 +257,48 @@ def run_load(client, rows, concurrency=1, repeat=1, seed=0, emit_each=None, leve
     return results, time.monotonic() - t0
 
 
+# Upper ends of the prompt length groups of `first_token_by_length`, in tokens.
+LENGTH_GROUPS = (100, 300, 1000, 4000)
+FIT_MIN_REQUESTS = 8
+FIT_MAX_POINTS = 400
+
+
+def first_token_by_length(results):
+    """First token against the tokens the server had to process for it, as a table and as a line. The line says what a prompt costs
+    before its tokens count: work per request that a benchmark with long prompts hides, and most of what someone with a short question
+    waits for. It is a Theil-Sen fit: a median of slopes, so neither the few long prompts nor a few slow requests decide it."""
+    points = []
+    for r in results:
+        if not r.get("ok") or r.get("ttft_s") is None:
+            continue
+        tokens = ((r.get("usage") or {}).get("prompt_tokens") or 0) - (r.get("cached_tokens") or 0)
+        if tokens > 0:
+            points.append((tokens, r["ttft_s"] * 1000.0))
+    if not points:
+        return {}
+    groups = []
+    low = 0
+    for high in LENGTH_GROUPS + (None,):
+        times = [ms for tokens, ms in points if tokens >= low and (high is None or tokens < high)]
+        if times:
+            groups.append({"tokens": f"{low}+" if high is None else f"{low}-{high - 1}", "requests": len(times),
+                           "mean_ms": round(sum(times) / len(times), 2), "p50_ms": round(percentile(times, 50), 2)})
+        low = high
+    out = {"first_token_by_length": groups}
+    lengths = [tokens for tokens, _ in points]
+    if len(points) >= FIT_MIN_REQUESTS and max(lengths) >= 2 * min(lengths):
+        sample = sorted(points)[::max(1, len(points) // FIT_MAX_POINTS)]
+        slopes = [(b[1] - a[1]) / (b[0] - a[0]) for i, a in enumerate(sample) for b in sample[i + 1:] if b[0] != a[0]]
+        per_token = percentile(slopes, 50)
+        fixed = percentile([ms - per_token * tokens for tokens, ms in points], 50)
+        typical = percentile(lengths, 50)
+        total = fixed + per_token * typical
+        out["first_token_fit"] = {"fixed_ms": round(fixed, 2), "per_token_ms": round(per_token, 4), "requests": len(points),
+                                  "median_prompt_tokens": round(typical),
+                                  "fixed_share_at_median": round(max(fixed, 0.0) / total, 3) if total > 0 else None}
+    return out
+
+
 def summarize_load(results, wall_s):
     """What a client saw. Token counts come from the server's usage when it sends one, otherwise from stream chunks."""
     ok = [r for r in results if r["ok"]]
@@ -305,6 +347,7 @@ def summarize_load(results, wall_s):
         "decode_tokens_per_s_mean": round(sum(per_request_decode) / len(per_request_decode), 3) if per_request_decode else None,
         "prefill_tokens_per_s_mean": round(sum(per_request_prefill) / len(per_request_prefill), 3) if per_request_prefill else None,
     })
+    out.update(first_token_by_length(ok))
     return out
 
 

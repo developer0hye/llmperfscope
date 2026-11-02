@@ -17,6 +17,15 @@ MAGIC_NO_WEIGHT = 0x4c5053434f504531
 MAGIC = 0x4c5053434f504532
 # Below this share of the measured CPU time, the profile is missing something worth saying.
 GOOD_COVERAGE = 0.9
+# Host calls that return when the GPU is done. Time under them is the host waiting, whatever the frames above them are called.
+GPU_WAITS = frozenset({
+    "cuStreamSynchronize", "cuEventSynchronize", "cuCtxSynchronize", "cuFenceSynchronize",
+    "cudaStreamSynchronize", "cudaEventSynchronize", "cudaDeviceSynchronize",
+    "hipStreamSynchronize", "hipEventSynchronize", "hipDeviceSynchronize",
+    "vkWaitForFences", "vkQueueWaitIdle", "vkDeviceWaitIdle", "clFinish", "clWaitForEvents",
+})
+# A place that waits for less than this share of the waiting is not named on its own.
+WAIT_SITE_MIN_SHARE = 0.02
 
 
 def library_path():
@@ -152,6 +161,44 @@ def _read_samples(path):
     return samples, dropped, hz
 
 
+def _is_gpu_wait(name):
+    return name.split("@", 1)[0] in GPU_WAITS
+
+
+def _add_wait(tree, frames, weight):
+    """Adds one waiting sample, its frames from the innermost out, to a tree of calls from the outermost in. The frames inside the wait
+    call are dropped: they say nothing about who waits."""
+    wait = max(i for i, name in enumerate(frames) if _is_gpu_wait(name))
+    node = tree
+    node["count"] = node.get("count", 0) + weight
+    for name in reversed(frames[wait + 1:]):
+        node = node.setdefault("calls", {}).setdefault(name, {})
+        node["count"] = node.get("count", 0) + weight
+
+
+def wait_sites(tree):
+    """The places that wait, as [(function, samples)]: follows the calls from the outermost in and names the first function after each
+    point where they part. Everything between the main loop and such a point is in every sample and says nothing, and the frames further
+    in are the same wrappers around the wait for every caller."""
+    total = tree.get("count", 0)
+    floor = total * WAIT_SITE_MIN_SHARE
+    sites = []
+
+    def walk(node, name, site):
+        calls = [(k, v) for k, v in node.get("calls", {}).items() if v["count"] >= floor]
+        if len(calls) == 1 and calls[0][1]["count"] >= 0.9 * node["count"]:
+            walk(calls[0][1], calls[0][0], site)
+        elif calls:
+            for k, v in calls:
+                walk(v, k, k)
+        elif name:
+            # with one caller in the whole phase there is no parting, the innermost name is the one that says something
+            sites.append((site or name, node["count"]))
+
+    walk(tree, None, None)
+    return sorted(sites, key=lambda site: -site[1])
+
+
 def summarize(run_dir, phases, t_baseline_ns, top=20):
     """Per phase group: where the CPU samples are, by module, function and thread. For the hot functions it also says how many threads
     ran them, which is what tells serial code from parallel code."""
@@ -165,7 +212,8 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
         wall_by_group[phase["group"]] += phase["end_s"] - phase["start_s"]
     symbols = {}
     per_group = defaultdict(lambda: {"n": 0, "raw": 0, "modules": Counter(), "self": Counter(), "inclusive": Counter(), "threads": Counter(),
-                                     "per_tid": Counter(), "self_tids": defaultdict(Counter), "tid_names": {}})
+                                     "per_tid": Counter(), "self_tids": defaultdict(Counter), "tid_names": {}, "wait_tree": {},
+                                     "waiting": Counter()})
     total = dropped_total = 0
     period_s = 0.005
     for path in files:
@@ -204,11 +252,13 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
             bucket["per_tid"][tid] += weight
             bucket["tid_names"][tid] = comm
             seen = set()
+            names = []
             for depth, address in enumerate(frames):
                 resolved = cache.get(address)
                 if resolved is None:
                     resolved = cache[address] = resolve(address)
                 module, name = resolved
+                names.append(name)
                 if depth == 0:
                     bucket["self"][name] += weight
                     bucket["modules"][module] += weight
@@ -216,6 +266,10 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
                 if name not in seen:
                     seen.add(name)
                     bucket["inclusive"][name] += weight
+            if any(_is_gpu_wait(name) for name in seen):
+                _add_wait(bucket["wait_tree"], names, weight)
+                for name in seen:
+                    bucket["waiting"][name] += weight
     out = {"samples": total, "dropped": dropped_total, "period_s": period_s, "groups": {}}
     for group, bucket in per_group.items():
         n = bucket["n"] or 1
@@ -236,7 +290,10 @@ def summarize(run_dir, phases, t_baseline_ns, top=20):
             "cpu_s": round(bucket["n"] * period_s, 3),
             "modules": [{"name": k, "share": round(v / n, 4)} for k, v in bucket["modules"].most_common(8)],
             "self": self_rows,
-            "inclusive": [{"name": k[:96], "share": round(v / n, 4)} for k, v in bucket["inclusive"].most_common(top)],
+            "inclusive": [{"name": k[:96], "share": round(v / n, 4), "waiting_share": round(bucket["waiting"][k] / n, 4)}
+                          for k, v in bucket["inclusive"].most_common(top)],
+            "gpu_wait": {"share": round(bucket["wait_tree"].get("count", 0) / n, 4),
+                         "sites": [{"name": k[:96], "share": round(v / n, 4)} for k, v in wait_sites(bucket["wait_tree"])[:8]]},
             "threads": [{"name": k, "share": round(v / n, 4)} for k, v in bucket["threads"].most_common(6)],
             "busiest_threads": [{"tid": tid, "name": bucket["tid_names"][tid], "cpu_s": round(count * period_s, 3)}
                                 for tid, count in bucket["per_tid"].most_common(8)],

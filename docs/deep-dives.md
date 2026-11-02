@@ -89,6 +89,23 @@ Per phase, the report has the functions with the most self time, the threads tha
 
 Function names come from the binary's symbols through `nm`. A stripped library shows as `library!?`, and a name is only trusted inside its symbol's extent, because the nearest symbol in a stripped library is usually wrong. Figures name such libraries for what they are, for example `GPU driver`.
 
+### Waiting is not work
+
+A host thread that spins until the GPU is done looks as busy as one that computes. So samples under a call that waits for the GPU (`cudaStreamSynchronize`, `cudaEventSynchronize`, `vkWaitForFences`, `clFinish` and the like) are counted apart: each row of `inclusive` has a `waiting_share`, and the report names the places that wait:
+
+```
+waiting for the GPU: 38% of the samples, in ggml_cuda_ar_allreduce 20%, ggml_backend_sched_alloc_graph 11%, pre_decode 7%
+```
+
+A place is named by the first function after the point where the calls part, so the main loop that is in every sample and the wrappers around the wait do not hide it.
+
+Do not try to make these functions faster. Ask something else of each one: could what comes after this wait have run during it? A wait before host work that the next GPU step needs keeps the GPU idle during that work. Two things seen on a real server: a function that took 7% of the host's time and looked like a slow copy was a 1 ms copy behind a wait, and a wait inside graph allocation kept 8 GPUs idle for about 90 ms per batch.
+
+### What these do not tell you
+
+- **A benchmark tool can run a different path than the server.** The second finding above never showed in a trace of `llama-bench`, which reported 8% idle: its first reservation of graph memory stays valid, and only the server's mix of batch sizes makes each batch reserve again. Trace what your users run: `serve --nsys`, with real prompts.
+- **Sampling says where time goes, not in what order things run.** To see what overlaps, and what each step of a request costs, add timers around the steps in the engine. No tool here replaces that yet: use these views to find where to put them.
+
 ## `--cold-start`: a first load
 
 ```sh

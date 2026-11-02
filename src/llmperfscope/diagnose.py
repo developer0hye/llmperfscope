@@ -512,6 +512,13 @@ def cpu_findings(run):
         if top:
             text += f" Hottest functions outside it: {top}."
         findings.append({"severity": "info", "what": "host_cpu_split", "text": text, "evidence": {"phase": name, "driver_share": round(in_driver, 3)}})
+        wait = group.get("gpu_wait") or {}
+        if wait.get("share", 0) >= 0.05 and wait.get("sites"):
+            sites = ", ".join(f"{x['name'][:48]} {x['share'] * 100:.0f}%" for x in wait["sites"][:4])
+            findings.append({"severity": "info", "what": "host_waits_for_gpu", "evidence": {"phase": name, "share": wait["share"], "sites": wait["sites"][:4]},
+                             "text": f"{name}: {wait['share'] * 100:.0f}% of host CPU samples wait for the GPU, in {sites}. That is not work to speed up. "
+                                     "But a wait that comes before host work the next GPU step needs keeps the GPU idle during that work: ask of each "
+                                     "place whether what follows it could have run while waiting."})
     return findings
 
 
@@ -535,6 +542,14 @@ def _describe_function(row):
 def serving_findings(run):
     """How a server behaves as load rises: does more concurrency buy more throughput, and what does waiting cost?"""
     findings = []
+    first = next((t for t in sorted((t for t in (run.get("throughput") or {}).values() if isinstance(t, dict) and "concurrency" in t),
+                                    key=lambda t: t["concurrency"])), {})
+    fit = first.get("first_token_fit") or {}
+    if (fit.get("fixed_share_at_median") or 0) >= 0.5 and fit.get("requests", 0) >= 20:
+        findings.append({"severity": "info", "what": "first_token_fixed_part", "evidence": fit,
+                         "text": f"First token = {fit['fixed_ms']:.0f} ms + {fit['per_token_ms']:.2f} ms per prompt token: for the median prompt of "
+                                 f"{fit['median_prompt_tokens']} tokens {fit['fixed_share_at_median'] * 100:.0f}% of it does not depend on its length. "
+                                 "That is work per request, not per token, and benchmarks with long prompts do not show it."})
     levels = sorted(((t["concurrency"], name, t) for name, t in (run.get("throughput") or {}).items()
                      if isinstance(t, dict) and "concurrency" in t and t.get("output_tokens_per_s")), key=lambda item: item[0])
     for (c0, name0, t0), (c1, name1, t1) in zip(levels, levels[1:]):

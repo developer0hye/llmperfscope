@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `--cpu-profile` tells waiting from work: time under a call that waits for the GPU is counted apart, `inclusive` rows have a `waiting_share`, and the report and the `host_waits_for_gpu` finding name the places that wait.
+- Serving reports split the first token into a fixed part and a part per prompt token, with a table by prompt length. `matrix` judges both parts (`ttft_fixed_ms`, `ttft_per_token_ms`) and lists the table per case, and `first_token_fixed_part` says when the fixed part is most of it.
 - Measuring works on macOS, with no root and nothing extra to install: process memory by kind, GPU time per process, GPU memory, energy and clock, thermal pressure, the memory compressor, disks by physical device, and `--cold-start`. `--nsys`, `--cpu-profile` and containers stay Linux only. See [Apple Silicon](docs/engines.md#apple-silicon).
 - MLX: a server preset for `mlx_lm.server`, and an adapter that reads the speed and peak memory `mlx_lm.generate` reports. `Profile` and `phase` report PyTorch's memory on MPS.
 - `serve` reads the prompts before starting the server. Their first download used to count as loading the model.

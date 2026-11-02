@@ -63,11 +63,14 @@ These cases are judged on what a streaming client saw, as well as on memory and 
 | `decode_j_per_token` | lower | 3% |
 | `output_tps`, at the highest concurrency | higher | 0.3% |
 | `ttft_ms`, `itl_ms`, median at the lowest concurrency | lower | 1% with at least 1 ms, 0.5% |
+| `ttft_fixed_ms`, `ttft_per_token_ms`, the two parts of the first token, see [reading-reports.md](reading-reports.md) | lower | 2% with at least 2 ms, 2% with at least 0.005 ms |
 | `serve_j_per_token` | lower | 3% |
 
 A result counts as `better` or `worse` only if **both** of these hold: the arms do not overlap, meaning every run of one side beats every run of the other, and the difference of the means exceeds the floor. Otherwise it is `same`.
 
 The floors are the smallest differences that can mean anything for that metric. Memory rounds to MiB and allocators differ a little from run to run, load time depends on the page cache, and the energy counter has its own resolution. Your own noise floor can be higher, which a later section measures.
+
+With real prompts, `table.md` also has the first token by prompt length for each case, one row per group of lengths. A single number for the first token mostly follows the short prompts, so a change that only helps long ones, or only hurts them, shows up here and not there.
 
 ### How many arms it takes
 
