@@ -225,6 +225,15 @@ class Driver(unittest.TestCase):
         self.assertTrue(out["tokens_exact"])
 
 
+class IdleMemory(unittest.TestCase):
+    def test_a_late_sample_does_not_move_the_baseline(self):
+        # Seen in CI: one of 16 samples already saw the target's 2000 MiB, and the memory it used came out 125 MiB short.
+        self.assertEqual(analyze.idle_level([100] * 15 + [2100]), 100)
+
+    def test_no_samples(self):
+        self.assertEqual(analyze.idle_level([]), 0)
+
+
 class FirstTokenByLength(unittest.TestCase):
     @staticmethod
     def request(tokens, ms, cached=0):
