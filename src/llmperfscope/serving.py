@@ -27,6 +27,8 @@ def add_arguments(parser):
     parser.add_argument("--allow-eos", action="store_true", help="let the model stop early (default: fixed output length)")
     parser.add_argument("--reuse-prompts", action="store_true",
                         help="send prompts unchanged, to measure a server's prefix cache (default: a short nonce in front defeats it)")
+    parser.add_argument("--turns", type=int, default=0,
+                        help="conversations of this many turns: each request repeats the questions and replies before it, to measure the prompt cache or context checkpoints")
     parser.add_argument("--extra-body", help="JSON merged into every request")
     parser.add_argument("--api-key", help="bearer token (never stored in the report)")
     parser.add_argument("--ready-path", help="health path (default from the preset)")
@@ -97,6 +99,9 @@ def workload(args, preset, marks_load):
                                     timeout_s=args.ready_timeout)
         run.log(f"server ready after {ready_s:.2f} s")
         extra = dict(preset.get("extra_body") or {})
+        if args.reuse_prompts or args.turns > 1:
+            # the point of these options is to reach the server's cache
+            extra.pop("cache_prompt", None)
         if args.extra_body:
             extra.update(json.loads(args.extra_body))
         client = driver.Client(base + preset["base_path"], model=args.model, max_tokens=args.max_tokens, extra_body=extra,
@@ -143,8 +148,11 @@ def workload(args, preset, marks_load):
                 name = f"serve_c{concurrency}"
                 current["concurrency"] = concurrency
                 run.emit(name, group="serve", concurrency=concurrency)
-                results, wall = driver.run_load(client, rows, concurrency=concurrency, repeat=args.repeat, seed=args.seed,
-                                                emit_each=record, level=f"c{concurrency}", unique=not args.reuse_prompts)
+                if args.turns > 1:
+                    results, wall = driver.run_conversations(client, rows, args.turns, emit_each=record)
+                else:
+                    results, wall = driver.run_load(client, rows, concurrency=concurrency, repeat=args.repeat, seed=args.seed,
+                                                    emit_each=record, level=f"c{concurrency}", unique=not args.reuse_prompts)
                 summary = driver.summarize_load(results, wall)
                 summary["concurrency"] = concurrency
                 throughput[name] = summary

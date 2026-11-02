@@ -163,6 +163,7 @@ The test suite runs real processes with known behaviour and checks that the repo
 | [Figures](https://github.com/developer0hye/llmperfscope/blob/main/docs/figures.md) | paper figures, sizes, fonts, captions, checklist |
 | [Comparing](https://github.com/developer0hye/llmperfscope/blob/main/docs/comparing.md) | A/B runs, noise floors, what counts as a real difference |
 | [Going deeper](https://github.com/developer0hye/llmperfscope/blob/main/docs/deep-dives.md) | `--nsys`, `--cpu-profile`, `--cold-start` |
+| [What the model's structure tells you](https://github.com/developer0hye/llmperfscope/blob/main/docs/llm-structure.md) | experts, KV cache, attention, speculation, prompt cache: which number is about which |
 | [Run data](https://github.com/developer0hye/llmperfscope/blob/main/docs/run-json.md) | `run.json`, samples and requests, for your own analysis |
 | [Adding an engine](https://github.com/developer0hye/llmperfscope/blob/main/docs/adapters.md) | presets, adapters, GPU backends |
 | [Validation](https://github.com/developer0hye/llmperfscope/blob/main/docs/validation.md) | overhead, known answers, limits |

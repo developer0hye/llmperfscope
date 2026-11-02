@@ -110,6 +110,7 @@ _FI_NVLINK_RX = 139  # NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX, KiB
 _ALL_LINKS = 0xFFFFFFFF
 _NOT_AVAILABLE = 0xFFFFFFFFFFFFFFFF
 _MAX_PROCS = 256
+_NVML_CLOCK_MEM = 2
 _MIB = 1024 * 1024
 
 
@@ -173,8 +174,22 @@ class NvmlBackend(GpuBackend):
             "name": name.value.decode(),
             "uuid": uuid.value.decode(),
             "memory_total_mib": mem.total // _MIB,
+            "memory_gb_per_s": self._memory_speed(handle),
             "power_limit_w": limit.value / 1000 if power_limit else None,
         }
+
+    def _memory_speed(self, handle):
+        """The most its memory can move, from what the driver says: bus width x max clock x 2. Exact for GDDR and HBM, and kernels get less."""
+        width = C.c_uint()
+        clock = C.c_uint()
+        try:
+            if self.lib.nvmlDeviceGetMemoryBusWidth(handle, C.byref(width)) != 0:
+                return None
+        except AttributeError:  # older drivers do not have it
+            return None
+        if self.lib.nvmlDeviceGetMaxClockInfo(handle, _NVML_CLOCK_MEM, C.byref(clock)) != 0 or not width.value or not clock.value:
+            return None
+        return round(2.0 * clock.value * 1e6 * width.value / 8.0 / 1e9, 1)
 
     def _read_nvlink(self, handle):
         fields = (_FieldValue * 2)()

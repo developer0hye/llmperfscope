@@ -89,6 +89,18 @@ The findings that matter most:
 
 Storage is told apart as NVMe, SSD, HDD, network or unknown. A RAID array of rotating disks reports as HDD and can still be fast, so the measured speed decides whether this counts as a warning.
 
+## Model structure findings
+
+These need the model's header. See [llm-structure.md](llm-structure.md).
+
+- `decode_against_memory_bound`: the least time a token needs to read its weights, against decode.
+- `moe_share_of_a_token`: how much of the model and how much of a token the experts are.
+- `kv_cache_cost_grows_with_context`: what each 1000 tokens of context add between tokens.
+- `speculative_decoding`: tokens drafted and accepted.
+- `graphs_reserved_per_request`: how often llama-server reserved graph memory again.
+- `prompt_cache_used`: how much of the prompts came from the server's cache.
+- `first_token_by_turn`: first token as a conversation grows, with `--turns`.
+
 ## Serving findings
 
 - `parallel_scaling` reports how much throughput rose from one concurrency level to the next, and what happened to the first token.

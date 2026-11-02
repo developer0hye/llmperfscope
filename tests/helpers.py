@@ -67,3 +67,40 @@ def group(**kwargs):
         else:
             out[key] = value
     return out
+
+
+def write_gguf(path, metadata, tensors, alignment=32):
+    """A GGUF file by the format's own rules. `tensors` is (name, dims, type number, bytes of data); the data is zeros."""
+    import struct
+
+    def string(text):
+        data = text.encode()
+        return struct.pack("<Q", len(data)) + data
+
+    def value(item):
+        if isinstance(item, bool):
+            return struct.pack("<I?", 7, item)
+        if isinstance(item, int):
+            return struct.pack("<Iq", 11, item)
+        if isinstance(item, float):
+            return struct.pack("<Id", 12, item)
+        if isinstance(item, str):
+            return struct.pack("<I", 8) + string(item)
+        if isinstance(item, list):
+            kind = 8 if item and isinstance(item[0], str) else 11
+            body = b"".join(string(x) if kind == 8 else struct.pack("<q", x) for x in item)
+            return struct.pack("<IIQ", 9, kind, len(item)) + body
+        raise TypeError(item)
+
+    header = b"GGUF" + struct.pack("<IQQ", 3, len(tensors), len(metadata))
+    for key, item in metadata.items():
+        header += string(key) + value(item)
+    offset = 0
+    for name, dims, kind, size in tensors:
+        header += string(name) + struct.pack("<I", len(dims)) + b"".join(struct.pack("<Q", d) for d in dims) + struct.pack("<IQ", kind, offset)
+        offset += (size + alignment - 1) // alignment * alignment
+    padding = (alignment - len(header) % alignment) % alignment
+    with open(path, "wb") as f:
+        f.write(header + b"\0" * padding)
+        f.truncate(len(header) + padding + offset)
+    return path

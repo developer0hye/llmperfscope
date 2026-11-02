@@ -24,6 +24,31 @@ def _gib(mib):
     return "-" if mib is None else f"{mib / 1024:,.2f}"
 
 
+def _model_section(run):
+    """What the model is made of, and what a token reads of it."""
+    model = run.get("model") or {}
+    if model.get("error"):
+        return [f"\nModel: {model['error']}"]
+    if not model.get("parts"):
+        return []
+    facts = [str(model.get("architecture") or model.get("name"))]
+    if model.get("layers"):
+        facts.append(f"{model['layers']} layers")
+    if model.get("embedding"):
+        facts.append(f"embedding {model['embedding']}")
+    if model.get("experts"):
+        used = f", {model['experts_used']} used per token" if model.get("experts_used") else ""
+        facts.append(f"{model['experts']} experts per layer{used}")
+    out = ["\n## Model\n", ", ".join(facts) + f": {_gib(model['file_mib'])} in {model['tensors']} tensors.\n"]
+    rows = [[row["part"], f"{row['mib']:,.0f}", f"{row['share'] * 100:.0f}%", f"{row['read_mib']:,.0f}", ", ".join(row["types"])]
+            for row in model["parts"] if row["mib"] >= 1.0 or row["read_mib"] >= 1.0]
+    out.append(_table(["part", "MiB", "share", "a token reads, MiB", "types"], rows))
+    config = run.get("engine_config") or {}
+    if config:
+        out.append("\nSettings: " + ", ".join(f"{k} {v}" if v is not True else k for k, v in config.items()) + ".")
+    return out
+
+
 def _diagnosis(run):
     diagnosis = run.get("diagnosis") or {}
     out = []
@@ -39,7 +64,7 @@ def _diagnosis(run):
         skipped = [name for name, b in bottlenecks.items() if b["confidence"] == "none"]
         if skipped:
             out.append(f"\nToo short to judge (under 1 s): {', '.join(skipped)}.")
-    for title, key in (("Memory", "memory"), ("Data movement", "movement"), ("Serving", "serving"), ("GPU and host time", "timeline")):
+    for title, key in (("Model structure", "structure"), ("Memory", "memory"), ("Data movement", "movement"), ("Serving", "serving"), ("GPU and host time", "timeline")):
         findings = diagnosis.get(key) or []
         if findings:
             out.append(f"\n## {title} findings\n")
@@ -109,6 +134,7 @@ def render(run):
         facts.append(f"model {before['model_page_cache_fraction'] * 100:.0f}% in page cache")
     out.append("\n" + ", ".join(facts))
 
+    out.extend(_model_section(run))
     out.extend(_diagnosis(run))
 
     groups = run.get("groups") or {}
@@ -178,6 +204,17 @@ def render(run):
                 if t.get("itl_ms"):
                     d = t["itl_ms"]
                     out.append(f"- between tokens ms: mean {d['mean']}, p50 {d['p50']}, p90 {d['p90']}, p99 {d['p99']}")
+                line = t.get("between_tokens_fit")
+                if line:
+                    out.append(f"- between tokens = {line['base_ms']:.2f} ms + {line['per_1000_context_tokens_ms']:.2f} ms per 1000 tokens of context")
+                if t.get("between_tokens_by_context"):
+                    cells = ", ".join(f"{g['tokens']}: {g['p50_ms']:.1f} ({g['requests']})" for g in t["between_tokens_by_context"])
+                    out.append(f"- between tokens by context, median ms (replies): {cells}")
+                if t.get("prompt_cached_share"):
+                    out.append(f"- {t['prompt_cached_share'] * 100:.0f}% of the prompt tokens came from the server's cache")
+                if t.get("speculative"):
+                    d = t["speculative"]
+                    out.append(f"- speculative decoding: {d['drafted']:,} tokens drafted, {d['accepted_share'] * 100:.0f}% accepted")
                 if t.get("prefill_tokens_per_s_mean") or t.get("decode_tokens_per_s_mean"):
                     out.append(f"- per request: prefill {_num(t.get('prefill_tokens_per_s_mean'), 1)} tokens/s, "
                                f"decode {_num(t.get('decode_tokens_per_s_mean'), 1)} tokens/s")

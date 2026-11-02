@@ -42,7 +42,14 @@ class Adapter:
         return {}
 
     def model_path(self):
-        return None
+        return _find(self.cmd, "--model", "--model-path", "--model-id")
+
+    def engine_config(self):
+        """The settings on the command line that change how the structure of a model plays out, under names shared by all engines."""
+        out = _settings(self.cmd, preset_for(self.cmd))
+        if out.get("tensor_parallel") not in (None, "1"):
+            out.setdefault("split_mode", "tensor")
+        return out
 
     def target_index(self):
         """Index of the real engine in a command like `taskset -c 1 numactl ... engine ...`, for tools inserted before it."""
@@ -83,6 +90,34 @@ def _find(cmd, *flags):
             if flag.startswith("--") and token.startswith(flag + "="):
                 return token.split("=", 1)[1]
     return None
+
+
+def _settings(cmd, engine):
+    """The flags of the engine itself, not of a wrapper in front of it like `taskset -c`. A flag given twice counts as the last one."""
+    words = cmd[_skip_wrappers(cmd):]
+    out = {}
+    for name, flags in ENGINE_FLAGS.get(engine, {}).items():
+        value = _find(list(reversed_pairs(words)), *flags)
+        if value is not None:
+            out[name] = value
+    for name, flags in ENGINE_SWITCHES.get(engine, {}).items():
+        if any(flag in words for flag in flags):
+            out[name] = True
+    return out
+
+
+def reversed_pairs(words):
+    """The words with flag and value pairs in reverse order, so that a search from the start finds the last time a flag was given."""
+    pairs = []
+    i = 0
+    while i < len(words):
+        if words[i].startswith("-") and i + 1 < len(words) and not words[i + 1].startswith("-"):
+            pairs.append(words[i:i + 2])
+            i += 2
+        else:
+            pairs.append(words[i:i + 1])
+            i += 1
+    return [word for pair in reversed(pairs) for word in pair]
 
 
 class MlxGenerate(Adapter):
@@ -250,9 +285,33 @@ _SERVER_LINES = [
 ]
 
 
+_GRAPHS_REUSED = re.compile(r"graphs reused\s*=\s*(\d+)")
+_GRAPH_REALLOCS = re.compile(r"graph reallocs\s*=\s*(\d+)\s*/\s*(\d+)")
+
+
 class _LlamaCommon(Adapter):
     def model_path(self):
         return _find(self.cmd, "-m", "--model")
+
+    def engine_config(self):
+        return _settings(self.cmd, "llama-server")
+
+    def _count_events(self, message):
+        """What the server says about its graphs and context checkpoints: work per request that no timer of a phase shows."""
+        counters = self.report.setdefault("engine_counters", {})
+        match = _GRAPHS_REUSED.search(message)
+        if match:
+            counters["graphs_reused"] = int(match.group(1))
+        match = _GRAPH_REALLOCS.search(message)
+        if match:
+            counters["graph_reallocs_same_size"] = int(match.group(1))
+            counters["graph_reallocs_changed"] = int(match.group(2))
+        if "created context checkpoint" in message:
+            counters["checkpoints_created"] = counters.get("checkpoints_created", 0) + 1
+        elif "restored context checkpoint" in message:
+            counters["checkpoints_restored"] = counters.get("checkpoints_restored", 0) + 1
+        if not counters:
+            del self.report["engine_counters"]
 
     def prepare(self, cmd, env):
         # JSONL logs are the only form of the memory breakdown visible without trace verbosity, which would slow decode.
@@ -278,6 +337,7 @@ class _LlamaCommon(Adapter):
         if table_row:
             self.report.setdefault("memory_breakdown", []).append(table_row)
             return
+        self._count_events(message)
         for regex, phase, group in _SERVER_LINES:
             if regex.search(message):
                 emit(phase, group=group, t=t)
@@ -336,6 +396,38 @@ def parse_breakdown_line(text):
 
 
 # Engines recognised from outside only: they get readiness, requests and server metrics, phases from markers.
+# Flags per engine, with what they mean. Only those that change where the time and memory of a model's parts go.
+ENGINE_FLAGS = {
+    "llama-server": {
+        "ctx_size": ("-c", "--ctx-size"), "batch_size": ("-b", "--batch-size"), "ubatch_size": ("-ub", "--ubatch-size"),
+        "gpu_layers": ("-ngl", "--gpu-layers", "--n-gpu-layers"), "split_mode": ("-sm", "--split-mode"), "tensor_split": ("-ts", "--tensor-split"),
+        "flash_attn": ("-fa", "--flash-attn"), "cache_type_k": ("-ctk", "--cache-type-k"), "cache_type_v": ("-ctv", "--cache-type-v"),
+        "parallel": ("-np", "--parallel"), "threads": ("-t", "--threads"), "override_tensor": ("-ot", "--override-tensor"),
+        "n_cpu_moe": ("-ncmoe", "--n-cpu-moe"), "draft_model": ("-md", "--spec-draft-model", "--model-draft"), "spec_type": ("--spec-type",),
+        "spec_draft_n_max": ("--spec-draft-n-max",), "spec_draft_p_min": ("--spec-draft-p-min",),
+        "ctx_checkpoints": ("-ctxcp", "--ctx-checkpoints", "--swa-checkpoints"), "checkpoint_min_step": ("-cms", "--checkpoint-min-step"),
+        "cache_ram": ("-cram", "--cache-ram"), "cache_reuse": ("--cache-reuse",),
+    },
+    "vllm": {
+        "ctx_size": ("--max-model-len",), "tensor_parallel": ("--tensor-parallel-size", "-tp"), "parallel": ("--max-num-seqs",),
+        "dtype": ("--dtype",), "cache_type_k": ("--kv-cache-dtype",), "memory_share": ("--gpu-memory-utilization",),
+        "speculative": ("--speculative-config",),
+    },
+    "sglang": {
+        "ctx_size": ("--context-length",), "tensor_parallel": ("--tp-size", "--tp"), "dtype": ("--dtype",), "memory_share": ("--mem-fraction-static",),
+        "spec_type": ("--speculative-algorithm",), "draft_model": ("--speculative-draft-model-path",),
+    },
+    "tgi": {
+        "ctx_size": ("--max-total-tokens",), "tensor_parallel": ("--num-shard",), "dtype": ("--dtype",), "quantize": ("--quantize",),
+    },
+}
+ENGINE_SWITCHES = {
+    "llama-server": {"cpu_moe": ("-cmoe", "--cpu-moe"), "no_mmap": ("--no-mmap",), "mlock": ("--mlock",), "no_cache_prompt": ("--no-cache-prompt",)},
+    "vllm": {"no_prefix_cache": ("--no-enable-prefix-caching",)},
+    "sglang": {"no_prefix_cache": ("--disable-radix-cache",)},
+}
+
+
 SERVER_PRESETS = {
     "openai": {"ready_path": "/health", "metrics_path": None, "base_path": "/v1", "stop_signal": "TERM", "extra_body": {},
                "port": 8000},
