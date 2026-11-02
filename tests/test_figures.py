@@ -173,6 +173,7 @@ class FromARun(unittest.TestCase):
 @unittest.skipUnless(HAVE_MATPLOTLIB, "needs matplotlib")
 @unittest.skipUnless(helpers.CAN_MEASURE, "needs Linux or macOS")
 class Serving(unittest.TestCase):
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_serving_and_compare(self):
         a, b = make_serving_run(), make_serving_run()
         out = helpers.temp_dir()

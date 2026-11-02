@@ -12,6 +12,8 @@ from llmperfscope.gpu import GpuBackend  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CAN_MEASURE = sys.platform.startswith("linux") or sys.platform == "darwin"
+# On GitHub's macOS virtual machines a sleep of 20 ms takes over 100 ms, and a process can take 30 s to start, so a known time cannot be checked there. A real Mac is fine.
+UNRELIABLE_TIMERS = sys.platform == "darwin" and bool(os.environ.get("CI"))
 
 
 class ScriptedGpu(GpuBackend):

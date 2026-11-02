@@ -227,12 +227,13 @@ def can_burn():
     if sys.platform != "darwin":
         return False
     backend = open_backend()
-    usable = backend.name == "apple" and bool(backend.accelerator.clients())
+    usable = (backend.name == "apple" and backend.fast()[0][0] is not None and backend.energy_mj(0) is not None and bool(backend.clock.frequencies)
+              and any(ns for _pid, ns in backend.accelerator.clients().values()))
     backend.close()
     return usable
 
 
-@unittest.skipUnless(can_burn(), "needs a GPU that macOS lists clients for")
+@unittest.skipUnless(can_burn(), "needs a GPU that publishes its memory, energy, clock and clients, which a virtual machine's does not")
 class Gpu(unittest.TestCase):
     def _run(self, cmd):
         return runner.Run(cmd, runner.Options(out=helpers.temp_dir(), quiet=True, precheck="skip")).execute()

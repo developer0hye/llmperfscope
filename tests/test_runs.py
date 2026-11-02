@@ -220,6 +220,7 @@ class Serving(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertTrue(spawned[0])
 
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_client_timing_matches_the_server_script(self):
         report = self.serve()
         self.assertEqual(report["status"], "ok")
@@ -233,6 +234,7 @@ class Serving(unittest.TestCase):
         report = self.serve()
         self.assertGreater(report["throughput"]["serve_c2"]["output_tokens_per_s"], 1.5 * report["throughput"]["serve_c1"]["output_tokens_per_s"])
 
+    @unittest.skipIf(helpers.UNRELIABLE_TIMERS, "timers on this virtual machine overshoot")
     def test_load_phase_ends_when_the_server_is_ready(self):
         report = self.serve(ready=1.0)
         self.assertAlmostEqual(report["workload"]["ready_s"], 1.0, delta=0.5)

@@ -679,7 +679,8 @@ class Accelerator:
         if not self.entry:
             raise OSError("no GPU found in the IOKit registry")
         self.statistics_key = _key("PerformanceStatistics")
-        if not self.read():
+        # A virtual machine's GPU has the property, with nothing useful in it.
+        if not any(value is not None for value in self.read() or ()):
             raise OSError("this GPU publishes no statistics")
 
     def read(self):
