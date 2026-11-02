@@ -238,6 +238,13 @@ class Components(unittest.TestCase):
                                 ("ncclDevKernel_AllReduce_f32_RING", "collectives"), ("ggml_cuda_ar_ll_kernel", "collectives"), ("some_torch_kernel", "other")):
             self.assertEqual(kernels.component_of(name), component, name)
 
+    def test_matrix_multiplies_against_the_memory(self):
+        line = kernels._against_memory({"expected": {"decode_floor_ms": 2.0}}, "decode", {"matrix multiply, dense or expert": 4.0})
+        self.assertIn("run at 50% of what the memory allows", line)
+        self.assertIn("not all of them run", kernels._against_memory({"expected": {"decode_floor_ms": 5.0}}, "decode", {"matrix multiply, dense or expert": 4.0}))
+        self.assertIsNone(kernels._against_memory({"expected": {"decode_floor_ms": 2.0}}, "prefill", {"matrix multiply, dense or expert": 4.0}))
+        self.assertIsNone(kernels._against_memory({}, "decode", {"matrix multiply, dense or expert": 4.0}))
+
     def test_totals(self):
         rows = [{"name": "mul_mat_vec_q", "cost_ms_per_token": 3.0}, {"name": "mul_mat_q", "cost_ms_per_token": 1.0}, {"name": "rms_norm_f32", "cost_ms_per_token": 0.5},
                 {"name": "ncclDevKernel_AllReduce", "cost_ms_per_token": 1.5}]

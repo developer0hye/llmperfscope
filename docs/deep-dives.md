@@ -65,7 +65,7 @@ How to read it:
 - **Collectives are a separate kind of problem.** Speeding up an AllReduce is about communication, not kernel tuning. A collective runs for as long as its slowest arrival, so the GPU that spends the least time in collectives shows what they really cost, and the table counts that. The rest is reported as waiting.
 - **Gaps** are time when no GPU kernel is running, such as host work or launching. If they are large, run `--cpu-profile` too.
 
-It tells you where the time goes and what it could win. It does not tell you how far a kernel is from what the hardware can do, which takes GPU hardware counters and admin rights.
+It tells you where the time goes and what it could win. With the model's header it also says how far matrix multiplies are from the limit of the memory, see [llm-structure.md](llm-structure.md). For other kernels that takes GPU hardware counters and admin rights.
 
 To see what a change did, compare two traces kernel by kernel:
 
@@ -94,7 +94,7 @@ Function names come from the binary's symbols through `nm`. A stripped library s
 A host thread that spins until the GPU is done looks as busy as one that computes. So samples under a call that waits for the GPU (`cudaStreamSynchronize`, `cudaEventSynchronize`, `vkWaitForFences`, `clFinish` and the like) are counted apart: each row of `inclusive` has a `waiting_share`, and the report names the places that wait:
 
 ```
-waiting for the GPU: 38% of the samples, in ggml_cuda_ar_allreduce 20%, ggml_backend_sched_alloc_graph 11%, pre_decode 7%
+waiting for the GPU: 87% of the samples, in server_context_impl::pre_decode 43%, ggml_backend_sched_alloc_graph 30%, llama_context::synchronize 10%, llama_context::graph_compute 4%
 ```
 
 A place is named by the first function after the point where the calls part, so the main loop that is in every sample and the wrappers around the wait do not hide it.

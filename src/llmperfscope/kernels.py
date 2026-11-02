@@ -37,6 +37,19 @@ def component_of(name):
     return "other"
 
 
+def _against_memory(run, phase, components):
+    """Matrix multiplies are mostly reading weights, so they have a limit that does not depend on the kernels."""
+    floor = (run.get("expected") or {}).get("decode_floor_ms")
+    multiply = components.get("matrix multiply, dense or expert")
+    if phase != "decode" or not floor or not multiply:
+        return None
+    if multiply < floor:
+        return (f"Matrix multiplies take {multiply:.2f} ms per token, less than the {floor:.2f} ms it takes to read all the weights a token should read at the memory's peak speed: "
+                "not all of them run on every token, or the header's counts do not fit this model.")
+    return (f"Matrix multiplies take {multiply:.2f} ms per token. Reading the weights a token reads takes at least {floor:.2f} ms at the memory's peak speed, "
+            f"so they run at {100 * floor / multiply:.0f}% of what the memory allows. Close to 100%, only fewer bytes can help, not a faster kernel.")
+
+
 def by_component(rows):
     """Time per token by what the kernels do for the model, waiting for other GPUs left out."""
     totals = {}
@@ -123,6 +136,9 @@ def render(run, speed=None, phases=("decode", "prefill"), top=12):
             out += ["| what the kernels do for the model | ms/token | share of kernel time |", "|---|---:|---:|"]
             out += [f"| {component} | {value:.2f} | {100 * value / spent:.0f}% |" for component, value in components]
             out.append("")
+            line = _against_memory(run, name, dict(components))
+            if line:
+                out += [line, ""]
         headers = ["kernel", "ms/token", "calls/token", "us/call"]
         if token_ms:
             headers += ["share of token", "speed-up if free, at most"]
@@ -149,7 +165,8 @@ def render(run, speed=None, phases=("decode", "prefill"), top=12):
         out.append("Note: the --speed run was itself traced or sampled, so its time per token is a little long.")
     if speed and any((((speed.get("throughput") or {}).get(name) or {}).get("tokens_per_s")) is None for name, _ in tables):
         out.append("Note: the --speed run has no speed for some of these phases, so they show no shares.")
-    out.append("This says where the time goes and what it could win. It does not say how far a kernel is from what the hardware can do: that takes GPU hardware counters, which need admin rights.")
+    out.append("This says where the time goes and what it could win. With the model's header it says how far matrix multiplies are from the limit of the memory. "
+               "For other kernels that takes GPU hardware counters, which need admin rights.")
     return "\n".join(out) + "\n"
 
 

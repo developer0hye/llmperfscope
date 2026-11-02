@@ -109,6 +109,8 @@ def cmd_run(args, target):
     options = _options(args)
     try:
         return _finish(runner.Run(target, options).execute(), options)
+    except FileNotFoundError as e:
+        raise SystemExit(f"llmperfscope: cannot start {e.filename or target[0]}: no such file") from None
     except runner.Refused as e:
         print(f"[llmperfscope] refused: {e}", file=sys.stderr)
         return 3

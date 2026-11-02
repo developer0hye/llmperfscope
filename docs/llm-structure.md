@@ -12,10 +12,15 @@ Every report that found the model starts with what it is made of:
 deepseek41, 8 layers, embedding 5120, 16 experts per layer, 6 used per token: 4.31 GiB in 222 tensors.
 
 | part | MiB | share | a token reads, MiB | types |
-|---|---:|---:|---:|---|
-| moe_experts | 2,295 | 53% | 861 | MXFP4 |
-| attention | 1,040 | 24% | 1,040 | Q8_0 |
-| moe_shared | 287 | 7% | 287 | Q8_0 |
+|---|---:|---:|---:|---:|
+| moe_experts | 2,295 | 52% | 861 | MXFP4 |
+| attention | 1,381 | 31% | 1,381 | F32, Q8_0 |
+| moe_shared | 287 | 6% | 287 | Q8_0 |
+| token_embedding | 170 | 4% | 0 | Q8_0 |
+| output_head | 170 | 4% | 170 | Q8_0 |
+| lookup_tables | 98 | 2% | 0 | Q8_0 |
+| mixing | 8 | 0% | 8 | Q8_0, F32 |
+| moe_router | 2 | 0% | 2 | F32 |
 ```
 
 `a token reads` is what one token touches: all of a dense weight, `used / total` of the experts, nothing to speak of from a table it reads one row of. Compare the two columns. The experts are often most of a file and far less of a token, so a smaller quantization of them gains less speed than memory.
@@ -40,7 +45,15 @@ deepseek41, 8 layers, embedding 5120, 16 experts per layer, 6 used per token: 4.
 
 ## Time by what the kernels do
 
-`llmperfscope kernels` also sums kernel time by what kernels do for the model: attention, matrix multiplies, expert routing, normalization, table lookups, KV cache writes. It goes by kernel names, which are known for llama.cpp's CUDA backend, and another engine's kernels land in `other`. An expert's matrix multiply and a dense one run the same kernel, so they stay one row. To split that row, compare with the part table: what a token reads of each part says how the reading divides.
+`llmperfscope kernels` also sums kernel time by what kernels do for the model: attention, matrix multiplies, expert routing, normalization, table lookups, KV cache writes. It goes by kernel names, which are known for llama.cpp's CUDA backend, and another engine's kernels land in `other`. An expert's matrix multiply and a dense one run the same kernel, so they stay one row. To split that row, compare with the part table: what a token reads of each part says how the reading divides. With the model's header it also says how close matrix multiplies are to the limit of the memory:
+
+```
+| matrix multiply, dense or expert | 7.30 | 91% |
+| attention | 0.20 | 3% |
+| normalization | 0.19 | 2% |
+
+Matrix multiplies take 7.30 ms per token. Reading the weights a token reads takes at least 6.34 ms at the memory's peak speed, so they run at 87% of what the memory allows. Close to 100%, only fewer bytes can help, not a faster kernel.
+```
 
 ## How the floor is worked out
 
@@ -53,6 +66,17 @@ The memory speed comes from the driver: bus width x max memory clock x 2, which 
 It is a floor, not a forecast. Kernels get less than the peak: on real work with 8 RTX A6000 the largest matrix multiplies reached 420-490 GB/s of 768. So read the floor as a question. If decode is many times the floor, reading weights is not what limits it, and the time goes to kernels' other work, collectives, the KV cache or the host.
 
 The KV cache is left out of the floor, because what attention reads of it depends on the kind of attention. `between_tokens_fit` measures that part instead.
+
+## A worked example: where the first token goes
+
+The same model and server, with prompts of 2000 tokens, with and without a fix to llama.cpp's scheduler:
+
+```
+before: waiting for the GPU: 87% of the samples, in server_context_impl::pre_decode 43%, ggml_backend_sched_alloc_graph 30%, llama_context::synchronize 10%
+after:  waiting for the GPU: 55% of the samples, in server_context_impl::pre_decode 28%, ggml_backend_sched_copy_input 18%, llama_context::synchronize 7%
+```
+
+Waiting in `alloc_graph` comes before the host work of the next batch, so the GPU sits idle during that work. After the fix the wait comes at `copy_input`, after that work. The finding `graphs_reserved_per_request` gives the same lead from the server's own count: 22 reservations in 8 requests. A trace of `llama-bench` never shows this, because it keeps its first reservation.
 
 ## What this still cannot tell
 
