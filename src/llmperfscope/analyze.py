@@ -526,6 +526,14 @@ def _attached_baseline(series, t_attached):
     return None
 
 
+def idle_level(values):
+    """What a GPU holds before the run: the median, so that a sample that already sees the target at the end of the window does not count."""
+    if not values:
+        return 0
+    ordered = sorted(values)
+    return round(ordered[len(ordered) // 2])
+
+
 def summarize(ticks, phases, t_end, attached=False):
     """phases: [{"name", "group", "t", ...}] sorted by t. Adds t_end and metrics in place, returns the report sections."""
     series = Series(ticks)
@@ -538,7 +546,7 @@ def summarize(ticks, phases, t_end, attached=False):
         i, j = series.window(baseline[0]["t"], baseline[0]["t_end"])
         for dev in range(series.n_gpus):
             values = [tick["g"][dev][G_MEM] or 0 for tick in ticks[i:j]]
-            baseline_mem[dev] = round(sum(values) / len(values)) if values else 0
+            baseline_mem[dev] = idle_level(values)
         if attached:
             baseline_mem = _attached_baseline(series, baseline[0]["t_end"]) or baseline_mem
     devices = used_devices(series, baseline_mem)
