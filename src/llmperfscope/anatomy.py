@@ -58,6 +58,11 @@ HF_KEYS = {
 }
 # Read for one row each, not as a whole: what a token reads of them is too small to count.
 LOOKED_UP = {"token_embedding", "lookup_tables"}
+# llama.cpp's encoders: they give an embedding per input and have no head at all, so a missing output.weight does not mean a tied one.
+GGUF_ENCODERS = {"bert", "modern-bert", "nomic-bert", "nomic-bert-moe", "neo-bert", "jina-bert-v2", "jina-bert-v3", "eurobert", "t5encoder",
+                 "gemma-embedding", "llama-embed"}
+# Hugging Face classes that generate text. Others, such as BertModel, have no head to tie.
+HF_GENERATES = r"(ForCausalLM|LMHeadModel|ForConditionalGeneration)$"
 MIB = 1024.0 * 1024.0
 
 
@@ -75,11 +80,12 @@ def _elements(dims):
     return count
 
 
-def _summarize(tensors, table, experts, experts_used):
-    """Per part: size, types, and how much of it one token reads."""
+def _summarize(tensors, table, experts, experts_used, may_tie=True):
+    """Per part: size, types, and how much of it one token reads. `may_tie` is False for a model with no head at all."""
     parts = {}
-    # A model with no head of its own multiplies by its token embedding, so every token reads all of that instead of looking up a row.
-    head_is_embedding = not any(_part_of(tensor["name"], table) == "output_head" for tensor in tensors)
+    # A model that generates text with no head of its own multiplies by its token embedding, so every token reads all of that instead of
+    # looking up a row.
+    head_is_embedding = may_tie and not any(_part_of(tensor["name"], table) == "output_head" for tensor in tensors)
     for tensor in tensors:
         part = _part_of(tensor["name"], table)
         entry = parts.setdefault(part, {"part": part, "mib": 0.0, "tensors": 0, "types": {}, "read_mib": 0.0, "active_params": 0.0})
@@ -132,6 +138,8 @@ def from_gguf(path):
         vocab = tokens.get("array_length")
     experts = number(key("expert_count"))
     used = number(key("expert_used_count"))
+    # Embedding models have no head: the encoders, and any architecture with a pooling type, as Qwen3-Embedding has.
+    may_tie = arch not in GGUF_ENCODERS and not number(key("pooling_type"))
     return _with_totals({
         "source": "gguf",
         "name": metadata.get("general.name") or os.path.basename(str(path)),
@@ -147,7 +155,7 @@ def from_gguf(path):
         "experts": experts,
         "experts_used": used,
         "experts_shared": number(key("expert_shared_count")),
-        "parts": _summarize(model["tensors"], GGUF_PARTS, experts, used),
+        "parts": _summarize(model["tensors"], GGUF_PARTS, experts, used, may_tie),
     })
 
 
@@ -178,10 +186,13 @@ def from_directory(directory):
     for path in sorted(glob.glob(str(directory / "*.safetensors"))):
         tensors += _safetensors_header(path)
     experts, used = key("experts"), key("experts_used")
+    classes = config.get("architectures") or []
+    generates = not classes or any(re.search(HF_GENERATES, str(name)) for name in classes)
+    may_tie = generates and config.get("tie_word_embeddings", text.get("tie_word_embeddings")) is not False
     out = {"source": "huggingface", "name": directory.name, "architecture": config.get("model_type"),
            "file_mib": round(sum(t["bytes"] for t in tensors) / MIB, 1), "tensors": len(tensors),
            **{name: key(name) for name in ("layers", "embedding", "heads", "heads_kv", "vocab", "context_trained", "experts_shared")},
-           "experts": experts, "experts_used": used, "parts": _summarize(tensors, HF_PARTS, experts, used)}
+           "experts": experts, "experts_used": used, "parts": _summarize(tensors, HF_PARTS, experts, used, may_tie)}
     return _with_totals(out)
 
 

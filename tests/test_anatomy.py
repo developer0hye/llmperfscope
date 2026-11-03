@@ -106,6 +106,19 @@ class Parts(unittest.TestCase):
         self.assertFalse(own["tied_head"])
         self.assertEqual({row["part"]: row["read_mib"] for row in own["parts"]}["token_embedding"], 0.0)
 
+    def test_an_embedding_model_has_no_head_to_tie(self):
+        # Measured: ggml-org's bge-small-en-v1.5 (bert) and embeddinggemma-300M (pooling type 1) were said to read 12 and 204 MiB of their
+        # token embedding per token. Neither has a head: an encoder says so by its architecture, any model by a pooling type.
+        tensors = [("token_embd.weight", [4, 4], 0, 2 * MIB), ("blk.0.attn_q.weight", [4, 4], 0, 3 * MIB)]
+        for i, metadata in enumerate(({"general.architecture": "bert"}, {"general.architecture": "qwen3", "qwen3.pooling_type": 3})):
+            model = anatomy.from_gguf(helpers.write_gguf(os.path.join(helpers.temp_dir(), f"embed{i}.gguf"), metadata, tensors))
+            self.assertEqual(model["weights_read_per_token_mib"], 3.0, metadata)
+            self.assertFalse(model["tied_head"], metadata)
+        # pooling type 0 is none: a model that generates again
+        generating = anatomy.from_gguf(helpers.write_gguf(os.path.join(helpers.temp_dir(), "none.gguf"),
+                                                          {"general.architecture": "qwen3", "qwen3.pooling_type": 0}, tensors))
+        self.assertTrue(generating["tied_head"])
+
     def test_parameters_a_token_uses(self):
         self.assertEqual(self.parts["moe_experts"]["active_params"], 2 * (64 * 128 * 8) // 4)
         self.assertEqual(self.parts["attention"]["active_params"], 2 * 64 * 64)
@@ -172,11 +185,11 @@ class Expectations(unittest.TestCase):
 
 
 class HuggingFace(unittest.TestCase):
-    def directory(self, head=True):
+    def directory(self, head=True, **config):
         directory = helpers.temp_dir()
         with open(os.path.join(directory, "config.json"), "w") as f:
             json.dump({"model_type": "toy_moe", "num_hidden_layers": 2, "hidden_size": 64, "num_attention_heads": 4,
-                       "num_experts": 4, "num_experts_per_tok": 1, "vocab_size": 100}, f)
+                       "num_experts": 4, "num_experts_per_tok": 1, "vocab_size": 100, **config}, f)
         names = {"model.embed_tokens.weight": 8 * MIB, "model.layers.0.self_attn.q_proj.weight": 4 * MIB, "model.layers.0.mlp.gate.weight": MIB,
                  "model.layers.0.mlp.experts.0.up.weight": 2 * MIB, "model.layers.0.mlp.experts.1.up.weight": 2 * MIB,
                  "model.layers.0.mlp.experts.2.up.weight": 2 * MIB, "model.layers.0.mlp.experts.3.up.weight": 2 * MIB, "lm_head.weight": 8 * MIB}
@@ -206,6 +219,14 @@ class HuggingFace(unittest.TestCase):
         own, tied = anatomy.describe(self.directory()), anatomy.describe(self.directory(head=False))
         self.assertEqual(tied["weights_read_per_token_mib"], own["weights_read_per_token_mib"])
         self.assertTrue(tied["tied_head"])
+        self.assertTrue(anatomy.describe(self.directory(head=False, architectures=["ToyMoeForCausalLM"]))["tied_head"])
+
+    def test_a_model_without_a_head_to_tie(self):
+        # An encoder has no head, and a config that says the head is not tied has it somewhere these files do not show
+        for config in ({"architectures": ["BertModel"]}, {"architectures": ["ToyMoeForCausalLM"], "tie_word_embeddings": False}):
+            model = anatomy.describe(self.directory(head=False, **config))
+            self.assertFalse(model["tied_head"], config)
+            self.assertEqual({row["part"]: row["read_mib"] for row in model["parts"]}["token_embedding"], 0.0, config)
 
     def test_found_by_name_in_the_local_cache(self):
         hub = helpers.temp_dir()
