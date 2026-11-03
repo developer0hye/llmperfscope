@@ -135,6 +135,6 @@ See [figures.md](figures.md).
 - Use fresh processes. A long-lived process carries caches and allocator state from one arm to the next.
 - Alternate the order. A slow drift, such as heat or background work, then cannot pass for a speed-up.
 - Use real prompts for anything you will quote. See [With real prompts](#with-real-prompts).
-- Use the same page cache state. Run a warm-up arm, or `--cold-start` on both sides.
+- Use the same page cache state. `matrix` reads each case's model once before its first arm, unless the model is over half of the memory available, and `diff` and `matrix` leave out of `load_s` an arm that found the model under half in the page cache when the others did not, and say so. For cold loads, give `--cold-start` to every run. Measured: a null matrix on a MacBook whose first arm found the model 0% cached loaded it in 1.22 s, against 0.13 s for the other seven. Its noise floor for load came out at 862%, which would have hidden any load regression after it; without that arm it is 2.9%.
 - Run enough arms for them to separate. With the default order and `-r 3`, each side has 4 processes of 3 repetitions.
 - Keep the run directories. A number without its machine state cannot be trusted later, and `run.json` has that state.

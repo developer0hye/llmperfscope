@@ -11,12 +11,14 @@ difference that rests on so little is reported as a hint, marked `?`, and `matri
 from __future__ import annotations
 
 import json
+import os
 import re
+import time
 from math import factorial
 from pathlib import Path
 from statistics import median
 
-from . import runner, serving
+from . import gguf, machine, runner, serving
 
 DEFAULT_ORDER = "ABBABAAB"
 # Above this chance of the arms separating by luck, a difference is a hint and not a result.
@@ -60,6 +62,15 @@ FLOORS = {
     "ttft_per_token_ms": (0.02, 0.005),
     "serve_j_per_token": (0.03, 0.0),
 }
+# A model less than half in the page cache before a run was read from disk while it loaded. That load time is another quantity than a
+# warm one, so a comparison that mixes the two leaves the cold arms out of the metrics the page cache decides.
+COLD_BELOW = 0.5
+CACHE_DECIDES = ("load_s",)
+
+
+def _cold(run):
+    fraction = (run.get("machine_before") or {}).get("model_page_cache_fraction")
+    return fraction is not None and fraction < COLD_BELOW
 
 
 def _get(run, *keys):
@@ -121,8 +132,16 @@ def diff(runs_a, runs_b, noise=None):
     dirty = sum(1 for r in usable_a + usable_b if not (r.get("machine_before") or {"clean": True}).get("clean", True))
     if dirty:
         out["dirty_runs"] = dirty
+    cold = sum(1 for r in usable_a + usable_b if _cold(r))
+    # Only a mix: when every arm is cold, as with --cold-start, cold loads are what is being compared.
+    leave_cold_out = 0 < cold < len(usable_a) + len(usable_b)
+    if leave_cold_out:
+        out["cold_runs"] = cold
     for metric, (getter, _direction) in METRICS.items():
-        result = judge(metric, [getter(r) for r in usable_a], [getter(r) for r in usable_b], (noise or {}).get(metric, 0.0))
+        side_a, side_b = usable_a, usable_b
+        if leave_cold_out and metric in CACHE_DECIDES:
+            side_a, side_b = [r for r in usable_a if not _cold(r)], [r for r in usable_b if not _cold(r)]
+        result = judge(metric, [getter(r) for r in side_a], [getter(r) for r in side_b], (noise or {}).get(metric, 0.0))
         if result["verdict"] != "missing":
             out["metrics"][metric] = result
     def named(verdict, weak):
@@ -175,6 +194,9 @@ def render_diff(result, a_label="A", b_label="B"):
         lines.append(f"{result['dropped_runs']} failed or traced runs were left out.")
     if result.get("dirty_runs"):
         lines.append(f"{result['dirty_runs']} runs started on a machine that was not clean.")
+    if result.get("cold_runs"):
+        lines.append(f"{result['cold_runs']} runs started with the model mostly out of the page cache, so they read it from disk: left out of "
+                     f"{', '.join(CACHE_DECIDES)}.")
     return "\n".join(lines) + "\n"
 
 
@@ -209,6 +231,26 @@ def _tag(label):
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", label)
 
 
+def warm_model(path, log=print):
+    """Reads a model once, so every arm finds it in the page cache. Otherwise the first arm reads it from disk and the rest do not, and
+    the first arm's load time is another quantity. Skipped when it would not stay there: a model over half of the memory available."""
+    files = [name for name in gguf.parts(path) if os.path.isfile(name)]
+    size = sum(os.path.getsize(name) for name in files)
+    available = machine.meminfo().get("MemAvailable", 0) * 1024
+    if not files or (available and size > available / 2):
+        if files:
+            log(f"  the model is {size / 2**30:.1f} GiB, over half of the {available / 2**30:.1f} GiB available, so arms may read it from disk")
+        return False
+    t0 = time.monotonic()
+    buffer = bytearray(16 << 20)
+    for name in files:
+        with open(name, "rb", buffering=0) as f:
+            while f.readinto(buffer):
+                pass
+    log(f"  read the model into the page cache first ({size / 2**30:.1f} GiB in {time.monotonic() - t0:.1f} s), so every arm loads it warm")
+    return True
+
+
 def run_matrix(cases, a, b, out_dir, order=DEFAULT_ORDER, timeout_s=1800.0, a_env=None, b_env=None, only=None, noise=None, log=print,
                precheck="wait", recheck=1):
     """a and b are (name, bin_dir). Fresh process per arm, alternating order, machine re-checked before every arm. A case that looks worse
@@ -224,6 +266,8 @@ def run_matrix(cases, a, b, out_dir, order=DEFAULT_ORDER, timeout_s=1800.0, a_en
             log(f"{case['label']}: model missing, skipped")
             table["cases"].append({"label": case["label"], "skipped": "model missing"})
             continue
+        if case["model"]:
+            warm_model(case["model"], log)
         runs = {"A": [], "B": []}
         arms_done = 0
 
@@ -323,6 +367,8 @@ def write_table(table, path):
                 cell = f"{cell} {mark}"
             cells.append(cell)
         extra = f" ({case['dropped_runs']} arms failed)" if case["dropped_runs"] else ""
+        if case.get("cold_runs"):
+            extra += f" ({case['cold_runs']} arms read the model from disk, left out of load)"
         if case.get("worse"):
             extra += ": costs " + ", ".join(case["worse"])
         arms = case.get("arms")
@@ -358,8 +404,8 @@ def noise_from_null(matrix_path):
         floors = {}
         for metric, value in case["metrics"].items():
             values = value["a_runs"] + value["b_runs"]
-            mean = sum(values) / len(values)
-            if mean:
-                floors[metric] = round((max(values) - min(values)) / abs(mean), 5)
+            middle = median(values)
+            if middle:
+                floors[metric] = round((max(values) - min(values)) / abs(middle), 5)
         out[case["label"]] = floors
     return out

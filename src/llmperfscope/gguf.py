@@ -100,15 +100,20 @@ def read_file(path):
     return {"version": version, "metadata": metadata, "tensors": tensors, "file_bytes": size}
 
 
+def parts(path):
+    """The files a model is in: the one given, then the other files of a split one that exist."""
+    match = _SPLIT_NAME.search(str(path))
+    if not match or int(match.group(2)) <= 1:
+        return [str(path)]
+    others = (_SPLIT_NAME.sub(f"-{i:05d}-of-{match.group(2)}.gguf", str(path)) for i in range(1, int(match.group(2)) + 1))
+    return [str(path)] + [part for part in others if part != str(path) and os.path.exists(part)]
+
+
 def read(path):
     """A model, with all the files of a split one: its first file has the metadata, the others tensors."""
     first = read_file(path)
-    match = _SPLIT_NAME.search(str(path))
-    if match and int(match.group(2)) > 1:
-        for i in range(1, int(match.group(2)) + 1):
-            part = _SPLIT_NAME.sub(f"-{i:05d}-of-{match.group(2)}.gguf", str(path))
-            if part != str(path) and os.path.exists(part):
-                other = read_file(part)
-                first["tensors"] += other["tensors"]
-                first["file_bytes"] += other["file_bytes"]
+    for part in parts(path)[1:]:
+        other = read_file(part)
+        first["tensors"] += other["tensors"]
+        first["file_bytes"] += other["file_bytes"]
     return first
