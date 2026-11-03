@@ -375,6 +375,12 @@ class Compare(unittest.TestCase):
     def test_tiny_separated_difference_is_not_a_change(self):
         self.assertEqual(compare.judge("decode_tps", [1000.0, 1000.1], [1000.5, 1000.6])["verdict"], "same")
 
+    def test_one_arm_that_ran_cold_does_not_move_the_ratio(self):
+        # Measured on a MacBook: the same llama-bench against itself, where the first arm read the model from disk
+        result = compare.judge("load_s", [1.219791, 0.125435, 0.126337, 0.129093], [0.126397, 0.127559, 0.128395, 0.125366])
+        self.assertEqual(result["verdict"], "same")
+        self.assertAlmostEqual(result["ratio"], 0.9942, places=4)
+
     def test_noise_floor_is_respected(self):
         self.assertEqual(compare.judge("decode_tps", [100, 100.1], [101, 101.1])["verdict"], "better")
         self.assertEqual(compare.judge("decode_tps", [100, 100.1], [101, 101.1], noise=0.013)["verdict"], "same")

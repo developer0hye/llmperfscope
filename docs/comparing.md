@@ -66,7 +66,7 @@ These cases are judged on what a streaming client saw, as well as on memory and 
 | `ttft_fixed_ms`, `ttft_per_token_ms`, the two parts of the first token, see [reading-reports.md](reading-reports.md) | lower | 2% with at least 2 ms, 2% with at least 0.005 ms |
 | `serve_j_per_token` | lower | 3% |
 
-A result counts as `better` or `worse` only if **both** of these hold: the arms do not overlap, meaning every run of one side beats every run of the other, and the difference of the means exceeds the floor. Otherwise it is `same`.
+A result counts as `better` or `worse` only if **both** of these hold: the arms do not overlap, meaning every run of one side beats every run of the other, and the difference of the medians exceeds the floor. Otherwise it is `same`. Tables show the medians and their ratio too: with a few arms, one that ran cold or was disturbed moves a mean far.
 
 The floors are the smallest differences that can mean anything for that metric. Memory rounds to MiB and allocators differ a little from run to run, load time depends on the page cache, and the energy counter has its own resolution. Your own noise floor can be higher, which a later section measures.
 
