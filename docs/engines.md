@@ -30,6 +30,7 @@ What llmperfscope changes, all recorded in the report:
 
 - `llama-bench` gets `--progress -o json`, for phase boundaries and per-repetition speed.
 - `llama-server` gets `--metrics` and `LLAMA_ARG_LOG_JSONL=1`, for its metrics and memory table.
+- `llama-server` without `--port` gets `--port 9931`, or a free port when that one is taken. Its default moved from 8080 to 9931 in October 2026 (llama.cpp #30159), so a command without a port would listen in a different place depending on the build.
 - `serve` sends `cache_prompt: false` so each request really runs prefill. `--reuse-prompts` keeps the prompt unchanged, and `--extra-body '{"cache_prompt": true}'` turns the cache back on, to measure it.
 
 Wrappers such as `taskset`, `numactl`, `env` and `timeout` in front of the command are fine. With an unusual wrapper, pass `--model-file model.gguf` so llmperfscope can check the page cache and find the disk.
@@ -159,6 +160,8 @@ llmperfscope serve --preset openai --url http://127.0.0.1:9000 --ready-path /v1/
 `--model` names the model when `/v1/models` does not, `--api-key` adds a bearer token (never stored), and `--extra-body '{"top_k": 1}'` adds fields to every request.
 
 By default replies are held to exactly `--max-tokens` with `ignore_eos`, so runs compare like with like. A server that rejects the field needs `--allow-eos`, and then the token counts come from its usage reports.
+
+`serve` refuses to start when something already answers where the server will listen, such as the Ollama app or a server left from an earlier run: the requests would go there, and the report would give its numbers as this server's. While it waits for the server to come up, it says every minute where it is waiting, because a server listening somewhere else looks the same as one still loading.
 
 ## Any other program
 

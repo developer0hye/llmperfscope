@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import urllib.parse
 from pathlib import Path
 
 from . import adapters, driver, procfs, runner
@@ -107,7 +109,7 @@ def workload(args, preset, marks_load):
         base = args.url.rstrip("/")
         is_alive = (lambda: procfs.alive(run.pid))
         ready_s = driver.wait_ready(base + args.ready_path if args.ready_path else base + preset["ready_path"], is_alive,
-                                    timeout_s=args.ready_timeout)
+                                    timeout_s=args.ready_timeout, log=run.log)
         run.log(f"server ready after {ready_s:.2f} s")
         extra = dict(preset.get("extra_body") or {})
         if args.reuse_prompts or args.turns > 1:
@@ -200,6 +202,20 @@ def add_energy_per_token(result):
             entry["j_per_output_token"] = round(energy / phase["tokens"], 4)
 
 
+def _refuse_a_port_in_use(url):
+    """Something that already answers where this server will listen would get the requests, and its numbers would be reported as this
+    server's: an Ollama app, or a server left over from an earlier run."""
+    parsed = urllib.parse.urlparse(url)
+    local = {"127.0.0.1": "127.0.0.1", "localhost": "localhost", "0.0.0.0": "127.0.0.1", "::1": "::1"}
+    try:
+        port = parsed.port
+    except ValueError:
+        return
+    if parsed.hostname in local and port and adapters.port_in_use(local[parsed.hostname], port):
+        raise runner.Refused(f"something already listens on {parsed.hostname}:{port}, so the requests would go to it and not to this "
+                             f"server. Stop it, or start this server on another port")
+
+
 def serve(target, options, args):
     """One whole life of a server. Raises runner.Refused if it cannot be measured."""
     options.stop_timeout_s = args.stop_timeout
@@ -207,7 +223,10 @@ def serve(target, options, args):
     preset = adapters.SERVER_PRESETS[preset_name]
     options.stop_signal = preset.get("stop_signal", "TERM")
     if not args.url:
-        args.url = adapters.guess_url(target, preset_name)
+        environ = {**os.environ, **(options.env or {})}
+        target = adapters.give_port(target, preset_name, environ)
+        args.url = adapters.guess_url(target, preset_name, environ)
+    _refuse_a_port_in_use(args.url)
     extras = list(preset.get("extra_args", []))
     if args.reuse_prompts or args.turns > 1:
         extras += preset.get("cache_report_args", [])

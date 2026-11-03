@@ -477,9 +477,12 @@ def summarize_load(results, wall_s):
     return out
 
 
-def wait_ready(url, is_alive, timeout_s=3600.0, poll_s=0.2):
-    """Polls a health URL until it answers 200. Returns the time it took."""
+def wait_ready(url, is_alive, timeout_s=3600.0, poll_s=0.2, log=None, every_s=60.0):
+    """Polls a health URL until it answers 200. Returns the time it took. Says every `every_s` what it is still waiting for: a server that
+    listens somewhere else looks the same as one that is still loading."""
     t0 = time.monotonic()
+    said = 0
+    answer = "no answer"
     while time.monotonic() - t0 < timeout_s:
         if not is_alive():
             raise RuntimeError("the server exited while loading")
@@ -487,8 +490,15 @@ def wait_ready(url, is_alive, timeout_s=3600.0, poll_s=0.2):
             with urllib.request.urlopen(url, timeout=5) as response:
                 if response.status == 200:
                     return time.monotonic() - t0
+                answer = f"status {response.status}"
+        except urllib.error.HTTPError as e:
+            answer = f"status {e.code}"
         except (urllib.error.URLError, OSError, http.client.HTTPException):
-            pass
+            answer = "no answer"
+        waited = time.monotonic() - t0
+        if log and waited >= (said + 1) * every_s:
+            said = int(waited // every_s)
+            log(f"waiting for {url}: {answer} after {waited:.0f} s. A large model can take this long; if the server listens elsewhere, give --url")
         time.sleep(poll_s)
     raise TimeoutError(f"{url} did not become ready in {timeout_s:.0f} s")
 

@@ -13,7 +13,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import adapters, cli, compare, cpuprof, machine, procfs, runner, serving
+from llmperfscope import adapters, cli, compare, cpuprof, driver, machine, procfs, runner, serving
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -246,6 +246,27 @@ class Serving(unittest.TestCase):
                 self.serve(extra=extra)
             self.assertIn(says, str(refused.exception))
             run.assert_not_called()
+
+    def test_a_port_that_is_taken_is_refused(self):
+        # Seen on the Mac this was checked on: the Ollama app listens on 11434. `serve -- ollama serve` would have measured it, not the server it started.
+        with socket.socket() as taken:
+            taken.bind(("127.0.0.1", 0))
+            taken.listen()
+            port = taken.getsockname()[1]
+            argv = ["serve", "--out", helpers.temp_dir(), "--precheck", "skip", "--quiet", "--url", f"http://127.0.0.1:{port}",
+                    "--", sys.executable, SERVER, str(port), "0.1", "0.1", "0.01"]
+            with mock.patch("llmperfscope.runner.Run") as run, mock.patch("sys.stderr") as stderr:
+                self.assertEqual(cli.main(argv), 3)
+            run.assert_not_called()
+            self.assertIn("already listens", "".join(str(c) for c in stderr.write.call_args_list))
+
+    def test_waiting_for_a_server_says_where(self):
+        said = []
+        with mock.patch("llmperfscope.driver.time") as clock, self.assertRaises(TimeoutError):
+            clock.monotonic.side_effect = iter(range(0, 1000, 30))
+            driver.wait_ready(f"http://127.0.0.1:{free_port()}/health", lambda: True, timeout_s=200, log=said.append)
+        self.assertEqual(len(said), 3)
+        self.assertIn("no answer after 60 s", said[0])
 
     def test_generated_prompts_are_enough_for_the_turns_asked(self):
         self.assertEqual(len(serving.rows_from(serving.defaults(turns=9))), 9)

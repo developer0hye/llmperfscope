@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `serve -- llama-server ...` without `--port` waited up to an hour for a server that was not there: llama.cpp moved its default port from 8080 to 9931 in October 2026 (#30159). llama-server now gets `--port` when its command has none.
+- `serve` refuses to start when something already answers where the server will listen, such as the Ollama app, so another server's numbers cannot be reported as this one's.
+- While waiting for a server to come up, `serve` says every minute where it is waiting.
 - `--turns` works with any prompts. On generated prompts, the default, or a file of `prompt` rows, it used to send nothing at all and call the run ok.
 - `--turns` refuses what it cannot do before starting the server: fewer prompts than turns, `--concurrency` above 1, or `--repeat`.
 - A server run that sent no requests is `workload_failed`, not `ok`.

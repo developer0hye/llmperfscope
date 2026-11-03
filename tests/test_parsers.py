@@ -95,11 +95,24 @@ class Adapters(unittest.TestCase):
 
     def test_urls(self):
         self.assertEqual(adapters.guess_url(["llama-server", "-m", "x", "--port", "9000"], "llama-server"), "http://127.0.0.1:9000")
-        self.assertEqual(adapters.guess_url(["llama-server", "-m", "x"], "llama-server"), "http://127.0.0.1:8080")
+        self.assertEqual(adapters.guess_url(["llama-server", "-m", "x"], "llama-server", environ={}), "http://127.0.0.1:9931")
+        self.assertEqual(adapters.guess_url(["llama-server", "-m", "x"], "llama-server", environ={"LLAMA_ARG_PORT": "9100"}), "http://127.0.0.1:9100")
         self.assertEqual(adapters.guess_url(["vllm", "serve", "m"], "vllm"), "http://127.0.0.1:8000")
         docker = ["docker", "run", "--gpus", "all", "-p", "9001:8000", "vllm/vllm-openai", "--model", "m", "--port", "8000"]
         self.assertEqual(adapters.guess_url(docker, "vllm"), "http://127.0.0.1:9001")
         self.assertEqual(adapters.guess_url(["docker", "run", "-p", "127.0.0.1:9002:80/tcp", "tgi"], "tgi"), "http://127.0.0.1:9002")
+
+    def test_llama_server_is_told_where_to_listen(self):
+        # Measured: llama.cpp moved its default port from 8080 to 9931, and `serve -- llama-server -m x` waited an hour at 8080
+        with mock.patch("llmperfscope.adapters.port_in_use", return_value=False):
+            self.assertEqual(adapters.give_port(["llama-server", "-m", "x"], "llama-server", {}), ["llama-server", "-m", "x", "--port", "9931"])
+        with mock.patch("llmperfscope.adapters.port_in_use", return_value=True), mock.patch("llmperfscope.adapters.free_port", return_value=40123):
+            self.assertEqual(adapters.give_port(["llama-server", "-m", "x"], "llama-server", {}), ["llama-server", "-m", "x", "--port", "40123"])
+        # what the command or the environment says stays, and other engines and containers are left alone
+        for cmd, preset, environ in ((["llama-server", "--port", "9000"], "llama-server", {}), (["llama-server", "--port=9000"], "llama-server", {}),
+                                     (["llama-server"], "llama-server", {"LLAMA_ARG_PORT": "9100"}), (["vllm", "serve", "m"], "vllm", {}),
+                                     (["docker", "run", "-p", "8080:8080", "ghcr.io/ggml-org/llama.cpp:server"], "llama-server", {})):
+            self.assertEqual(adapters.give_port(cmd, preset, environ), cmd)
 
     def test_presets(self):
         self.assertEqual(adapters.preset_for(["/a/llama-server", "-m", "x"]), "llama-server")
