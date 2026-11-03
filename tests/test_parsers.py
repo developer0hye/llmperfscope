@@ -381,6 +381,60 @@ class Compare(unittest.TestCase):
         self.assertEqual(result["verdict"], "same")
         self.assertAlmostEqual(result["ratio"], 0.9942, places=4)
 
+    def _arm(self, load_s, cached):
+        return {"status": "ok", "groups": {"load": {"wall_s": load_s}}, "throughput": {"decode": {"tokens_per_s": 100.0}},
+                "machine_before": {"clean": True, "model_page_cache_fraction": cached}}
+
+    def test_arms_that_read_the_model_from_disk_are_left_out_of_load(self):
+        # The same arms as above: the first one found the model 0% in the page cache, the others all of it
+        runs_a = [self._arm(1.219791, 0.0), self._arm(0.125435, 1.0), self._arm(0.126337, 1.0), self._arm(0.129093, 1.0)]
+        runs_b = [self._arm(0.126397, 1.0), self._arm(0.127559, 1.0), self._arm(0.128395, 1.0), self._arm(0.125366, 1.0)]
+        result = compare.diff(runs_a, runs_b)
+        self.assertEqual(result["cold_runs"], 1)
+        self.assertEqual(result["metrics"]["load_s"]["a_runs"], [0.125435, 0.126337, 0.129093])
+        self.assertEqual(len(result["metrics"]["decode_tps"]["a_runs"]), 4)
+        self.assertIn("read it from disk", compare.render_diff(result))
+        # every arm cold is a comparison of cold loads, and nothing is left out
+        cold = compare.diff([self._arm(1.2, 0.0)] * 4, [self._arm(1.3, 0.0)] * 4)
+        self.assertNotIn("cold_runs", cold)
+        self.assertEqual(len(cold["metrics"]["load_s"]["a_runs"]), 4)
+
+    def test_a_model_is_read_into_the_page_cache_before_its_arms(self):
+        directory = helpers.temp_dir()
+        parts = [os.path.join(directory, f"m-0000{i}-of-00002.gguf") for i in (1, 2)]
+        for part in parts:
+            with open(part, "wb") as f:
+                f.write(b"\0" * 1024)
+        self.assertEqual(compare.gguf.parts(parts[0]), parts)
+        said = []
+        with mock.patch("llmperfscope.compare.machine.meminfo", return_value={"MemAvailable": 1 << 20}):
+            self.assertTrue(compare.warm_model(parts[0], said.append))
+        self.assertIn("0.0 GiB", said[0])
+        with mock.patch("llmperfscope.compare.machine.meminfo", return_value={"MemAvailable": 1}):
+            self.assertFalse(compare.warm_model(parts[0], said.append))
+        self.assertIn("over half", said[1])
+        self.assertFalse(compare.warm_model(directory, said.append))
+
+    def test_matrix_warms_each_model_before_its_first_arm(self):
+        model = os.path.join(helpers.temp_dir(), "m.gguf")
+        with open(model, "wb") as f:
+            f.write(b"\0")
+        order = []
+
+        class FakeRun:
+            def __init__(self, command, opts):
+                pass
+
+            def execute(self):
+                order.append("arm")
+                return {"status": "ok", "throughput": {"decode": {"tokens_per_s": 100.0}}}
+
+        cases = [{"label": "case", "binary": "llama-bench", "prefix": [], "args": [], "env": {}, "model": model, "gpus": None}]
+        with mock.patch("llmperfscope.compare.runner.Run", FakeRun), \
+                mock.patch("llmperfscope.compare.warm_model", side_effect=lambda path, log: order.append(path)):
+            compare.run_matrix(cases, ("a", "/a"), ("b", "/b"), helpers.temp_dir(), order="AB", log=lambda text: None, recheck=0)
+        self.assertEqual(order, [model, "arm", "arm"])
+
     def test_noise_floor_is_respected(self):
         self.assertEqual(compare.judge("decode_tps", [100, 100.1], [101, 101.1])["verdict"], "better")
         self.assertEqual(compare.judge("decode_tps", [100, 100.1], [101, 101.1], noise=0.013)["verdict"], "same")

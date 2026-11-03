@@ -12,6 +12,7 @@
 - `kernels` reads a server's trace, per output token. On a `serve --nsys` run it used to say it needed a run with `--nsys`. Phases with other names, marked by hand, show by default too.
 - `matrix --precheck warn` runs each arm at once and flags the ones that started on a busy machine. By default `matrix` still waits for a quiet machine, up to an hour per arm, which a desktop with a browser open may never be.
 - `matrix` and `diff` compare medians, not means. The same binary against itself showed a load ratio of 0.317, from one arm of eight that read the model from disk. Verdicts did not change from it, since they need every arm of one side to beat every arm of the other.
+- `matrix` reads each case's model into the page cache before its first arm, and `diff` and `matrix` leave an arm that read the model from disk out of `load_s` when the other arms did not, and say so. That one arm made `noise` give a load floor of 862%, which would have hidden any later load regression; without it the floor is 2.9%.
 
 ## 0.2.0
 
