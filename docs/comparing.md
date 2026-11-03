@@ -8,7 +8,7 @@ A single ratio from a few runs is mostly noise. The same binary against itself h
 llmperfscope matrix --cases cases.json --a old=build-old/bin --b new=build-new/bin --out res
 ```
 
-For each case, it runs both builds in the order set by `--order` (`ABBABAAB` by default, 4 arms per side), each arm in a fresh process, and waits for a quiet machine before each arm. A case that looks worse gets the same number of arms again before anything is called worse (`--recheck`, 1 round by default, 0 to turn it off). The result goes to `res/table.md` and `res/matrix.json`, with every arm's full run directory under `res/`. The exit code is 1 if anything got worse, which suits CI.
+For each case, it runs both builds in the order set by `--order` (`ABBABAAB` by default, 4 arms per side), each arm in a fresh process, and waits for a quiet machine before each arm, up to an hour. A desktop with a browser open may never be quiet enough: `--precheck warn` runs each arm at once and flags the ones that started on a busy machine. A case that looks worse gets the same number of arms again before anything is called worse (`--recheck`, 1 round by default, 0 to turn it off). The result goes to `res/table.md` and `res/matrix.json`, with every arm's full run directory under `res/`. The exit code is 1 if anything got worse, which suits CI.
 
 ### The cases file
 

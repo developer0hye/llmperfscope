@@ -65,8 +65,13 @@ def _phase_tables(run, phases):
 
 
 def _default_phases(run):
-    """A server runs prefill and decode together, as one phase."""
-    return ("decode", "prefill") if _phase_tables(run, ("decode", "prefill")) else ("serve",)
+    """decode and prefill. A server runs both together as one phase, and phases marked by hand have whatever names their markers gave:
+    then every phase with tokens."""
+    for names in (("decode", "prefill"), ("serve",)):
+        if _phase_tables(run, names):
+            return names
+    groups = (run.get("nsys") or {}).get("groups") or {}
+    return tuple(groups)
 
 
 def per_token(group):

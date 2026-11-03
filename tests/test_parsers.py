@@ -482,6 +482,20 @@ class Compare(unittest.TestCase):
         _, arms, _ = self._matrix({"old": [100.0, 100.1], "new": [90.0, 90.1]}, recheck=0)
         self.assertEqual(len(arms), 8)
 
+    def test_matrix_can_run_on_a_busy_machine_when_asked(self):
+        # Seen on a MacBook with a browser open: every arm waited for a quiet machine that never came, up to an hour each
+        from llmperfscope import cli
+        cases = os.path.join(helpers.temp_dir(), "cases.json")
+        with open(cases, "w") as f:
+            json.dump({"cases": [{"label": "c", "model": "m.gguf"}]}, f)
+        out = helpers.temp_dir()
+        for extra, expected in (([], "wait"), (["--precheck", "warn"], "warn")):
+            with mock.patch("llmperfscope.compare.run_matrix", return_value={"cases": []}) as run_matrix, \
+                    mock.patch("llmperfscope.runner.platform_refusal", return_value=None), mock.patch("builtins.print"), \
+                    mock.patch("llmperfscope.cli.Path.read_text", return_value=""):
+                cli.main(["matrix", "--cases", cases, "--a", "a=x", "--b", "b=y", "--out", out, *extra])
+            self.assertEqual(run_matrix.call_args.kwargs["precheck"], expected)
+
     def test_noise_from_null_matrix(self):
         path = os.path.join(helpers.temp_dir(), "m.json")
         with open(path, "w") as f:
@@ -548,6 +562,14 @@ class Kernels(unittest.TestCase):
         self.assertNotIn("has no speed", text)
         self.assertIn("## serve", kernels.render_diff(run, run))
         self.assertNotIn("## serve", kernels.render(self._run()))
+
+    def test_phases_marked_by_hand_are_shown(self):
+        # `phase("generate", tokens=10)` in a script: its kernels were there, and kernels said it needed --nsys and phases with tokens
+        run = {"nsys": {"groups": {"load": {"devices": []}, "generate": self._run()["nsys"]["groups"]["decode"]}}}
+        text = kernels.render(run)
+        self.assertIn("## generate: 10 tokens traced", text)
+        self.assertNotIn("## load", text)
+        self.assertIn("## generate", kernels.render_diff(run, run))
 
     def test_diff_shows_which_kernel_changed(self):
         text = kernels.render_diff(self._run(), self._run(mul_mat_ms=100.0), "old", "new")
