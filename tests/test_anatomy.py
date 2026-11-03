@@ -94,6 +94,18 @@ class Parts(unittest.TestCase):
         self.assertEqual(self.parts["token_embedding"]["read_mib"], 0.0)
         self.assertEqual(self.model["weights_read_per_token_mib"], 40.0 + 4.0 + 1.0 + 20.0 + 20.0 + 1.0)
 
+    def test_a_head_tied_to_the_embedding_reads_all_of_it(self):
+        # Measured: two files of Qwen3-0.6B said 604 and 446 MiB per token. They differ only in having output.weight; without it llama.cpp multiplies by token_embd.
+        common = [("token_embd.weight", [4, 4], 0, 2 * MIB), ("pos_embd.weight", [4, 4], 0, MIB), ("blk.0.attn_q.weight", [4, 4], 0, 3 * MIB)]
+        tied = anatomy.from_gguf(helpers.write_gguf(os.path.join(helpers.temp_dir(), "tied.gguf"), {"general.architecture": "toy"}, common))
+        own = anatomy.from_gguf(helpers.write_gguf(os.path.join(helpers.temp_dir(), "own.gguf"), {"general.architecture": "toy"},
+                                                   common + [("output.weight", [4, 4], 0, 2 * MIB)]))
+        self.assertEqual(tied["weights_read_per_token_mib"], 5.0)
+        self.assertEqual(own["weights_read_per_token_mib"], 5.0)
+        self.assertTrue(tied["tied_head"])
+        self.assertFalse(own["tied_head"])
+        self.assertEqual({row["part"]: row["read_mib"] for row in own["parts"]}["token_embedding"], 0.0)
+
     def test_parameters_a_token_uses(self):
         self.assertEqual(self.parts["moe_experts"]["active_params"], 2 * (64 * 128 * 8) // 4)
         self.assertEqual(self.parts["attention"]["active_params"], 2 * 64 * 64)
@@ -154,10 +166,13 @@ class Expectations(unittest.TestCase):
         self.assertIn("## Model", text)
         self.assertIn("8 experts per layer, 2 used per token", text)
         self.assertIn("| moe_experts | 160 |", text)
+        self.assertNotIn("no output head of its own", text)
+        run["model"]["tied_head"] = True
+        self.assertIn("no output head of its own", report.render(run))
 
 
 class HuggingFace(unittest.TestCase):
-    def directory(self):
+    def directory(self, head=True):
         directory = helpers.temp_dir()
         with open(os.path.join(directory, "config.json"), "w") as f:
             json.dump({"model_type": "toy_moe", "num_hidden_layers": 2, "hidden_size": 64, "num_attention_heads": 4,
@@ -165,6 +180,8 @@ class HuggingFace(unittest.TestCase):
         names = {"model.embed_tokens.weight": 8 * MIB, "model.layers.0.self_attn.q_proj.weight": 4 * MIB, "model.layers.0.mlp.gate.weight": MIB,
                  "model.layers.0.mlp.experts.0.up.weight": 2 * MIB, "model.layers.0.mlp.experts.1.up.weight": 2 * MIB,
                  "model.layers.0.mlp.experts.2.up.weight": 2 * MIB, "model.layers.0.mlp.experts.3.up.weight": 2 * MIB, "lm_head.weight": 8 * MIB}
+        if not head:
+            del names["lm_head.weight"]
         header = {}
         offset = 0
         for name, size in names.items():
@@ -184,6 +201,11 @@ class HuggingFace(unittest.TestCase):
         self.assertEqual(parts["moe_router"]["mib"], 1.0)
         self.assertEqual(parts["attention"]["mib"], 4.0)
         self.assertEqual(parts["output_head"]["mib"], 8.0)
+
+    def test_a_tied_head_is_read_like_one_of_its_own(self):
+        own, tied = anatomy.describe(self.directory()), anatomy.describe(self.directory(head=False))
+        self.assertEqual(tied["weights_read_per_token_mib"], own["weights_read_per_token_mib"])
+        self.assertTrue(tied["tied_head"])
 
     def test_found_by_name_in_the_local_cache(self):
         hub = helpers.temp_dir()

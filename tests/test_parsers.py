@@ -523,6 +523,19 @@ class Kernels(unittest.TestCase):
     def test_a_run_without_a_trace_says_so(self):
         self.assertIn("--nsys", kernels.render({"throughput": {}}))
 
+    def test_a_server_trace_is_per_output_token(self):
+        # Measured: `kernels` on a real `serve --nsys` said it needed a run with --nsys.
+        run = {"nsys": {"groups": {"serve": self._run()["nsys"]["groups"]["decode"]}}}
+        text = kernels.render(run)
+        self.assertIn("## serve: 10 tokens traced", text)
+        self.assertIn("per output token", text)
+        speed = {"throughput": {"serve_c2": {"concurrency": 2, "output_tokens_per_s": 90.0}, "serve_c1": {"concurrency": 1, "output_tokens_per_s": 50.0}}}
+        text = kernels.render(run, speed)
+        self.assertIn("20.00 ms per token without tracing", text)
+        self.assertNotIn("has no speed", text)
+        self.assertIn("## serve", kernels.render_diff(run, run))
+        self.assertNotIn("## serve", kernels.render(self._run()))
+
     def test_diff_shows_which_kernel_changed(self):
         text = kernels.render_diff(self._run(), self._run(mul_mat_ms=100.0), "old", "new")
         self.assertIn("| old ms/token | new ms/token |", text)

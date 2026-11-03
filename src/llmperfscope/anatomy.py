@@ -78,6 +78,8 @@ def _elements(dims):
 def _summarize(tensors, table, experts, experts_used):
     """Per part: size, types, and how much of it one token reads."""
     parts = {}
+    # A model with no head of its own multiplies by its token embedding, so every token reads all of that instead of looking up a row.
+    head_is_embedding = not any(_part_of(tensor["name"], table) == "output_head" for tensor in tensors)
     for tensor in tensors:
         part = _part_of(tensor["name"], table)
         entry = parts.setdefault(part, {"part": part, "mib": 0.0, "tensors": 0, "types": {}, "read_mib": 0.0, "active_params": 0.0})
@@ -88,7 +90,7 @@ def _summarize(tensors, table, experts, experts_used):
         share = 1.0
         if part == "moe_experts" and experts and experts_used:
             share = experts_used / experts
-        elif part in LOOKED_UP:
+        elif part in LOOKED_UP and not (head_is_embedding and part == "token_embedding" and not re.search(r"pos_|token_types", tensor["name"])):
             share = 0.0
         entry["read_mib"] += mib * share
         entry["active_params"] += _elements(tensor["dims"]) * share
@@ -106,6 +108,7 @@ def _with_totals(out):
     parts = out["parts"]
     out["weights_read_per_token_mib"] = round(sum(row["read_mib"] for row in parts), 2)
     out["active_params_per_token"] = sum(row["active_params"] for row in parts)
+    out["tied_head"] = any(row["part"] == "token_embedding" and row["read_mib"] > 0 for row in parts)
     return out
 
 

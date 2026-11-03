@@ -265,7 +265,7 @@ def cmd_noise(args, _target):
 
 def cmd_kernels(args, _target):
     run = compare.load_run(args.run)
-    phases = tuple(args.phase.split(",")) if args.phase else ("decode", "prefill")
+    phases = tuple(args.phase.split(",")) if args.phase else None
     if args.vs:
         print(kernels.render_diff(run, compare.load_run(args.vs), args.run_name, args.vs_name, phases))
     else:
@@ -368,7 +368,7 @@ def build_parser():
     p.add_argument("run")
     p.add_argument("--speed", help="the same command without --nsys, for each kernel's share of a token and what it could win")
     p.add_argument("--vs", help="another run with --nsys: what changed, kernel by kernel")
-    p.add_argument("--phase", help="comma-separated phases (default: decode,prefill)")
+    p.add_argument("--phase", help="comma-separated phases (default: decode,prefill, or serve for a server)")
     p.add_argument("--run-name", default="A")
     p.add_argument("--vs-name", default="B")
     p.set_defaults(func=cmd_kernels)

@@ -5,6 +5,8 @@
 - `--turns` works with any prompts. On generated prompts, the default, or a file of `prompt` rows, it used to send nothing at all and call the run ok.
 - `--turns` refuses what it cannot do before starting the server: fewer prompts than turns, `--concurrency` above 1, or `--repeat`.
 - A server run that sent no requests is `workload_failed`, not `ok`.
+- What a token reads counts the token embedding when the model has no output head of its own. Models with a tied head showed too little, and a memory floor that was too low.
+- `kernels` reads a server's trace, per output token. On a `serve --nsys` run it used to say it needed a run with `--nsys`.
 
 ## 0.2.0
 
