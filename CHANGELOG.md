@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `--turns` works with any prompts. On generated prompts, the default, or a file of `prompt` rows, it used to send nothing at all and call the run ok.
+- `--turns` refuses what it cannot do before starting the server: fewer prompts than turns, `--concurrency` above 1, or `--repeat`.
+- A server run that sent no requests is `workload_failed`, not `ok`.
+
 ## 0.2.0
 
 - `--turns` and `--reuse-prompts` make vLLM and SGLang report how much came from their cache. A server that does not report it now shows no share, instead of 0%.

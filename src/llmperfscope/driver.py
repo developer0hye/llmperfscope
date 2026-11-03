@@ -269,11 +269,11 @@ def run_conversations(client, rows, turns, emit_each=None):
     Every request repeats all of the conversation, which is what a server's prompt cache or context checkpoints are there for."""
     results = []
     t0 = time.monotonic()
-    usable = [row for row in rows if "messages" in row]
-    for start in range(0, len(usable) - turns + 1, turns):
+    for start in range(0, len(rows) - turns + 1, turns):
         messages = []
-        for turn, row in enumerate(usable[start:start + turns]):
-            messages = messages + [m for m in row["messages"] if m.get("role") != "assistant"]
+        for turn, row in enumerate(rows[start:start + turns]):
+            asked = row["messages"] if "messages" in row else [{"role": "user", "content": row["prompt"]}]
+            messages = messages + [m for m in asked if m.get("role") != "assistant"]
             result = client.request({"id": row.get("id"), "messages": messages, "keep_text": True, "extra_body": {"cache_prompt": True}})
             result["turn"] = turn
             text = result.pop("text", "")

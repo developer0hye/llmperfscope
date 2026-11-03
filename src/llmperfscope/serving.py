@@ -28,7 +28,7 @@ def add_arguments(parser):
     parser.add_argument("--reuse-prompts", action="store_true",
                         help="send prompts unchanged, to measure a server's prefix cache (default: a short nonce in front defeats it)")
     parser.add_argument("--turns", type=int, default=0,
-                        help="conversations of this many turns: each request repeats the questions and replies before it, to measure the prompt cache or context checkpoints")
+                        help="conversations of this many turns, one prompt per turn: each request repeats the questions and replies before it, to measure the prompt cache or context checkpoints")
     parser.add_argument("--extra-body", help="JSON merged into every request")
     parser.add_argument("--api-key", help="bearer token (never stored in the report)")
     parser.add_argument("--ready-path", help="health path (default from the preset)")
@@ -58,7 +58,7 @@ def _prompt_chars(row):
 
 def rows_from(args):
     if not args.prompts:
-        return driver.synthetic_prompts(args.synthetic_words, args.limit or 8)
+        return driver.synthetic_prompts(args.synthetic_words, args.limit or max(8, args.turns))
     filters = dict(item.split("=", 1) for item in args.filter or [])
     path = args.prompts
     if path == "mix":
@@ -70,6 +70,16 @@ def rows_from(args):
     if not rows:
         raise SystemExit("no prompts left after the filter")
     return rows[:args.limit] if args.limit else rows
+
+
+def _refuse_what_a_conversation_cannot_do(args, rows):
+    """A conversation is one client going through the prompts once, one prompt per turn. Anything else would not be what the report says it measured."""
+    if args.turns <= 1:
+        return
+    if str(args.concurrency) != "1" or args.repeat != 1:
+        raise SystemExit("--turns is one client going through the prompts once: it does not combine with --concurrency or --repeat")
+    if len(rows) < args.turns:
+        raise SystemExit(f"--turns {args.turns} takes one prompt per turn, and there are {len(rows)}")
 
 
 def _overall_speed(throughput):
@@ -89,6 +99,7 @@ def workload(args, preset, marks_load):
     """Waits until the server is ready, warms it up, drives each concurrency level, collects the server's own metrics. The prompts are read first: downloading them inside
     the run would count as loading the model, and a mistake in them should not have to wait for a model to load."""
     rows = rows_from(args)
+    _refuse_what_a_conversation_cannot_do(args, rows)
 
     def run_workload(run):
         if marks_load:
@@ -153,6 +164,8 @@ def workload(args, preset, marks_load):
                 else:
                     results, wall = driver.run_load(client, rows, concurrency=concurrency, repeat=args.repeat, seed=args.seed,
                                                     emit_each=record, level=f"c{concurrency}", unique=not args.reuse_prompts)
+                if not results:
+                    raise RuntimeError(f"{name} sent no requests, so it measured nothing")
                 summary = driver.summarize_load(results, wall)
                 summary["concurrency"] = concurrency
                 throughput[name] = summary
