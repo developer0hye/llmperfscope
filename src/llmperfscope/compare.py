@@ -14,6 +14,7 @@ import json
 import re
 from math import factorial
 from pathlib import Path
+from statistics import median
 
 from . import runner, serving
 
@@ -90,14 +91,16 @@ def judge(metric, a_values, b_values, noise=0.0):
     b_values = [v for v in b_values if v is not None]
     if not a_values or not b_values:
         return {"verdict": "missing"}
-    a_mean = sum(a_values) / len(a_values)
-    b_mean = sum(b_values) / len(b_values)
+    # Medians: with a few arms, one that ran cold or was disturbed moves a mean far. Measured: the same binary against itself showed a
+    # load ratio of 0.317 from one arm that read the model from disk, at 1.22 s against 0.13 s for the other seven.
+    a_mid = median(a_values)
+    b_mid = median(b_values)
     direction = METRICS[metric][1]
-    ratio = b_mean / a_mean if a_mean else None
+    ratio = b_mid / a_mid if a_mid else None
     relative_floor, absolute_floor = FLOORS[metric]
-    floor = max(relative_floor, noise) * abs(a_mean)
+    floor = max(relative_floor, noise) * abs(a_mid)
     floor = max(floor, absolute_floor)
-    difference = (b_mean - a_mean) * direction  # positive: B is better
+    difference = (b_mid - a_mid) * direction  # positive: B is better
     separated = min(b_values) > max(a_values) or max(b_values) < min(a_values)
     verdict = "same"
     weak = False
@@ -106,7 +109,7 @@ def judge(metric, a_values, b_values, noise=0.0):
         spread = max(max(a_values) - min(a_values), max(b_values) - min(b_values))
         clear = min(len(a_values), len(b_values)) >= 2 and abs(difference) > CLEAR_EFFECT * spread
         weak = separation_chance(len(a_values), len(b_values)) > WEAK_ABOVE and not clear
-    return {"a": round(a_mean, 4), "b": round(b_mean, 4), "ratio": round(ratio, 4) if ratio is not None else None,
+    return {"a": round(a_mid, 4), "b": round(b_mid, 4), "ratio": round(ratio, 4) if ratio is not None else None,
             "verdict": verdict, "weak": weak, "a_runs": a_values, "b_runs": b_values}
 
 

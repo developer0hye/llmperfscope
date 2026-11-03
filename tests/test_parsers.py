@@ -95,11 +95,24 @@ class Adapters(unittest.TestCase):
 
     def test_urls(self):
         self.assertEqual(adapters.guess_url(["llama-server", "-m", "x", "--port", "9000"], "llama-server"), "http://127.0.0.1:9000")
-        self.assertEqual(adapters.guess_url(["llama-server", "-m", "x"], "llama-server"), "http://127.0.0.1:8080")
+        self.assertEqual(adapters.guess_url(["llama-server", "-m", "x"], "llama-server", environ={}), "http://127.0.0.1:9931")
+        self.assertEqual(adapters.guess_url(["llama-server", "-m", "x"], "llama-server", environ={"LLAMA_ARG_PORT": "9100"}), "http://127.0.0.1:9100")
         self.assertEqual(adapters.guess_url(["vllm", "serve", "m"], "vllm"), "http://127.0.0.1:8000")
         docker = ["docker", "run", "--gpus", "all", "-p", "9001:8000", "vllm/vllm-openai", "--model", "m", "--port", "8000"]
         self.assertEqual(adapters.guess_url(docker, "vllm"), "http://127.0.0.1:9001")
         self.assertEqual(adapters.guess_url(["docker", "run", "-p", "127.0.0.1:9002:80/tcp", "tgi"], "tgi"), "http://127.0.0.1:9002")
+
+    def test_llama_server_is_told_where_to_listen(self):
+        # Measured: llama.cpp moved its default port from 8080 to 9931, and `serve -- llama-server -m x` waited an hour at 8080
+        with mock.patch("llmperfscope.adapters.port_in_use", return_value=False):
+            self.assertEqual(adapters.give_port(["llama-server", "-m", "x"], "llama-server", {}), ["llama-server", "-m", "x", "--port", "9931"])
+        with mock.patch("llmperfscope.adapters.port_in_use", return_value=True), mock.patch("llmperfscope.adapters.free_port", return_value=40123):
+            self.assertEqual(adapters.give_port(["llama-server", "-m", "x"], "llama-server", {}), ["llama-server", "-m", "x", "--port", "40123"])
+        # what the command or the environment says stays, and other engines and containers are left alone
+        for cmd, preset, environ in ((["llama-server", "--port", "9000"], "llama-server", {}), (["llama-server", "--port=9000"], "llama-server", {}),
+                                     (["llama-server"], "llama-server", {"LLAMA_ARG_PORT": "9100"}), (["vllm", "serve", "m"], "vllm", {}),
+                                     (["docker", "run", "-p", "8080:8080", "ghcr.io/ggml-org/llama.cpp:server"], "llama-server", {})):
+            self.assertEqual(adapters.give_port(cmd, preset, environ), cmd)
 
     def test_presets(self):
         self.assertEqual(adapters.preset_for(["/a/llama-server", "-m", "x"]), "llama-server")
@@ -362,6 +375,12 @@ class Compare(unittest.TestCase):
     def test_tiny_separated_difference_is_not_a_change(self):
         self.assertEqual(compare.judge("decode_tps", [1000.0, 1000.1], [1000.5, 1000.6])["verdict"], "same")
 
+    def test_one_arm_that_ran_cold_does_not_move_the_ratio(self):
+        # Measured on a MacBook: the same llama-bench against itself, where the first arm read the model from disk
+        result = compare.judge("load_s", [1.219791, 0.125435, 0.126337, 0.129093], [0.126397, 0.127559, 0.128395, 0.125366])
+        self.assertEqual(result["verdict"], "same")
+        self.assertAlmostEqual(result["ratio"], 0.9942, places=4)
+
     def test_noise_floor_is_respected(self):
         self.assertEqual(compare.judge("decode_tps", [100, 100.1], [101, 101.1])["verdict"], "better")
         self.assertEqual(compare.judge("decode_tps", [100, 100.1], [101, 101.1], noise=0.013)["verdict"], "same")
@@ -469,6 +488,20 @@ class Compare(unittest.TestCase):
         _, arms, _ = self._matrix({"old": [100.0, 100.1], "new": [90.0, 90.1]}, recheck=0)
         self.assertEqual(len(arms), 8)
 
+    def test_matrix_can_run_on_a_busy_machine_when_asked(self):
+        # Seen on a MacBook with a browser open: every arm waited for a quiet machine that never came, up to an hour each
+        from llmperfscope import cli
+        cases = os.path.join(helpers.temp_dir(), "cases.json")
+        with open(cases, "w") as f:
+            json.dump({"cases": [{"label": "c", "model": "m.gguf"}]}, f)
+        out = helpers.temp_dir()
+        for extra, expected in (([], "wait"), (["--precheck", "warn"], "warn")):
+            with mock.patch("llmperfscope.compare.run_matrix", return_value={"cases": []}) as run_matrix, \
+                    mock.patch("llmperfscope.runner.platform_refusal", return_value=None), mock.patch("builtins.print"), \
+                    mock.patch("llmperfscope.cli.Path.read_text", return_value=""):
+                cli.main(["matrix", "--cases", cases, "--a", "a=x", "--b", "b=y", "--out", out, *extra])
+            self.assertEqual(run_matrix.call_args.kwargs["precheck"], expected)
+
     def test_noise_from_null_matrix(self):
         path = os.path.join(helpers.temp_dir(), "m.json")
         with open(path, "w") as f:
@@ -522,6 +555,27 @@ class Kernels(unittest.TestCase):
 
     def test_a_run_without_a_trace_says_so(self):
         self.assertIn("--nsys", kernels.render({"throughput": {}}))
+
+    def test_a_server_trace_is_per_output_token(self):
+        # Measured: `kernels` on a real `serve --nsys` said it needed a run with --nsys.
+        run = {"nsys": {"groups": {"serve": self._run()["nsys"]["groups"]["decode"]}}}
+        text = kernels.render(run)
+        self.assertIn("## serve: 10 tokens traced", text)
+        self.assertIn("per output token", text)
+        speed = {"throughput": {"serve_c2": {"concurrency": 2, "output_tokens_per_s": 90.0}, "serve_c1": {"concurrency": 1, "output_tokens_per_s": 50.0}}}
+        text = kernels.render(run, speed)
+        self.assertIn("20.00 ms per token without tracing", text)
+        self.assertNotIn("has no speed", text)
+        self.assertIn("## serve", kernels.render_diff(run, run))
+        self.assertNotIn("## serve", kernels.render(self._run()))
+
+    def test_phases_marked_by_hand_are_shown(self):
+        # `phase("generate", tokens=10)` in a script: its kernels were there, and kernels said it needed --nsys and phases with tokens
+        run = {"nsys": {"groups": {"load": {"devices": []}, "generate": self._run()["nsys"]["groups"]["decode"]}}}
+        text = kernels.render(run)
+        self.assertIn("## generate: 10 tokens traced", text)
+        self.assertNotIn("## load", text)
+        self.assertIn("## generate", kernels.render_diff(run, run))
 
     def test_diff_shows_which_kernel_changed(self):
         text = kernels.render_diff(self._run(), self._run(mul_mat_ms=100.0), "old", "new")

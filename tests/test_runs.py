@@ -13,7 +13,7 @@ import unittest
 from unittest import mock
 
 import helpers
-from llmperfscope import adapters, cli, compare, cpuprof, machine, procfs, runner, serving
+from llmperfscope import adapters, cli, compare, cpuprof, driver, machine, procfs, runner, serving
 
 ENGINE = os.path.join(helpers.HERE, "fake_engine.py")
 SERVER = os.path.join(helpers.HERE, "fake_openai_server.py")
@@ -221,6 +221,61 @@ class Serving(unittest.TestCase):
             report = self.serve(extra=["--limit", "2"])
         self.assertEqual(report["workload"]["model"], "first")
         self.assertTrue([note for note in report["notes"] if "lists 2 models" in note])
+
+    def test_a_conversation_runs_on_generated_prompts(self):
+        # Measured: --turns without --prompts sent nothing and called the run ok, because generated prompts are not chat messages.
+        bodies = os.path.join(helpers.temp_dir(), "bodies.jsonl")
+        with mock.patch.dict(os.environ, {"FAKE_SERVER_BODIES": bodies}):
+            report = self.serve(extra=["--turns", "2", "--concurrency", "1"])
+        self.assertEqual(report["status"], "ok")
+        c1 = report["throughput"]["serve_c1"]
+        self.assertEqual(c1["requests"], 4)
+        self.assertEqual([t["turn"] for t in c1["by_turn"]], [1, 2])
+        with open(bodies) as f:
+            chats = [body["messages"] for body in map(json.loads, f) if "messages" in body]
+        self.assertEqual([[m["role"] for m in chat] for chat in chats],
+                         [["user"], ["user", "assistant", "user"], ["user"], ["user", "assistant", "user"]])
+        self.assertEqual(chats[1][0], chats[0][0])
+        self.assertNotEqual(chats[1][2], chats[0][0])
+
+    def test_a_conversation_is_refused_when_it_could_not_be_what_was_asked(self):
+        for extra, says in ((["--turns", "3", "--limit", "2", "--concurrency", "1"], "one prompt per turn"),
+                            (["--turns", "2"], "--concurrency"),
+                            (["--turns", "2", "--concurrency", "1", "--repeat", "2"], "--repeat")):
+            with mock.patch("llmperfscope.runner.Run") as run, self.assertRaises(SystemExit) as refused:
+                self.serve(extra=extra)
+            self.assertIn(says, str(refused.exception))
+            run.assert_not_called()
+
+    def test_a_port_that_is_taken_is_refused(self):
+        # Seen on the Mac this was checked on: the Ollama app listens on 11434. `serve -- ollama serve` would have measured it, not the server it started.
+        with socket.socket() as taken:
+            taken.bind(("127.0.0.1", 0))
+            taken.listen()
+            port = taken.getsockname()[1]
+            argv = ["serve", "--out", helpers.temp_dir(), "--precheck", "skip", "--quiet", "--url", f"http://127.0.0.1:{port}",
+                    "--", sys.executable, SERVER, str(port), "0.1", "0.1", "0.01"]
+            with mock.patch("llmperfscope.runner.Run") as run, mock.patch("sys.stderr") as stderr:
+                self.assertEqual(cli.main(argv), 3)
+            run.assert_not_called()
+            self.assertIn("already listens", "".join(str(c) for c in stderr.write.call_args_list))
+
+    def test_waiting_for_a_server_says_where(self):
+        said = []
+        with mock.patch("llmperfscope.driver.time") as clock, self.assertRaises(TimeoutError):
+            clock.monotonic.side_effect = iter(range(0, 1000, 30))
+            driver.wait_ready(f"http://127.0.0.1:{free_port()}/health", lambda: True, timeout_s=200, log=said.append)
+        self.assertEqual(len(said), 3)
+        self.assertIn("no answer after 60 s", said[0])
+
+    def test_generated_prompts_are_enough_for_the_turns_asked(self):
+        self.assertEqual(len(serving.rows_from(serving.defaults(turns=9))), 9)
+        self.assertEqual(len(serving.rows_from(serving.defaults(turns=2))), 8)
+
+    def test_a_run_that_sent_no_requests_is_not_ok(self):
+        report = self.serve(extra=["--repeat", "0", "--concurrency", "1"])
+        self.assertEqual(report["status"], "workload_failed")
+        self.assertIn("no requests", report["workload_error"])
 
     def test_prompts_are_read_before_the_server_starts(self):
         calls = []

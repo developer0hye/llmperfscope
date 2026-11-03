@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- `serve -- llama-server ...` without `--port` waited up to an hour for a server that was not there: llama.cpp moved its default port from 8080 to 9931 in October 2026 (#30159). llama-server now gets `--port` when its command has none.
+- `serve` refuses to start when something already answers where the server will listen, such as the Ollama app, so another server's numbers cannot be reported as this one's.
+- While waiting for a server to come up, `serve` says every minute where it is waiting.
+- `--turns` works with any prompts. On generated prompts, the default, or a file of `prompt` rows, it used to send nothing at all and call the run ok.
+- `--turns` refuses what it cannot do before starting the server: fewer prompts than turns, `--concurrency` above 1, or `--repeat`.
+- A server run that sent no requests is `workload_failed`, not `ok`.
+- What a token reads counts the token embedding when a model that generates text has no output head of its own. Models with a tied head showed too little, and a memory floor that was too low. Embedding models, which have no head at all, still read only one row of it.
+- `kernels` reads a server's trace, per output token. On a `serve --nsys` run it used to say it needed a run with `--nsys`. Phases with other names, marked by hand, show by default too.
+- `matrix --precheck warn` runs each arm at once and flags the ones that started on a busy machine. By default `matrix` still waits for a quiet machine, up to an hour per arm, which a desktop with a browser open may never be.
+- `matrix` and `diff` compare medians, not means. The same binary against itself showed a load ratio of 0.317, from one arm of eight that read the model from disk. Verdicts did not change from it, since they need every arm of one side to beat every arm of the other.
+
 ## 0.2.0
 
 - `--turns` and `--reuse-prompts` make vLLM and SGLang report how much came from their cache. A server that does not report it now shows no share, instead of 0%.

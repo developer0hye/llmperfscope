@@ -30,7 +30,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Tests need no GPU; real processes with known behaviour stand in for an engine. Nothing but Python is installed yet, as for a user.
         working-directory: tests
-        run: python -m unittest test_parsers test_html test_runs test_docs test_samples
+        run: python -m unittest test_parsers test_html test_runs test_docs test_samples test_anatomy
       - name: Install matplotlib
         run: python -m pip install "matplotlib==${{ matrix.matplotlib }}"
       - name: Figures

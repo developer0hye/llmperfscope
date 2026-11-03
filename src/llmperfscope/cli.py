@@ -245,7 +245,7 @@ def cmd_matrix(args, _target):
     cases = compare.load_cases(args.cases)
     table = compare.run_matrix(cases, side(args.a), side(args.b), args.out, order=args.order,
                                timeout_s=args.timeout, a_env=_parse_env(args.a_env), b_env=_parse_env(args.b_env), only=args.only,
-                               noise=noise, recheck=args.recheck)
+                               noise=noise, recheck=args.recheck, precheck=args.precheck)
     print(Path(args.out, "table.md").read_text())
     if any(not case.get("serve") and case.get("binary") == "llama-bench" for case in cases):
         print(f"Note: {adapters.RANDOM_TOKENS_NOTE}")
@@ -265,7 +265,7 @@ def cmd_noise(args, _target):
 
 def cmd_kernels(args, _target):
     run = compare.load_run(args.run)
-    phases = tuple(args.phase.split(",")) if args.phase else ("decode", "prefill")
+    phases = tuple(args.phase.split(",")) if args.phase else None
     if args.vs:
         print(kernels.render_diff(run, compare.load_run(args.vs), args.run_name, args.vs_name, phases))
     else:
@@ -356,6 +356,8 @@ def build_parser():
     p.add_argument("--only", help="regex on case labels")
     p.add_argument("--noise", help="floors from `llmperfscope noise`")
     p.add_argument("--timeout", type=float, default=1800.0)
+    p.add_argument("--precheck", choices=["wait", "warn", "require"], default="wait",
+                   help="before every arm: wait for a quiet machine, up to an hour (default); only flag a busy one; or skip the arm")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_matrix)
 
@@ -368,7 +370,7 @@ def build_parser():
     p.add_argument("run")
     p.add_argument("--speed", help="the same command without --nsys, for each kernel's share of a token and what it could win")
     p.add_argument("--vs", help="another run with --nsys: what changed, kernel by kernel")
-    p.add_argument("--phase", help="comma-separated phases (default: decode,prefill)")
+    p.add_argument("--phase", help="comma-separated phases (default: decode,prefill, serve for a server, or else every phase with tokens)")
     p.add_argument("--run-name", default="A")
     p.add_argument("--vs-name", default="B")
     p.set_defaults(func=cmd_kernels)

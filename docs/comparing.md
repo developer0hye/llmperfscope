@@ -8,7 +8,7 @@ A single ratio from a few runs is mostly noise. The same binary against itself h
 llmperfscope matrix --cases cases.json --a old=build-old/bin --b new=build-new/bin --out res
 ```
 
-For each case, it runs both builds in the order set by `--order` (`ABBABAAB` by default, 4 arms per side), each arm in a fresh process, and waits for a quiet machine before each arm. A case that looks worse gets the same number of arms again before anything is called worse (`--recheck`, 1 round by default, 0 to turn it off). The result goes to `res/table.md` and `res/matrix.json`, with every arm's full run directory under `res/`. The exit code is 1 if anything got worse, which suits CI.
+For each case, it runs both builds in the order set by `--order` (`ABBABAAB` by default, 4 arms per side), each arm in a fresh process, and waits for a quiet machine before each arm, up to an hour. A desktop with a browser open may never be quiet enough: `--precheck warn` runs each arm at once and flags the ones that started on a busy machine. A case that looks worse gets the same number of arms again before anything is called worse (`--recheck`, 1 round by default, 0 to turn it off). The result goes to `res/table.md` and `res/matrix.json`, with every arm's full run directory under `res/`. The exit code is 1 if anything got worse, which suits CI.
 
 ### The cases file
 
@@ -66,7 +66,7 @@ These cases are judged on what a streaming client saw, as well as on memory and 
 | `ttft_fixed_ms`, `ttft_per_token_ms`, the two parts of the first token, see [reading-reports.md](reading-reports.md) | lower | 2% with at least 2 ms, 2% with at least 0.005 ms |
 | `serve_j_per_token` | lower | 3% |
 
-A result counts as `better` or `worse` only if **both** of these hold: the arms do not overlap, meaning every run of one side beats every run of the other, and the difference of the means exceeds the floor. Otherwise it is `same`.
+A result counts as `better` or `worse` only if **both** of these hold: the arms do not overlap, meaning every run of one side beats every run of the other, and the difference of the medians exceeds the floor. Otherwise it is `same`. Tables show the medians and their ratio too: with a few arms, one that ran cold or was disturbed moves a mean far.
 
 The floors are the smallest differences that can mean anything for that metric. Memory rounds to MiB and allocators differ a little from run to run, load time depends on the page cache, and the energy counter has its own resolution. Your own noise floor can be higher, which a later section measures.
 

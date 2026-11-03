@@ -86,7 +86,7 @@ GPU figures cover the GPUs in `devices_used`, and memory is above the idle basel
 | `workload` | with `serve`: model, prompts, readiness time, server gauges and metrics |
 | `torch_memory` | PyTorch's allocated and reserved peaks, from markers |
 | `nsys` | with `--nsys`, per group: `devices`, `top_kernels`, `copies`, `host_api`, `per_token_ms` |
-| `model` | from the model's header: `architecture`, `layers`, `experts`, `experts_used`, `parts` with `mib`, `share`, `read_mib`, `active_params`, `types`, and `weights_read_per_token_mib` |
+| `model` | from the model's header: `architecture`, `layers`, `experts`, `experts_used`, `parts` with `mib`, `share`, `read_mib`, `active_params`, `types`, `weights_read_per_token_mib`, and `tied_head` when the output head is the token embedding |
 | `engine_config` | the engine's flags that change how the structure plays out, under names shared by engines |
 | `engine_counters` | what the engine's log says: `graphs_reused`, `graph_reallocs_same_size`, `graph_reallocs_changed`, `checkpoints_created`, `checkpoints_restored` |
 | `expected` | what the structure predicts: `decode_floor_ms`, `memory_bandwidth`, `gpus_sharing`, `decode_share_of_time_reading`, `prefill_tera_params_per_s` |

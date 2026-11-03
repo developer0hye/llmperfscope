@@ -64,6 +64,16 @@ def _phase_tables(run, phases):
     return [(name, groups[name]) for name in phases if name in groups and groups[name].get("tokens") and groups[name].get("devices")]
 
 
+def _default_phases(run):
+    """decode and prefill. A server runs both together as one phase, and phases marked by hand have whatever names their markers gave:
+    then every phase with tokens."""
+    for names in (("decode", "prefill"), ("serve",)):
+        if _phase_tables(run, names):
+            return names
+    groups = (run.get("nsys") or {}).get("groups") or {}
+    return tuple(groups)
+
+
 def per_token(group):
     """Time per token and per GPU, by kernel. For balanced GPUs this is what one GPU spends, and so what a token waits for."""
     devices = group["devices"]
@@ -99,7 +109,12 @@ def per_token(group):
 
 def _speed_of(run, phase):
     """ms per token without tracing."""
-    tokens_per_s = ((run.get("throughput") or {}).get(phase) or {}).get("tokens_per_s")
+    throughput = run.get("throughput") or {}
+    if phase == "serve":
+        levels = sorted((t for t in throughput.values() if "concurrency" in t), key=lambda t: t["concurrency"])
+        tokens_per_s = levels[0].get("output_tokens_per_s") if levels else None
+    else:
+        tokens_per_s = (throughput.get(phase) or {}).get("tokens_per_s")
     return 1000.0 / tokens_per_s if tokens_per_s else None
 
 
@@ -111,8 +126,8 @@ def gain_if_free(token_ms, cost_ms):
     return token_ms / left - 1.0
 
 
-def render(run, speed=None, phases=("decode", "prefill"), top=12):
-    tables = _phase_tables(run, phases)
+def render(run, speed=None, phases=None, top=12):
+    tables = _phase_tables(run, phases or _default_phases(run))
     if not tables:
         return "No kernel times here: this needs a run with --nsys and phases with tokens.\n"
     out = []
@@ -123,6 +138,8 @@ def render(run, speed=None, phases=("decode", "prefill"), top=12):
         if token_ms:
             title += f", {token_ms:.2f} ms per token without tracing"
         out += [title, ""]
+        if name == "serve":
+            out += ["A server runs prefill and decode together, so this is per output token with the prefill inside it.", ""]
         if token_ms:
             rest = token_ms - data["kernel_ms"] - data["collective_ms"] - data["copy_ms"]
             out += ["| where the token's time goes | ms/token | share |", "|---|---:|---:|"]
@@ -163,15 +180,16 @@ def render(run, speed=None, phases=("decode", "prefill"), top=12):
         out.append("Add --speed RUN, the same command without --nsys, for each kernel's share of a token and what it could win.")
     elif speed.get("perturbed"):
         out.append("Note: the --speed run was itself traced or sampled, so its time per token is a little long.")
-    if speed and any((((speed.get("throughput") or {}).get(name) or {}).get("tokens_per_s")) is None for name, _ in tables):
+    if speed and any(_speed_of(speed, name) is None for name, _ in tables):
         out.append("Note: the --speed run has no speed for some of these phases, so they show no shares.")
     out.append("This says where the time goes and what it could win. With the model's header it says how far matrix multiplies are from the limit of the memory. "
                "For other kernels that takes GPU hardware counters, which need admin rights.")
     return "\n".join(out) + "\n"
 
 
-def render_diff(run_a, run_b, name_a="A", name_b="B", phases=("decode", "prefill"), top=14):
+def render_diff(run_a, run_b, name_a="A", name_b="B", phases=None, top=14):
     """Kernel by kernel, what changed between two traced runs: for telling a change in the kernels from a change in everything around them."""
+    phases = phases or _default_phases(run_a)
     tables_a = dict(_phase_tables(run_a, phases))
     tables_b = dict(_phase_tables(run_b, phases))
     shared = [name for name in phases if name in tables_a and name in tables_b]

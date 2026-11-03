@@ -67,6 +67,8 @@ How to read it:
 
 It tells you where the time goes and what it could win. With the model's header it also says how far matrix multiplies are from the limit of the memory, see [llm-structure.md](llm-structure.md). For other kernels that takes GPU hardware counters and admin rights.
 
+A server run works too, and with real prompts it is closer to real use than `llama-bench`. Its one phase, `serve`, has prefill and decode together, per output token.
+
 To see what a change did, compare two traces kernel by kernel:
 
 ```sh

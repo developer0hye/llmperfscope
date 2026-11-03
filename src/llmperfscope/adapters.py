@@ -10,8 +10,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
 
-ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+ANSI =re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 RANDOM_TOKENS_NOTE = ("llama-bench feeds random tokens. Caches, expert routing and table lookups behave differently with real text, so a gain here can be "
                       "much smaller there: confirm it with `llmperfscope serve --prompts mix`, or a server case in `llmperfscope matrix`.")
 WRAPPERS = {"env", "taskset", "numactl", "timeout", "nice", "ionice", "chrt", "flock", "stdbuf", "setsid", "nohup", "sudo"}
@@ -431,7 +432,8 @@ ENGINE_SWITCHES = {
 SERVER_PRESETS = {
     "openai": {"ready_path": "/health", "metrics_path": None, "base_path": "/v1", "stop_signal": "TERM", "extra_body": {},
                "port": 8000},
-    "llama-server": {**LlamaServer.server, "port": 8080},
+    # llama.cpp's default since #30159 (2026-10-09), 8080 before. A command without --port gets this one, see give_port.
+    "llama-server": {**LlamaServer.server, "port": 9931},
     "vllm": {"ready_path": "/health", "metrics_path": "/metrics", "base_path": "/v1", "stop_signal": "TERM", "extra_body": {},
              "port": 8000, "cache_report_args": ["--enable-prompt-tokens-details"]},
     "sglang": {"ready_path": "/health", "metrics_path": "/metrics", "base_path": "/v1", "stop_signal": "TERM", "extra_body": {},
@@ -494,8 +496,37 @@ def docker_index(cmd):
     return None
 
 
-def guess_url(cmd, preset_name):
+def port_in_use(host, port):
+    """Whether something already answers there."""
+    try:
+        with socket.create_connection((host, port), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
+def free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def give_port(cmd, preset_name, environ=None):
+    """A llama-server command that says where to listen. Its default moved from 8080 to 9931 in llama.cpp #30159, so without --port the
+    port depends on the build. The default is kept when it is free, so the server is where its own docs say."""
+    environ = os.environ if environ is None else environ
+    has_port = any(token == "--port" or token.startswith("--port=") for token in cmd)
+    if preset_name != "llama-server" or docker_index(cmd) is not None or has_port or environ.get("LLAMA_ARG_PORT"):
+        return cmd
+    port = SERVER_PRESETS["llama-server"]["port"]
+    if port_in_use("127.0.0.1", port):
+        port = free_port()
+    return list(cmd) + ["--port", str(port)]
+
+
+def guess_url(cmd, preset_name, environ=None):
     """Where a server will listen, so nobody has to say it twice. A container's published port wins over the flags inside."""
+    environ = os.environ if environ is None else environ
     port = None
     host = "127.0.0.1"
     index = docker_index(cmd)
@@ -517,10 +548,12 @@ def guess_url(cmd, preset_name):
                 port = int(cmd[i + 1])
             elif token.startswith("--port=") and token.split("=", 1)[1].isdigit():
                 port = int(token.split("=", 1)[1])
-    if port is None and preset_name == "ollama" and ":" in os.environ.get("OLLAMA_HOST", ""):
-        tail = os.environ["OLLAMA_HOST"].rsplit(":", 1)[1]
+    if port is None and preset_name == "ollama" and ":" in environ.get("OLLAMA_HOST", ""):
+        tail = environ["OLLAMA_HOST"].rsplit(":", 1)[1]
         if tail.isdigit():
             port = int(tail)
+    if port is None and preset_name == "llama-server" and str(environ.get("LLAMA_ARG_PORT", "")).isdigit():
+        port = int(environ["LLAMA_ARG_PORT"])
     if port is None:
         port = SERVER_PRESETS[preset_name]["port"]
     return f"http://{host}:{port}"

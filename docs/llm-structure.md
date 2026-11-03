@@ -23,7 +23,7 @@ deepseek41, 8 layers, embedding 5120, 16 experts per layer, 6 used per token: 4.
 | moe_router | 2 | 0% | 2 | F32 |
 ```
 
-`a token reads` is what one token touches: all of a dense weight, `used / total` of the experts, nothing to speak of from a table it reads one row of. Compare the two columns. The experts are often most of a file and far less of a token, so a smaller quantization of them gains less speed than memory.
+`a token reads` is what one token touches: all of a dense weight, `used / total` of the experts, nothing to speak of from a table it reads one row of. A model that generates text with no output head of its own multiplies by its token embedding, so then a token reads all of that too, and the report says so. An embedding model has no head at all: an encoder such as BERT, or any model whose header gives a pooling type. Compare the two columns. The experts are often most of a file and far less of a token, so a smaller quantization of them gains less speed than memory.
 
 ## What a number is about
 

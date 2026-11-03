@@ -43,6 +43,8 @@ def _model_section(run):
     rows = [[row["part"], f"{row['mib']:,.0f}", f"{row['share'] * 100:.0f}%", f"{row['read_mib']:,.0f}", ", ".join(row["types"])]
             for row in model["parts"] if row["mib"] >= 1.0 or row["read_mib"] >= 1.0]
     out.append(_table(["part", "MiB", "share", "a token reads, MiB", "types"], rows))
+    if model.get("tied_head"):
+        out.append("\nThe model has no output head of its own: it multiplies by its token embedding, so a token reads all of that too.")
     config = run.get("engine_config") or {}
     if config:
         out.append("\nSettings: " + ", ".join(f"{k} {v}" if v is not True else k for k, v in config.items()) + ".")
